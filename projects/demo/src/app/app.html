@@ -1,44 +1,107 @@
-<main class="page" [class.page--dark]="themeMode() === 'dark'">
-  <h1>&#64;ascentspark/angular-image-editor — demo</h1>
-  <p class="lede">Advanced workspace on Fabric.js v7, fully themed from 3 inputs.</p>
+<div class="shell" [class.shell--dark]="themeMode() === 'dark'">
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand__logo" src="asc-logo-full.svg" alt="Ascentspark" />
+      <span class="brand__sep" aria-hidden="true"></span>
+      <div class="brand__product">
+        <span class="brand__name">Image Editor</span>
+        <span class="brand__tag">Angular 22 · Fabric.js v7</span>
+      </div>
+      <span class="brand__badge">demo</span>
+    </div>
 
-  <section class="controls">
-    @for (preset of presets; track preset.label) {
-      <button type="button" class="chip" (click)="applyPreset(preset)">{{ preset.label }}</button>
-    }
-    <label class="field">Base <input type="color" [value]="base()" (input)="onBaseInput($event)" /></label>
-    <label class="field">Accent <input type="color" [value]="accent()" (input)="onAccentInput($event)" /></label>
-    <button type="button" class="chip chip--toggle" (click)="toggleMode()">Mode: {{ themeMode() }}</button>
-  </section>
+    <div class="topbar__spacer"></div>
 
-  <section class="controls">
-    <button type="button" class="chip" (click)="openDialog()">Open basic dialog</button>
-    @if (lastResult()) {
-      <span class="controls__label">→ {{ lastResult() }}</span>
-    }
-  </section>
-
-  <section class="controls">
-    <span class="controls__label">Editor mode:</span>
-    @for (m of editorModes; track m) {
+    <div class="theme-cluster">
+      <label class="swatch" title="Base color">
+        <input type="color" [value]="base()" (input)="onBaseInput($event)" aria-label="Base color" />
+        <span class="swatch__txt">Base</span>
+      </label>
+      <label class="swatch" title="Accent color">
+        <input type="color" [value]="accent()" (input)="onAccentInput($event)" aria-label="Accent color" />
+        <span class="swatch__txt">Accent</span>
+      </label>
       <button
         type="button"
-        class="chip"
-        [class.chip--active]="editorMode() === m"
-        (click)="setEditorMode(m)"
+        class="mode-toggle"
+        [attr.aria-pressed]="themeMode() === 'dark'"
+        (click)="toggleMode()"
       >
-        {{ m }}
+        @if (themeMode() === 'dark') {
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /></svg>
+          Dark
+        } @else {
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" /></svg>
+          Light
+        }
       </button>
-    }
-    <button type="button" class="chip" [class.chip--active]="customTools()" (click)="toggleCustomRail()">
-      Custom tools
-    </button>
-    <button type="button" class="chip" [class.chip--active]="disabled().length" (click)="toggleDisabled()">
-      Disable filters/frame/redact
-    </button>
+    </div>
+  </header>
+
+  <section class="toolbar">
+    <div class="group">
+      <span class="group__label">Theme</span>
+      <div class="chips">
+        @for (preset of presets; track preset.label) {
+          <button
+            type="button"
+            class="chip"
+            [class.chip--active]="base() === preset.base && accent() === preset.accent"
+            (click)="applyPreset(preset)"
+          >
+            <span class="chip__dot" [style.background]="preset.accent"></span>
+            {{ preset.label }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="group">
+      <span class="group__label">Mode</span>
+      <div class="segmented" role="group" aria-label="Editor mode">
+        @for (m of editorModes; track m) {
+          <button
+            type="button"
+            class="segmented__item"
+            [class.segmented__item--active]="editorMode() === m"
+            (click)="setEditorMode(m)"
+          >
+            {{ m }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="group group--end">
+      <span class="group__label">Demo options</span>
+      <div class="opts">
+        <button
+          type="button"
+          class="toggle"
+          [class.toggle--on]="customTools()"
+          [attr.aria-pressed]="!!customTools()"
+          (click)="toggleCustomRail()"
+        >
+          Custom tools
+        </button>
+        <button
+          type="button"
+          class="toggle"
+          [class.toggle--on]="disabled().length"
+          [attr.aria-pressed]="disabled().length > 0"
+          (click)="toggleDisabled()"
+        >
+          Disable filters / frame / redact
+        </button>
+        <button type="button" class="btn-brand" (click)="openDialog()">Open dialog</button>
+        @if (lastResult()) {
+          <span class="result">{{ lastResult() }}</span>
+        }
+      </div>
+    </div>
   </section>
 
-  <div class="editor-box">
+  <main class="stage">
     <asp-image-editor
       [mode]="editorMode()"
       [tools]="customTools()"
@@ -50,5 +113,13 @@
       [themeMode]="themeMode()"
       (saved)="onSaved($event)"
     ></asp-image-editor>
-  </div>
-</main>
+  </main>
+
+  <footer class="footer">
+    <span class="footer__left">
+      <img class="footer__logo" src="asc-logo-full.svg" alt="Ascentspark" />
+      <span>Free &amp; open source · MIT</span>
+    </span>
+    <span class="footer__right">Built by Ascentspark · Fabric.js v7 · Angular 22</span>
+  </footer>
+</div>
