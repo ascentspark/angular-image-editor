@@ -36,6 +36,19 @@
           <button type="button" class="asp-iconbtn" title="Fit to screen" aria-label="Fit to screen" (click)="fitToScreen()">
             <asp-icon name="scaling" [size]="16" />
           </button>
+          @if (showHistory()) {
+          <div class="asp-pop">
+            <button type="button" class="asp-iconbtn" title="History" aria-label="Edit history" (click)="toggleHistory()">
+              <asp-icon name="history" [size]="17" />
+            </button>
+            @if (historyOpen()) {
+              <button type="button" class="asp-pop__scrim" aria-label="Close history" (click)="toggleHistory()"></button>
+              <div class="asp-menu asp-menu--history">
+                <asp-history-list [entries]="historyEntries()" [currentIndex]="historyIndex()" />
+              </div>
+            }
+          </div>
+          }
           <span class="asp-spacer"></span>
           <ng-container [ngTemplateOutlet]="imageTpl" />
           <ng-container [ngTemplateOutlet]="exportTpl" />

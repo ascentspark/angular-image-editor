@@ -197,6 +197,17 @@
   width: 248px;
   padding: 14px;
 }
+.asp-menu--history {
+  left: 0;
+  width: 240px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.asp-menu--history asp-history-list {
+  border-top: none;
+  max-height: none;
+}
 .asp-menu__title {
   font-size: 10.5px;
   font-weight: 700;

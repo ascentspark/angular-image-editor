@@ -182,6 +182,7 @@ export class AspImageEditor implements OnDestroy {
 
   protected readonly pickerOpen = signal(false);
   protected readonly exportOpen = signal(false);
+  protected readonly historyOpen = signal(false);
   protected readonly exportFormat = signal<AspExportFormat>('png');
   protected readonly exportQ = signal(90);
   protected readonly samples = signal<SampleImage[]>([]);
@@ -536,11 +537,19 @@ export class AspImageEditor implements OnDestroy {
   protected togglePicker(): void {
     this.pickerOpen.update((v) => !v);
     this.exportOpen.set(false);
+    this.historyOpen.set(false);
   }
 
   protected toggleExport(): void {
     this.exportOpen.update((v) => !v);
     this.pickerOpen.set(false);
+    this.historyOpen.set(false);
+  }
+
+  protected toggleHistory(): void {
+    this.historyOpen.update((v) => !v);
+    this.pickerOpen.set(false);
+    this.exportOpen.set(false);
   }
 
   protected async pickSample(sample: SampleImage): Promise<void> {

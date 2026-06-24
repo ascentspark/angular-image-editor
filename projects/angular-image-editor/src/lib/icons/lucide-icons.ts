@@ -1,10 +1,10 @@
 /**
  * Inline Lucide icon paths (ISC license, lucide-static v1.21.0).
  *
- * Only the 45 icons the editor actually uses are baked in, so there is no
+ * Only the 46 icons the editor actually uses are baked in, so there is no
  * runtime icon dependency or network fetch — the bundle stays light and the
  * exact design icons are used (never a generic substitute). Each value is the
- * inner markup of a 24×24 `viewBox`, stroke `currentColor`; rendered by AspIcon.
+ * inner markup of a 24×24 \`viewBox\`, stroke \`currentColor\`; rendered by AspIcon.
  */
 
 export const LUCIDE_ICONS: Readonly<Record<string, string>> = {
@@ -28,6 +28,7 @@ export const LUCIDE_ICONS: Readonly<Record<string, string>> = {
   'frame': '<line x1="22" x2="2" y1="6" y2="6" /><line x1="22" x2="2" y1="18" y2="18" /><line x1="6" x2="6" y1="2" y2="22" /><line x1="18" x2="18" y1="2" y2="22" />',
   'group': '<path d="M3 7V5c0-1.1.9-2 2-2h2" /><path d="M17 3h2c1.1 0 2 .9 2 2v2" /><path d="M21 17v2c0 1.1-.9 2-2 2h-2" /><path d="M7 21H5c-1.1 0-2-.9-2-2v-2" /><rect width="7" height="5" x="7" y="7" rx="1" /><rect width="7" height="5" x="10" y="12" rx="1" />',
   'highlighter': '<path d="m9 11-6 6v3h9l3-3" /><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />',
+  'history': '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l4 2" />',
   'image-plus': '<path d="M16 5h6" /><path d="M19 2v6" /><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /><circle cx="9" cy="9" r="2" />',
   'image': '<rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />',
   'info': '<circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />',
