@@ -175,6 +175,13 @@ export class AspImageEditor implements OnDestroy {
   protected readonly annotationWidth = signal(4);
   protected readonly fontSize = signal(28);
   protected readonly fontFamily = signal(DEFAULT_FONTS[0].value);
+  /** Custom fonts added at runtime, merged after the host-provided list. */
+  protected readonly customFonts = signal<FontOption[]>([]);
+  protected readonly allFonts = computed<FontOption[]>(() => {
+    const base = this.fonts();
+    const extra = this.customFonts().filter((c) => !base.some((b) => b.value === c.value));
+    return [...base, ...extra];
+  });
   protected readonly hasSelection = signal(false);
   protected readonly activeFrame = signal('none');
 
@@ -713,6 +720,13 @@ export class AspImageEditor implements OnDestroy {
       this.engine?.styleActiveObject({ fontFamily: value });
       this.sync();
     });
+  }
+
+  protected onAddCustomFont(name: string): void {
+    if (!this.customFonts().some((f) => f.value === name)) {
+      this.customFonts.update((fonts) => [...fonts, { label: name, value: name }]);
+    }
+    this.onFontChange(name);
   }
 
   protected groupSelection(): void {

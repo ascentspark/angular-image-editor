@@ -166,6 +166,16 @@
                   <option [value]="font.value">{{ font.label }}</option>
                 }
               </select>
+              <div class="asp-text-add asp-mt">
+                <input
+                  class="asp-input"
+                  placeholder="Add a Google font…"
+                  [value]="customFontValue()"
+                  (input)="onCustomFontInput($event)"
+                  aria-label="Add a Google font by name"
+                />
+                <button type="button" class="asp-btn-line" (click)="onAddFont()">Add</button>
+              </div>
             </div>
           }
         }

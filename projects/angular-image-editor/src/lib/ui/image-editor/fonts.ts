@@ -14,15 +14,27 @@ export interface FontOption {
   readonly value: string;
 }
 
-/** Default font choices: a system stack plus a few popular Google families. */
+/** Default font choices: a system stack plus popular Google families. */
 export const DEFAULT_FONTS: readonly FontOption[] = [
   { label: 'System', value: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' },
   { label: 'Inter', value: 'Inter' },
   { label: 'Roboto', value: 'Roboto' },
+  { label: 'Open Sans', value: 'Open Sans' },
+  { label: 'Lato', value: 'Lato' },
   { label: 'Montserrat', value: 'Montserrat' },
   { label: 'Poppins', value: 'Poppins' },
+  { label: 'Raleway', value: 'Raleway' },
+  { label: 'Nunito', value: 'Nunito' },
+  { label: 'Work Sans', value: 'Work Sans' },
+  { label: 'Rubik', value: 'Rubik' },
+  { label: 'Oswald', value: 'Oswald' },
+  { label: 'Bebas Neue', value: 'Bebas Neue' },
+  { label: 'Merriweather', value: 'Merriweather' },
   { label: 'Playfair Display', value: 'Playfair Display' },
   { label: 'Lobster', value: 'Lobster' },
+  { label: 'Pacifico', value: 'Pacifico' },
+  { label: 'Dancing Script', value: 'Dancing Script' },
+  { label: 'Caveat', value: 'Caveat' },
   { label: 'Roboto Mono', value: 'Roboto Mono' },
 ];
 

@@ -121,6 +121,8 @@ export class AspOptionsPanel {
   readonly addShape = output<ShapeKind>();
   readonly addText = output<string>();
   readonly fontChange = output<string>();
+  /** Add + apply a custom Google font family by name. */
+  readonly addFont = output<string>();
   readonly addRedaction = output<RedactMode>();
   readonly annotationColorChange = output<string>();
   /** Live size change (slider drag) — apply without committing history. */
@@ -141,9 +143,22 @@ export class AspOptionsPanel {
   protected readonly backgroundColors = BACKGROUND_COLORS;
   protected readonly backgroundGradients = BACKGROUND_GRADIENTS;
   protected readonly textValue = signal('Add a label');
+  protected readonly customFontValue = signal('');
 
   protected onTextInput(event: Event): void {
     this.textValue.set((event.target as HTMLInputElement).value);
+  }
+
+  protected onCustomFontInput(event: Event): void {
+    this.customFontValue.set((event.target as HTMLInputElement).value);
+  }
+
+  protected onAddFont(): void {
+    const name = this.customFontValue().trim();
+    if (name.length > 0) {
+      this.addFont.emit(name);
+      this.customFontValue.set('');
+    }
   }
 
   protected onAddText(): void {
