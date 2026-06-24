@@ -4,7 +4,11 @@ import {
   AspImageEditorDialog,
   type AspMode,
   type AspThemeMode,
+  type AspTool,
 } from '@ascentspark/angular-image-editor';
+
+const CUSTOM_RAIL: AspTool[] = ['crop', 'rotate', 'text', 'filters'];
+const DISABLED_SET: AspTool[] = ['filters', 'frame', 'redact'];
 
 interface ThemePreset {
   readonly label: string;
@@ -37,6 +41,16 @@ export class App {
   protected readonly themeMode = signal<AspThemeMode>('light');
   protected readonly editorMode = signal<AspMode>('advanced');
   protected readonly lastResult = signal('');
+  protected readonly customTools = signal<AspTool[] | null>(null);
+  protected readonly disabled = signal<AspTool[]>([]);
+
+  protected toggleCustomRail(): void {
+    this.customTools.update((t) => (t ? null : [...CUSTOM_RAIL]));
+  }
+
+  protected toggleDisabled(): void {
+    this.disabled.update((d) => (d.length ? [] : [...DISABLED_SET]));
+  }
 
   protected async openDialog(): Promise<void> {
     const blob = await this.dialog.open({

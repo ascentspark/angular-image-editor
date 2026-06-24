@@ -30,11 +30,19 @@
         {{ m }}
       </button>
     }
+    <button type="button" class="chip" [class.chip--active]="customTools()" (click)="toggleCustomRail()">
+      Custom tools
+    </button>
+    <button type="button" class="chip" [class.chip--active]="disabled().length" (click)="toggleDisabled()">
+      Disable filters/frame/redact
+    </button>
   </section>
 
   <div class="editor-box">
     <asp-image-editor
       [mode]="editorMode()"
+      [tools]="customTools()"
+      [disabledTools]="disabled()"
       [baseColor]="base()"
       [accentColor]="accent()"
       [themeMode]="themeMode()"

@@ -14,10 +14,19 @@ import type { AspFilter } from '../types/editor.types';
 
 type FabricFilter = Fabric.filters.BaseFilter<string>;
 
-/** Parameter-less "look" filters that are toggled on/off. */
-export const LOOK_FILTERS: readonly AspFilter[] = ['grayscale', 'sepia', 'invert', 'sharpen'];
+/** "Look" filters that are toggled on/off (no per-look slider). */
+export const LOOK_FILTERS: readonly AspFilter[] = [
+  'grayscale',
+  'sepia',
+  'invert',
+  'sharpen',
+  'blendColor',
+];
 
 const SHARPEN_MATRIX = [0, -1, 0, -1, 5, -1, 0, -1, 0];
+
+/** Default tint color for the blendColor "Tint" look (host can refine later). */
+const TINT_COLOR = '#3b82f6';
 
 /**
  * Build the ordered Fabric filter chain for the current state: active
@@ -78,6 +87,9 @@ export function buildFabricFilters(
         break;
       case 'sharpen':
         chain.push(new f.Convolute({ matrix: SHARPEN_MATRIX }));
+        break;
+      case 'blendColor':
+        chain.push(new f.BlendColor({ color: TINT_COLOR, mode: 'tint', alpha: 0.5 }));
         break;
       default:
         break;

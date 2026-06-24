@@ -118,6 +118,9 @@
 .asp-filter__thumb[data-look='sharpen'] {
   filter: contrast(1.4) saturate(1.1);
 }
+.asp-filter__thumb[data-look='blendColor'] {
+  filter: sepia(0.4) hue-rotate(170deg) saturate(1.4);
+}
 .asp-filter__label {
   display: block;
   text-align: center;
