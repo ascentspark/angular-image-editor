@@ -8,6 +8,30 @@
 
 export { AspImageEditor } from './lib/ui/image-editor/image-editor';
 
+// Core type contract.
+export {
+  ALL_TOOLS,
+  ALL_FILTERS,
+  type AspMode,
+  type AspTool,
+  type AspFilter,
+  type AspExportFormat,
+  type AspAspectPreset,
+} from './lib/types/editor.types';
+
+// Tool/filter catalog + resolution (mode → tools allowlist → minus disabledTools; filters).
+export {
+  TOOL_REGISTRY,
+  FILTER_REGISTRY,
+  DEFAULT_TOOLS,
+  DEFAULT_FILTERS,
+  type ToolMeta,
+  type FilterMeta,
+  type AspToolGroup,
+  type FilterKind,
+} from './lib/registry/tool-registry';
+export { resolveTools, resolveFilters } from './lib/registry/resolve-tools';
+
 // Theming — derive and apply the editor's --asp-* palette from 3 inputs.
 export { deriveTheme, type AspThemeMode } from './lib/theme/derive-theme';
 export { applyTheme } from './lib/theme/apply-theme';
