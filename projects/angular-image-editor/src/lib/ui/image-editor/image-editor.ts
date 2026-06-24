@@ -636,6 +636,40 @@ export class AspImageEditor implements OnDestroy {
     input.value = '';
   }
 
+  /** Download the current scene as a reusable template (JSON). */
+  protected saveTemplate(): void {
+    const engine = this.engine;
+    if (!engine) {
+      return;
+    }
+    this.pickerOpen.set(false);
+    try {
+      const json = engine.exportScene();
+      triggerDownload(new Blob([json], { type: 'application/json' }), 'template.json');
+    } catch (error) {
+      this.emitError('template-save-failed', error);
+    }
+  }
+
+  /** Load a template (JSON) saved by {@link saveTemplate} and sync the UI to it. */
+  protected async loadTemplate(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) {
+      return;
+    }
+    this.pickerOpen.set(false);
+    try {
+      await this.engine?.loadScene(await file.text());
+      this.artboard.set(this.engine?.getArtboard() ?? null);
+      this.sync();
+      this.syncUiFromEngine();
+    } catch (error) {
+      this.emitError('template-load-failed', error);
+    }
+  }
+
   protected setExportFormat(format: AspExportFormat): void {
     this.exportFormat.set(format);
   }

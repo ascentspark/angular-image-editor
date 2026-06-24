@@ -286,6 +286,15 @@
           <asp-icon name="upload" [size]="15" /> Upload your own
           <input type="file" accept="image/*" (change)="onUpload($event)" />
         </label>
+        <div class="asp-menu__divider"></div>
+        <div class="asp-menu__title">Template</div>
+        <button type="button" class="asp-upload asp-upload--btn" (click)="saveTemplate()">
+          <asp-icon name="download" [size]="15" /> Save template
+        </button>
+        <label class="asp-upload">
+          <asp-icon name="upload" [size]="15" /> Load template
+          <input type="file" accept="application/json,.json" (change)="loadTemplate($event)" />
+        </label>
       </div>
     }
   </div>

@@ -93,6 +93,39 @@ interface EditorSnapshot {
   frame: string;
 }
 
+/** A versioned template: a full editor snapshot plus the artboard. */
+interface SceneTemplate {
+  snapshot: EditorSnapshot;
+  artboard: ArtboardSize | null;
+}
+
+/** Narrow untrusted parsed JSON to a usable template (only checks the fields we rely on). */
+function isSceneTemplate(value: unknown): value is SceneTemplate {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const v = value as Record<string, unknown>;
+  const snapshot = v['snapshot'];
+  if (typeof snapshot !== 'object' || snapshot === null) {
+    return false;
+  }
+  const json = (snapshot as Record<string, unknown>)['json'];
+  if (typeof json !== 'object' || json === null) {
+    return false;
+  }
+  const artboard = v['artboard'];
+  if (artboard !== null && artboard !== undefined) {
+    if (typeof artboard !== 'object') {
+      return false;
+    }
+    const a = artboard as Record<string, unknown>;
+    if (typeof a['width'] !== 'number' || typeof a['height'] !== 'number') {
+      return false;
+    }
+  }
+  return true;
+}
+
 const ZOOM_MIN = 25;
 const ZOOM_MAX = 400;
 const FIT_PADDING = 0.92;
@@ -1382,6 +1415,39 @@ export class EditorEngine {
     if (entry) {
       await this.restore(entry.state);
     }
+  }
+
+  // ---- templates (save / load scene) --------------------------------------
+
+  /**
+   * Serialize the whole editor — scene objects, transform/adjustment/look/frame
+   * state, and the artboard — into a portable, versioned template string. The
+   * inverse of {@link loadScene}.
+   */
+  exportScene(): string {
+    const template = {
+      version: 1 as const,
+      snapshot: JSON.parse(this.snapshot()) as EditorSnapshot,
+      artboard: this.artboard,
+    };
+    return JSON.stringify(template);
+  }
+
+  /**
+   * Restore a template produced by {@link exportScene}. Resets the history to
+   * the loaded state so it becomes the new undo baseline. Throws on malformed
+   * input rather than loading a partial scene.
+   */
+  async loadScene(json: string): Promise<void> {
+    const parsed: unknown = JSON.parse(json);
+    if (!isSceneTemplate(parsed)) {
+      throw new Error('Not a valid editor template');
+    }
+    await this.restore(JSON.stringify(parsed.snapshot));
+    this.setArtboard(parsed.artboard ?? null);
+    this.history.reset('Loaded template', this.snapshot());
+    this.notifyLayers();
+    this.notifySelection();
   }
 
   /**
