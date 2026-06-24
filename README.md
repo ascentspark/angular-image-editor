@@ -11,9 +11,20 @@ commercial editors (Syncfusion / Pintura / Filerobot). No license keys, no telem
   web fonts**, freehand redaction (solid / blur / pixelate), frames, **background
   color/gradient**, undo / redo history, image picker + upload, and export to
   PNG / JPEG / WEBP / SVG / JSON
-- **Layers panel** — z-order reorder, per-layer **lock** (clicks pass through, fixing
-  overlap mis-selection), show/hide, delete; **group/ungroup**, **align**, multi-select,
-  copy/paste/**duplicate**
+- **Usage-based UI** — a grouped, Photoshop-style **flyout toolbar** (tools = modes:
+  Select · Crop&Rotate · Color · Draw · Shapes · Text · Redact · Canvas), tool **Options**
+  + a **persistent Layers panel** on the right, and **actions** (undo/redo, zoom, fit,
+  history, image, export) in the top bar.
+- **Layers panel** (persistent companion) — z-order reorder, per-layer **lock** (clicks
+  pass through, fixing overlap mis-selection), show/hide, **opacity**; plus the object-ops
+  that act on the selection: **group/ungroup**, **align**, **duplicate**, delete,
+  multi-select. Available regardless of the active tool.
+- **Color anywhere** — preset swatches **+ a custom color picker** for fill, draw, text,
+  shapes, frame, and background.
+- **Web fonts** — a curated Google-font list plus a custom “add any Google font” entry.
+- **Correct compositing** — the highlighter is genuinely translucent; **redact** bakes the
+  *composited* pixels under the region (blur / pixelate / solid), concealing everything
+  beneath — not just the base image.
 - **Keyboard shortcuts** — undo/redo, delete, Ctrl/Cmd+C/V/D, select-all, Esc, Space-to-pan
   (scoped to the editor, suppressed while typing; toggle with `keyboardEnabled`)
 - **3-input runtime theming** — `baseColor` + `accentColor` + `themeMode` derive the whole
