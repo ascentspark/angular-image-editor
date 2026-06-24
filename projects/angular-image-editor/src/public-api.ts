@@ -8,6 +8,12 @@
 
 export { AspImageEditor } from './lib/ui/image-editor/image-editor';
 
+// Modal dialog — open the basic editor and await a Blob (or null on cancel).
+export {
+  AspImageEditorDialog,
+  type OpenImageEditorConfig,
+} from './lib/dialog/image-editor-dialog';
+
 // Core type contract.
 export {
   ALL_TOOLS,

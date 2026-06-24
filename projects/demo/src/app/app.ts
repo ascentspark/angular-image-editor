@@ -1,5 +1,10 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
-import { AspImageEditor, type AspMode, type AspThemeMode } from '@ascentspark/angular-image-editor';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  AspImageEditor,
+  AspImageEditorDialog,
+  type AspMode,
+  type AspThemeMode,
+} from '@ascentspark/angular-image-editor';
 
 interface ThemePreset {
   readonly label: string;
@@ -25,10 +30,24 @@ export class App {
 
   protected readonly editorModes: readonly AspMode[] = ['viewer', 'basic', 'advanced', 'full'];
 
+  private readonly dialog = inject(AspImageEditorDialog);
+
   protected readonly base = signal(this.presets[0].base);
   protected readonly accent = signal(this.presets[0].accent);
   protected readonly themeMode = signal<AspThemeMode>('light');
   protected readonly editorMode = signal<AspMode>('advanced');
+  protected readonly lastResult = signal('');
+
+  protected async openDialog(): Promise<void> {
+    const blob = await this.dialog.open({
+      heading: 'Update profile photo',
+      baseColor: this.base(),
+      accentColor: this.accent(),
+      themeMode: this.themeMode(),
+      aspectPresets: ['1:1', '4:3', 'free'],
+    });
+    this.lastResult.set(blob ? `saved ${blob.type} (${blob.size} bytes)` : 'canceled');
+  }
 
   protected applyPreset(preset: ThemePreset): void {
     this.base.set(preset.base);

@@ -1,184 +1,264 @@
-@if (isWorkspaceMode()) {
-  <div class="asp-workspace">
-    <!-- tool rail -->
-    <asp-tool-rail
-      class="asp-workspace__rail"
-      [tools]="resolvedTools()"
-      [activeTool]="activeTool()"
-      (toolSelect)="selectTool($event)"
-    />
+@switch (layout()) {
+  @case ('workspace') {
+    <div class="asp-workspace">
+      <asp-tool-rail
+        class="asp-workspace__rail"
+        [tools]="resolvedTools()"
+        [activeTool]="activeTool()"
+        (toolSelect)="selectTool($event)"
+      />
 
-    <!-- canvas column -->
-    <div class="asp-workspace__canvas asp-card">
-      <div class="asp-topbar">
-        <button
-          type="button"
-          class="asp-iconbtn"
-          [disabled]="!canUndo()"
-          title="Undo"
-          aria-label="Undo"
-          (click)="undo()"
-        >
-          <asp-icon name="undo-2" [size]="17" />
-        </button>
-        <button
-          type="button"
-          class="asp-iconbtn"
-          [disabled]="!canRedo()"
-          title="Redo"
-          aria-label="Redo"
-          (click)="redo()"
-        >
-          <asp-icon name="redo-2" [size]="17" />
-        </button>
-
-        <span class="asp-divider"></span>
-
-        <div class="asp-zoom">
-          <button type="button" class="asp-zoom__btn" aria-label="Zoom out" (click)="zoomOut()">
-            <asp-icon name="minus" [size]="15" />
+      <div class="asp-workspace__canvas asp-card">
+        <div class="asp-topbar">
+          <button
+            type="button"
+            class="asp-iconbtn"
+            [disabled]="!canUndo()"
+            title="Undo"
+            aria-label="Undo"
+            (click)="undo()"
+          >
+            <asp-icon name="undo-2" [size]="17" />
           </button>
-          <span class="asp-zoom__label">{{ zoomLabel() }}</span>
-          <button type="button" class="asp-zoom__btn" aria-label="Zoom in" (click)="zoomIn()">
-            <asp-icon name="plus" [size]="15" />
+          <button
+            type="button"
+            class="asp-iconbtn"
+            [disabled]="!canRedo()"
+            title="Redo"
+            aria-label="Redo"
+            (click)="redo()"
+          >
+            <asp-icon name="redo-2" [size]="17" />
           </button>
+          <span class="asp-divider"></span>
+          <ng-container [ngTemplateOutlet]="zoomTpl" />
+          <span class="asp-spacer"></span>
+          <ng-container [ngTemplateOutlet]="imageTpl" />
+          <ng-container [ngTemplateOutlet]="exportTpl" />
         </div>
 
-        <span class="asp-spacer"></span>
-
-        <!-- image picker -->
-        <div class="asp-pop">
-          <button type="button" class="asp-btn-line asp-topbtn" (click)="togglePicker()">
-            <asp-icon name="image-plus" [size]="16" /> Image
-          </button>
-          @if (pickerOpen()) {
-            <button
-              type="button"
-              class="asp-pop__scrim"
-              aria-label="Close image menu"
-              (click)="togglePicker()"
-            ></button>
-            <div class="asp-menu asp-menu--right">
-              <div class="asp-menu__title">Sample images</div>
-              <div class="asp-sample-grid">
-                @for (sample of samples(); track sample.key) {
-                  <button
-                    type="button"
-                    class="asp-sample"
-                    [style.background-image]="'url(' + sample.dataUrl + ')'"
-                    [attr.title]="sample.label"
-                    [attr.aria-label]="sample.label"
-                    (click)="pickSample(sample)"
-                  ></button>
-                }
-              </div>
-              <label class="asp-upload">
-                <asp-icon name="upload" [size]="15" /> Upload your own
-                <input type="file" accept="image/*" (change)="onUpload($event)" />
-              </label>
-            </div>
-          }
-        </div>
-
-        <!-- export -->
-        <div class="asp-pop">
-          <button type="button" class="asp-btn-accent asp-topbtn" (click)="toggleExport()">
-            <asp-icon name="download" [size]="16" /> Export
-          </button>
-          @if (exportOpen()) {
-            <button
-              type="button"
-              class="asp-pop__scrim"
-              aria-label="Close export menu"
-              (click)="toggleExport()"
-            ></button>
-            <div class="asp-menu asp-menu--right asp-menu--export">
-              <div class="asp-menu__label">Format</div>
-              <div class="asp-fmt-row">
-                @for (fmt of exportFormats(); track fmt) {
-                  <button
-                    type="button"
-                    class="asp-fmt"
-                    [class.asp-fmt--active]="exportFormat() === fmt"
-                    (click)="setExportFormat(fmt)"
-                  >
-                    {{ fmt | uppercase }}
-                  </button>
-                }
-              </div>
-              <div class="asp-menu__row">
-                <span class="asp-menu__label">Quality</span>
-                <span class="asp-menu__value">{{ exportQ() }}</span>
-              </div>
-              <input
-                type="range"
-                class="asp-range"
-                min="10"
-                max="100"
-                [value]="exportQ()"
-                (input)="onExportQuality($event)"
-                aria-label="Export quality"
-              />
-              <button type="button" class="asp-btn-accent asp-download" (click)="download()">
-                Download image
-              </button>
+        <div #stageEl class="asp-stage">
+          <canvas #canvasEl></canvas>
+          @if (activeTool() === 'crop') {
+            <div class="asp-crop-overlay" aria-hidden="true">
+              <span class="asp-crop-overlay__v" style="left: 33.33%"></span>
+              <span class="asp-crop-overlay__v" style="left: 66.66%"></span>
+              <span class="asp-crop-overlay__h" style="top: 33.33%"></span>
+              <span class="asp-crop-overlay__h" style="top: 66.66%"></span>
             </div>
           }
         </div>
       </div>
 
+      <div class="asp-workspace__panel asp-card">
+        <asp-options-panel
+          class="asp-workspace__options"
+          [activeTool]="activeTool()"
+          [toolTitle]="toolTitle()"
+          [adjustmentDefs]="adjustmentDefs()"
+          [adjustments]="adjustments()"
+          [lookDefs]="lookDefs()"
+          [activeLook]="activeLook()"
+          [aspectPresets]="aspectPresets()"
+          [activeCrop]="activeCrop()"
+          [straighten]="straighten()"
+          [annotationColor]="annotationColor()"
+          [annotationWidth]="annotationWidth()"
+          [frameOptions]="frameOptions"
+          [activeFrame]="activeFrame()"
+          (resetRequested)="reset()"
+          (adjustInput)="onAdjustInput($event)"
+          (adjustCommit)="onAdjustCommit($event)"
+          (selectLook)="selectLook($event)"
+          (selectCrop)="selectCrop($event)"
+          (rotate)="rotate($event)"
+          (flip)="flip($event)"
+          (straightenInput)="onStraightenInput($event)"
+          (straightenCommit)="onStraightenCommit($event)"
+          (addShape)="addShape($event)"
+          (addText)="addText($event)"
+          (addRedaction)="addRedaction($event)"
+          (annotationColorChange)="setAnnotationColor($event)"
+          (annotationWidthChange)="setAnnotationWidth($event)"
+          (selectFrame)="selectFrame($event)"
+          (deleteSelection)="deleteSelection()"
+        />
+        <asp-history-list [entries]="historyEntries()" [currentIndex]="historyIndex()" />
+      </div>
+    </div>
+  }
+
+  @case ('viewer') {
+    <div class="asp-viewer asp-card">
+      <div class="asp-topbar">
+        <ng-container [ngTemplateOutlet]="zoomTpl" />
+        <span class="asp-spacer"></span>
+        <ng-container [ngTemplateOutlet]="exportTpl" />
+      </div>
       <div #stageEl class="asp-stage">
         <canvas #canvasEl></canvas>
-        @if (activeTool() === 'crop') {
-          <div class="asp-crop-overlay" aria-hidden="true">
-            <span class="asp-crop-overlay__v" style="left: 33.33%"></span>
-            <span class="asp-crop-overlay__v" style="left: 66.66%"></span>
-            <span class="asp-crop-overlay__h" style="top: 33.33%"></span>
-            <span class="asp-crop-overlay__h" style="top: 66.66%"></span>
-          </div>
-        }
       </div>
     </div>
+  }
 
-    <!-- options column -->
-    <div class="asp-workspace__panel asp-card">
-      <asp-options-panel
-        class="asp-workspace__options"
-        [activeTool]="activeTool()"
-        [toolTitle]="toolTitle()"
-        [adjustmentDefs]="adjustmentDefs()"
-        [adjustments]="adjustments()"
-        [lookDefs]="lookDefs()"
-        [activeLook]="activeLook()"
-        [aspectPresets]="aspectPresets()"
-        [activeCrop]="activeCrop()"
-        [straighten]="straighten()"
-        [annotationColor]="annotationColor()"
-        [annotationWidth]="annotationWidth()"
-        [frameOptions]="frameOptions"
-        [activeFrame]="activeFrame()"
-        (resetRequested)="reset()"
-        (adjustInput)="onAdjustInput($event)"
-        (adjustCommit)="onAdjustCommit($event)"
-        (selectLook)="selectLook($event)"
-        (selectCrop)="selectCrop($event)"
-        (rotate)="rotate($event)"
-        (flip)="flip($event)"
-        (straightenInput)="onStraightenInput($event)"
-        (straightenCommit)="onStraightenCommit($event)"
-        (addShape)="addShape($event)"
-        (addText)="addText($event)"
-        (addRedaction)="addRedaction($event)"
-        (annotationColorChange)="setAnnotationColor($event)"
-        (annotationWidthChange)="setAnnotationWidth($event)"
-        (selectFrame)="selectFrame($event)"
-        (deleteSelection)="deleteSelection()"
-      />
-      <asp-history-list [entries]="historyEntries()" [currentIndex]="historyIndex()" />
+  @case ('basic') {
+    <div class="asp-basic asp-card">
+      <div class="asp-basic__head">
+        <div class="asp-basic__title">{{ heading() }}</div>
+        <button type="button" class="asp-iconbtn-plain" aria-label="Close" (click)="cancel()">
+          <asp-icon name="x" [size]="19" />
+        </button>
+      </div>
+
+      <div class="asp-basic__body">
+        <div #stageEl class="asp-stage asp-stage--rounded">
+          <canvas #canvasEl></canvas>
+        </div>
+
+        <div>
+          <div class="asp-section-label">Aspect ratio</div>
+          <div class="asp-chip-row">
+            @for (preset of aspectPresets(); track preset) {
+              <button
+                type="button"
+                class="asp-chip"
+                [class.asp-chip--active]="activeCrop() === preset"
+                (click)="selectCrop(preset)"
+              >
+                {{ preset === 'free' ? 'Free' : preset === 'original' ? 'Original' : preset }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="asp-basic__controls">
+          <button type="button" class="asp-iconbtn" title="Rotate left" (click)="rotate(-90)">
+            <asp-icon name="rotate-ccw" [size]="17" />
+          </button>
+          <button type="button" class="asp-iconbtn" title="Rotate right" (click)="rotate(90)">
+            <asp-icon name="rotate-cw" [size]="17" />
+          </button>
+          <button type="button" class="asp-iconbtn" title="Flip" (click)="flip('h')">
+            <asp-icon name="flip-horizontal-2" [size]="17" />
+          </button>
+          <div class="asp-zoomslider">
+            <asp-icon name="plus" [size]="16" />
+            <input
+              type="range"
+              class="asp-range"
+              min="100"
+              max="300"
+              [value]="zoomPct()"
+              (input)="onZoomSlider($event)"
+              aria-label="Zoom"
+            />
+          </div>
+          <label class="asp-upload asp-upload--inline">
+            <asp-icon name="upload" [size]="15" /> Replace
+            <input type="file" accept="image/*" (change)="onUpload($event)" />
+          </label>
+        </div>
+      </div>
+
+      <div class="asp-basic__foot">
+        <button type="button" class="asp-btn-line" (click)="cancel()">Cancel</button>
+        <button type="button" class="asp-btn-accent" (click)="save()">Save</button>
+      </div>
     </div>
-  </div>
-} @else {
-  <div class="asp-placeholder">
-    <p>The <code>{{ mode() }}</code> layout arrives in a later phase.</p>
-  </div>
+  }
 }
+
+<!-- shared sub-templates ----------------------------------------------------->
+<ng-template #zoomTpl>
+  <div class="asp-zoom">
+    <button type="button" class="asp-zoom__btn" aria-label="Zoom out" (click)="zoomOut()">
+      <asp-icon name="minus" [size]="15" />
+    </button>
+    <span class="asp-zoom__label">{{ zoomLabel() }}</span>
+    <button type="button" class="asp-zoom__btn" aria-label="Zoom in" (click)="zoomIn()">
+      <asp-icon name="plus" [size]="15" />
+    </button>
+  </div>
+</ng-template>
+
+<ng-template #imageTpl>
+  <div class="asp-pop">
+    <button type="button" class="asp-btn-line asp-topbtn" (click)="togglePicker()">
+      <asp-icon name="image-plus" [size]="16" /> Image
+    </button>
+    @if (pickerOpen()) {
+      <button
+        type="button"
+        class="asp-pop__scrim"
+        aria-label="Close image menu"
+        (click)="togglePicker()"
+      ></button>
+      <div class="asp-menu asp-menu--right">
+        <div class="asp-menu__title">Sample images</div>
+        <div class="asp-sample-grid">
+          @for (sample of samples(); track sample.key) {
+            <button
+              type="button"
+              class="asp-sample"
+              [style.background-image]="'url(' + sample.dataUrl + ')'"
+              [attr.title]="sample.label"
+              [attr.aria-label]="sample.label"
+              (click)="pickSample(sample)"
+            ></button>
+          }
+        </div>
+        <label class="asp-upload">
+          <asp-icon name="upload" [size]="15" /> Upload your own
+          <input type="file" accept="image/*" (change)="onUpload($event)" />
+        </label>
+      </div>
+    }
+  </div>
+</ng-template>
+
+<ng-template #exportTpl>
+  <div class="asp-pop">
+    <button type="button" class="asp-btn-accent asp-topbtn" (click)="toggleExport()">
+      <asp-icon name="download" [size]="16" /> Export
+    </button>
+    @if (exportOpen()) {
+      <button
+        type="button"
+        class="asp-pop__scrim"
+        aria-label="Close export menu"
+        (click)="toggleExport()"
+      ></button>
+      <div class="asp-menu asp-menu--right asp-menu--export">
+        <div class="asp-menu__label">Format</div>
+        <div class="asp-fmt-row">
+          @for (fmt of exportFormats(); track fmt) {
+            <button
+              type="button"
+              class="asp-fmt"
+              [class.asp-fmt--active]="exportFormat() === fmt"
+              (click)="setExportFormat(fmt)"
+            >
+              {{ fmt | uppercase }}
+            </button>
+          }
+        </div>
+        <div class="asp-menu__row">
+          <span class="asp-menu__label">Quality</span>
+          <span class="asp-menu__value">{{ exportQ() }}</span>
+        </div>
+        <input
+          type="range"
+          class="asp-range"
+          min="10"
+          max="100"
+          [value]="exportQ()"
+          (input)="onExportQuality($event)"
+          aria-label="Export quality"
+        />
+        <button type="button" class="asp-btn-accent asp-download" (click)="download()">
+          Download image
+        </button>
+      </div>
+    }
+  </div>
+</ng-template>

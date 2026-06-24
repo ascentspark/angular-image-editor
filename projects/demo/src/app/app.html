@@ -12,6 +12,13 @@
   </section>
 
   <section class="controls">
+    <button type="button" class="chip" (click)="openDialog()">Open basic dialog</button>
+    @if (lastResult()) {
+      <span class="controls__label">→ {{ lastResult() }}</span>
+    }
+  </section>
+
+  <section class="controls">
     <span class="controls__label">Editor mode:</span>
     @for (m of editorModes; track m) {
       <button

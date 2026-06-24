@@ -1,9 +1,8 @@
-import { UpperCasePipe } from '@angular/common';
+import { NgTemplateOutlet, UpperCasePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  afterNextRender,
   computed,
   effect,
   inject,
@@ -57,7 +56,7 @@ const ZOOM_STEP = 25;
 @Component({
   selector: 'asp-image-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [UpperCasePipe, AspIcon, AspToolRail, AspOptionsPanel, AspHistoryList],
+  imports: [NgTemplateOutlet, UpperCasePipe, AspIcon, AspToolRail, AspOptionsPanel, AspHistoryList],
   templateUrl: './image-editor.html',
   styleUrl: './image-editor.css',
 })
@@ -76,6 +75,9 @@ export class AspImageEditor implements OnDestroy {
   readonly accentColor = input<string>(FALLBACK_ACCENT);
   readonly themeMode = input<AspThemeMode>('light');
 
+  /** Heading shown by the `basic` modal layout. */
+  readonly heading = input<string>('Edit image');
+
   readonly saved = output<Blob>();
   readonly canceled = output<void>();
 
@@ -87,6 +89,8 @@ export class AspImageEditor implements OnDestroy {
   // ---- engine + readiness --------------------------------------------------
   private engine: EditorEngine | null = null;
   private resizeObserver: ResizeObserver | null = null;
+  private boundCanvas: HTMLCanvasElement | null = null;
+  private lastSource: string | Blob | null | undefined = undefined;
   protected readonly engineReady = signal(false);
 
   // ---- resolved configuration ----------------------------------------------
@@ -137,9 +141,16 @@ export class AspImageEditor implements OnDestroy {
   });
   protected readonly toolTitle = computed(() => this.activeToolMeta()?.label ?? '');
   protected readonly zoomLabel = computed(() => `${this.zoomPct()}%`);
-  protected readonly isWorkspaceMode = computed(
-    () => this.mode() === 'advanced' || this.mode() === 'full',
-  );
+  protected readonly layout = computed<'workspace' | 'basic' | 'viewer'>(() => {
+    const mode = this.mode();
+    if (mode === 'basic') {
+      return 'basic';
+    }
+    if (mode === 'viewer') {
+      return 'viewer';
+    }
+    return 'workspace';
+  });
 
   constructor() {
     // Apply the derived theme to the host element whenever inputs change.
@@ -167,18 +178,17 @@ export class AspImageEditor implements OnDestroy {
       }
     });
 
-    afterNextRender(() => {
-      this.samples.set(buildSampleImages());
-      void this.initEngine();
-    });
-
-    // (Re)load when the src input changes and the engine is ready.
+    // Bind the engine to the rendered canvas and (re)load the source. Runs on
+    // first render and again whenever the layout swaps the canvas element
+    // (mode change) or the `src` input changes.
     effect(() => {
+      const canvas = this.canvasRef()?.nativeElement;
+      const stage = this.stageRef()?.nativeElement;
       const src = this.src();
-      if (!this.engineReady()) {
+      if (!canvas || !stage) {
         return;
       }
-      void untracked(() => this.loadCurrent(src));
+      void untracked(() => this.ensureEngineAndLoad(canvas, stage, src));
     });
 
     // Free-draw follows the active tool + current brush settings.
@@ -209,22 +219,41 @@ export class AspImageEditor implements OnDestroy {
   }
 
   // ---- engine lifecycle ----------------------------------------------------
-  private async initEngine(): Promise<void> {
-    const canvas = this.canvasRef()?.nativeElement;
-    const stage = this.stageRef()?.nativeElement;
-    if (!canvas || !stage) {
+  private async ensureEngineAndLoad(
+    canvas: HTMLCanvasElement,
+    stage: HTMLElement,
+    src: string | Blob | null,
+  ): Promise<void> {
+    if (this.samples().length === 0) {
+      this.samples.set(buildSampleImages());
+    }
+
+    // (Re)create the engine when the canvas element changes (e.g. mode switch).
+    if (canvas !== this.boundCanvas) {
+      try {
+        this.resizeObserver?.disconnect();
+        await this.engine?.destroy();
+        const { width, height } = stageSize(stage);
+        this.engine = await EditorEngine.create(canvas, { width, height });
+        this.boundCanvas = canvas;
+        this.lastSource = undefined;
+        this.engineReady.set(true);
+        this.observeResize(stage);
+      } catch (error) {
+        // No 2D/WebGL context (SSR/headless) — chrome still renders; actions inert.
+        console.warn('[asp-image-editor] could not initialize the canvas engine:', error);
+        return;
+      }
+    }
+
+    const source = src ?? this.samples()[0]?.dataUrl ?? null;
+    if (source === null || source === this.lastSource || !this.engine) {
       return;
     }
-    try {
-      const { width, height } = stageSize(stage);
-      this.engine = await EditorEngine.create(canvas, { width, height });
-      this.engineReady.set(true);
-      this.observeResize(stage);
-    } catch (error) {
-      // No 2D/WebGL context (e.g. SSR or a headless test environment) — the
-      // editor chrome still renders; engine-backed actions are simply inert.
-      console.warn('[asp-image-editor] could not initialize the canvas engine:', error);
-    }
+    this.lastSource = source;
+    await this.engine.loadImage(source);
+    this.resetUiState();
+    this.sync();
   }
 
   private observeResize(stage: HTMLElement): void {
@@ -233,20 +262,6 @@ export class AspImageEditor implements OnDestroy {
       this.engine?.setSize(width, height);
     });
     this.resizeObserver.observe(stage);
-  }
-
-  private async loadCurrent(src: string | Blob | null): Promise<void> {
-    const engine = this.engine;
-    if (!engine) {
-      return;
-    }
-    const source = src ?? this.samples()[0]?.dataUrl ?? null;
-    if (source === null) {
-      return;
-    }
-    await engine.loadImage(source);
-    this.resetUiState();
-    this.sync();
   }
 
   private resetUiState(): void {
@@ -340,6 +355,28 @@ export class AspImageEditor implements OnDestroy {
     this.exportOpen.set(false);
     this.saved.emit(blob);
     triggerDownload(blob, `image.${extensionFor(this.exportFormat())}`);
+  }
+
+  // ---- basic / viewer layouts ----------------------------------------------
+  /** Save (basic modal): export to a Blob and emit `saved` without downloading. */
+  protected async save(): Promise<void> {
+    const engine = this.engine;
+    if (!engine) {
+      return;
+    }
+    const format = this.exportFormats()[0] ?? 'png';
+    const blob = await engine.exportImage(format, this.exportQ(), this.exportFormats());
+    this.saved.emit(blob);
+  }
+
+  protected cancel(): void {
+    this.canceled.emit();
+  }
+
+  protected onZoomSlider(event: Event): void {
+    const value = Number((event.target as HTMLInputElement).value);
+    this.engine?.setZoom(value);
+    this.sync();
   }
 
   // ---- options panel handlers ----------------------------------------------
