@@ -1,5 +1,21 @@
-<main style="font-family: system-ui, sans-serif; padding: 24px;">
+<main class="page" [class.page--dark]="mode() === 'dark'">
   <h1>&#64;ascentspark/angular-image-editor — demo</h1>
-  <p>Phase 0 scaffold. Modes, theming, and the full editor land in later phases.</p>
-  <asp-image-editor></asp-image-editor>
+  <p class="lede">Phase 1: 3-input theming. Pick a preset or custom colors and toggle light/dark.</p>
+
+  <section class="controls">
+    @for (preset of presets; track preset.label) {
+      <button type="button" class="chip" (click)="applyPreset(preset)">{{ preset.label }}</button>
+    }
+    <label class="field">Base <input type="color" [value]="base()" (input)="onBaseInput($event)" /></label>
+    <label class="field">Accent <input type="color" [value]="accent()" (input)="onAccentInput($event)" /></label>
+    <button type="button" class="chip chip--toggle" (click)="toggleMode()">
+      Mode: {{ mode() }}
+    </button>
+  </section>
+
+  <asp-image-editor
+    [baseColor]="base()"
+    [accentColor]="accent()"
+    [themeMode]="mode()"
+  ></asp-image-editor>
 </main>

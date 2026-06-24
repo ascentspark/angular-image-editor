@@ -1,0 +1,39 @@
+<!-- Phase 1 palette preview — temporary; replaced by the editor workspace in Phase 4. -->
+<div class="asp-preview">
+  <header class="asp-preview__bar">
+    <span class="asp-preview__title">asp-image-editor</span>
+    <span class="asp-preview__muted">theme preview · {{ themeMode() }}</span>
+    <span class="asp-spacer"></span>
+    <button type="button" class="asp-btn asp-btn--ghost">Cancel</button>
+    <button type="button" class="asp-btn asp-btn--accent">Export</button>
+  </header>
+
+  <div class="asp-preview__body">
+    <section class="asp-card">
+      <h3 class="asp-card__title">Surfaces &amp; ink</h3>
+      <p class="asp-text">Primary ink on surface — should read crisply (AAA).</p>
+      <p class="asp-text asp-text--700">Secondary ink (700).</p>
+      <p class="asp-text asp-text--muted">Muted ink for small labels (AA).</p>
+      <div class="asp-row">
+        <span class="asp-swatch" style="background: var(--asp-bg)">bg</span>
+        <span class="asp-swatch" style="background: var(--asp-surface-2)">surf-2</span>
+        <span class="asp-swatch" style="background: var(--asp-surface-sunk)">sunk</span>
+        <span class="asp-swatch asp-swatch--line">line</span>
+      </div>
+    </section>
+
+    <section class="asp-card">
+      <h3 class="asp-card__title">Accent</h3>
+      <div class="asp-row">
+        <button type="button" class="asp-btn asp-btn--accent">Accent</button>
+        <button type="button" class="asp-btn asp-btn--soft">Soft</button>
+        <button type="button" class="asp-btn asp-btn--ghost asp-focus">Focus ring</button>
+      </div>
+      <div class="asp-row">
+        <span class="asp-pill asp-pill--success">success</span>
+        <span class="asp-pill asp-pill--warning">warning</span>
+        <span class="asp-pill asp-pill--error">error</span>
+      </div>
+    </section>
+  </div>
+</div>

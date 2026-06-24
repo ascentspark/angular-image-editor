@@ -2,8 +2,19 @@
  * Public API surface of @ascentspark/angular-image-editor
  *
  * Only symbols re-exported here are part of the package's semver contract.
- * Types, the dialog service, and additional components are added by later
- * phases (see docs/plans/00-master-plan.md).
+ * Additional components, the dialog service, and the tool types are added by
+ * later phases (see docs/plans/00-master-plan.md).
  */
 
 export { AspImageEditor } from './lib/ui/image-editor/image-editor';
+
+// Theming — derive and apply the editor's --asp-* palette from 3 inputs.
+export { deriveTheme, type AspThemeMode } from './lib/theme/derive-theme';
+export { applyTheme } from './lib/theme/apply-theme';
+export {
+  THEME_TOKEN_NAMES,
+  COLOR_TOKEN_NAMES,
+  STATIC_TOKEN_NAMES,
+  type AspThemeTokens,
+  type ThemeTokenName,
+} from './lib/theme/tokens';

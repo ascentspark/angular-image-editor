@@ -1,0 +1,149 @@
+:host {
+  display: block;
+  background: var(--asp-bg);
+  color: var(--asp-ink);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  border-radius: var(--asp-radius-lg);
+  overflow: hidden;
+}
+
+.asp-preview {
+  display: flex;
+  flex-direction: column;
+}
+
+.asp-preview__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: var(--asp-surface);
+  border-bottom: 1px solid var(--asp-line);
+}
+
+.asp-spacer {
+  flex: 1;
+}
+
+.asp-preview__title {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.asp-preview__muted {
+  font-size: 12px;
+  color: var(--asp-ink-muted);
+}
+
+.asp-preview__body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 16px;
+}
+
+.asp-card {
+  background: var(--asp-surface);
+  border: 1px solid var(--asp-line);
+  border-radius: var(--asp-radius-md);
+  padding: 16px;
+}
+
+.asp-card__title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.asp-text {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+.asp-text--700 {
+  color: var(--asp-ink-700);
+}
+.asp-text--muted {
+  color: var(--asp-ink-muted);
+  font-size: 12px;
+}
+
+.asp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.asp-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  height: 34px;
+  padding: 0 8px;
+  font-size: 11px;
+  color: var(--asp-ink-700);
+  border: 1px solid var(--asp-line);
+  border-radius: var(--asp-radius-sm);
+}
+.asp-swatch--line {
+  background: var(--asp-surface);
+  border-color: var(--asp-line-strong);
+  border-width: 2px;
+}
+
+.asp-btn {
+  height: var(--asp-ctl-h);
+  padding: 0 14px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: var(--asp-radius-sm);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.asp-btn--accent {
+  background: var(--asp-accent);
+  color: var(--asp-accent-ink);
+}
+.asp-btn--accent:hover {
+  background: var(--asp-accent-hover);
+}
+.asp-btn--soft {
+  background: var(--asp-accent-soft);
+  color: var(--asp-accent-soft-ink);
+}
+.asp-btn--ghost {
+  background: var(--asp-surface);
+  color: var(--asp-ink-700);
+  border-color: var(--asp-line-strong);
+  font-weight: 600;
+}
+.asp-focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--asp-ring);
+}
+
+.asp-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--asp-radius-pill);
+  color: #fff;
+}
+.asp-pill--success {
+  background: var(--asp-success);
+}
+.asp-pill--warning {
+  background: var(--asp-warning);
+}
+.asp-pill--error {
+  background: var(--asp-error);
+}
+
+@media (max-width: 560px) {
+  .asp-preview__body {
+    grid-template-columns: 1fr;
+  }
+}
