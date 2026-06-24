@@ -175,6 +175,13 @@ export class AspImageEditor implements OnDestroy {
   protected readonly annotationWidth = signal(4);
   protected readonly fontSize = signal(28);
   protected readonly fontFamily = signal(DEFAULT_FONTS[0].value);
+  protected readonly textBold = signal(false);
+  protected readonly textItalic = signal(false);
+  protected readonly textUnderline = signal(false);
+  protected readonly textStrike = signal(false);
+  protected readonly textAlign = signal('left');
+  protected readonly lineHeight = signal(1.16);
+  protected readonly letterSpacing = signal(0);
   /** Custom fonts added at runtime, merged after the host-provided list. */
   protected readonly customFonts = signal<FontOption[]>([]);
   protected readonly allFonts = computed<FontOption[]>(() => {
@@ -769,9 +776,61 @@ export class AspImageEditor implements OnDestroy {
     this.annotationColor.set(info.color);
     if (info.kind === 'text') {
       this.fontSize.set(Math.round(info.size));
+      if (info.textStyle) {
+        this.textBold.set(info.textStyle.bold);
+        this.textItalic.set(info.textStyle.italic);
+        this.textUnderline.set(info.textStyle.underline);
+        this.textStrike.set(info.textStyle.strike);
+        this.textAlign.set(info.textStyle.align);
+      }
     } else {
       this.annotationWidth.set(Math.round(info.size));
     }
+  }
+
+  // ---- rich text ----
+  protected toggleBold(): void {
+    const v = !this.textBold();
+    this.textBold.set(v);
+    this.engine?.applyTextStyle({ fontWeight: v ? 'bold' : 'normal' });
+    this.sync();
+  }
+  protected toggleItalic(): void {
+    const v = !this.textItalic();
+    this.textItalic.set(v);
+    this.engine?.applyTextStyle({ fontStyle: v ? 'italic' : 'normal' });
+    this.sync();
+  }
+  protected toggleUnderline(): void {
+    const v = !this.textUnderline();
+    this.textUnderline.set(v);
+    this.engine?.applyTextStyle({ underline: v });
+    this.sync();
+  }
+  protected toggleStrike(): void {
+    const v = !this.textStrike();
+    this.textStrike.set(v);
+    this.engine?.applyTextStyle({ linethrough: v });
+    this.sync();
+  }
+  protected setTextAlign(align: string): void {
+    this.textAlign.set(align);
+    this.engine?.applyTextStyle({ textAlign: align });
+    this.sync();
+  }
+  protected setLineHeight(value: number): void {
+    this.lineHeight.set(value);
+    this.engine?.applyTextStyle({ lineHeight: value });
+    this.sync();
+  }
+  protected setLetterSpacing(value: number): void {
+    this.letterSpacing.set(value);
+    this.engine?.applyTextStyle({ charSpacing: value });
+    this.sync();
+  }
+  protected setTextBg(color: string): void {
+    this.engine?.applyTextStyle({ textBackgroundColor: color === 'transparent' ? '' : color });
+    this.sync();
   }
 
   protected setRedactMode(mode: RedactMode): void {

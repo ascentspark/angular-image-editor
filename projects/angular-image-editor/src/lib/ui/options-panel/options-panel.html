@@ -178,6 +178,50 @@
               </div>
             </div>
           }
+
+          <div class="asp-btn-row">
+            <button type="button" class="asp-icon-btn" [class.asp-icon-btn--on]="textBold()" title="Bold" (click)="toggleBold.emit()">
+              <asp-icon name="bold" [size]="16" />
+            </button>
+            <button type="button" class="asp-icon-btn" [class.asp-icon-btn--on]="textItalic()" title="Italic" (click)="toggleItalic.emit()">
+              <asp-icon name="italic" [size]="16" />
+            </button>
+            <button type="button" class="asp-icon-btn" [class.asp-icon-btn--on]="textUnderline()" title="Underline" (click)="toggleUnderline.emit()">
+              <asp-icon name="underline" [size]="16" />
+            </button>
+            <button type="button" class="asp-icon-btn" [class.asp-icon-btn--on]="textStrike()" title="Strikethrough" (click)="toggleStrike.emit()">
+              <asp-icon name="strikethrough" [size]="16" />
+            </button>
+          </div>
+          <div class="asp-btn-row">
+            <button type="button" class="asp-icon-btn" [class.asp-icon-btn--on]="textAlign() === 'left'" title="Align left" (click)="textAlignChange.emit('left')">
+              <asp-icon name="align-left" [size]="16" />
+            </button>
+            <button type="button" class="asp-icon-btn" [class.asp-icon-btn--on]="textAlign() === 'center'" title="Align center" (click)="textAlignChange.emit('center')">
+              <asp-icon name="align-center" [size]="16" />
+            </button>
+            <button type="button" class="asp-icon-btn" [class.asp-icon-btn--on]="textAlign() === 'right'" title="Align right" (click)="textAlignChange.emit('right')">
+              <asp-icon name="align-right" [size]="16" />
+            </button>
+          </div>
+          <div>
+            <div class="asp-field-row">
+              <span class="asp-field-label">Line height</span>
+              <span class="asp-field-value">{{ lineHeight().toFixed(2) }}</span>
+            </div>
+            <input type="range" class="asp-range" min="80" max="300" [value]="lineHeight() * 100" (input)="onLineHeight($event)" aria-label="Line height" />
+          </div>
+          <div>
+            <div class="asp-field-row">
+              <span class="asp-field-label">Letter spacing</span>
+              <span class="asp-field-value">{{ letterSpacing() }}</span>
+            </div>
+            <input type="range" class="asp-range" min="-50" max="800" [value]="letterSpacing()" (input)="onLetterSpacing($event)" aria-label="Letter spacing" />
+          </div>
+          <div>
+            <span class="asp-field-label">Text background</span>
+            <asp-color-field class="asp-mt" [colors]="fillColors" [value]="''" (colorChange)="textBgChange.emit($event)" />
+          </div>
         }
 
         <div>

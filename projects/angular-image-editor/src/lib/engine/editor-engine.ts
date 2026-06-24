@@ -51,12 +51,23 @@ export interface TextStyle {
   readonly fontFamily?: string;
 }
 
+/** Rich-text attributes of the selected text, for the Text panel toggles. */
+export interface TextStyleInfo {
+  readonly bold: boolean;
+  readonly italic: boolean;
+  readonly underline: boolean;
+  readonly strike: boolean;
+  readonly align: string;
+}
+
 /** Editable style of the current selection, surfaced to the host UI. */
 export interface SelectionStyleInfo {
   /** `'text'` → color is fill + size is fontSize; `'stroke'` → color is stroke + size is strokeWidth. */
   readonly kind: 'text' | 'stroke';
   readonly color: string;
   readonly size: number;
+  /** Present when a single text object is selected. */
+  readonly textStyle?: TextStyleInfo;
 }
 
 /** One entry in the layers panel (top of the z-stack first). */
@@ -190,10 +201,19 @@ export class EditorEngine {
     if (object.isType('textbox', 'i-text', 'text')) {
       const fill = object.get('fill');
       const fontSize = object.get('fontSize');
+      const weight = object.get('fontWeight');
+      const align = object.get('textAlign');
       return {
         kind: 'text',
         color: typeof fill === 'string' ? fill : '#000000',
         size: typeof fontSize === 'number' ? fontSize : 24,
+        textStyle: {
+          bold: weight === 'bold' || weight === 700,
+          italic: object.get('fontStyle') === 'italic',
+          underline: object.get('underline') === true,
+          strike: object.get('linethrough') === true,
+          align: typeof align === 'string' ? align : 'left',
+        },
       };
     }
     let target = object;
@@ -791,6 +811,25 @@ export class EditorEngine {
       brush.width = style.strokeWidth;
     }
     this.canvas.freeDrawingBrush = brush;
+  }
+
+  /** Apply rich-text attributes (weight/style/underline/align/spacing/bg) to the active text. */
+  applyTextStyle(props: Record<string, string | number | boolean>, commit = true): boolean {
+    const active = this.canvas
+      .getActiveObjects()
+      .filter((o) => o.isType('textbox', 'i-text', 'text'));
+    if (active.length === 0) {
+      return false;
+    }
+    for (const object of active) {
+      object.set(props);
+    }
+    this.canvas.requestRenderAll();
+    if (commit) {
+      this.commit('Text style');
+    }
+    this.notifySelection();
+    return true;
   }
 
   /** Set the fill of the active non-text object(s) (`'transparent'` clears it). */

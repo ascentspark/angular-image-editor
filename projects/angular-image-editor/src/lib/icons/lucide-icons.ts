@@ -1,15 +1,19 @@
 /**
  * Inline Lucide icon paths (ISC license, lucide-static v1.21.0).
  *
- * Only the 51 icons the editor actually uses are baked in, so there is no
+ * Only the 58 icons the editor actually uses are baked in, so there is no
  * runtime icon dependency or network fetch — the bundle stays light and the
  * exact design icons are used (never a generic substitute). Each value is the
  * inner markup of a 24×24 \`viewBox\`, stroke \`currentColor\`; rendered by AspIcon.
  */
 
 export const LUCIDE_ICONS: Readonly<Record<string, string>> = {
+  'align-center': '<path d="M21 5H3" /><path d="M17 12H7" /><path d="M19 19H5" />',
   'align-horizontal-distribute-center': '<rect width="6" height="14" x="4" y="5" rx="2" /><rect width="6" height="10" x="14" y="7" rx="2" /><path d="M17 22v-5" /><path d="M17 7V2" /><path d="M7 22v-3" /><path d="M7 5V2" />',
+  'align-left': '<path d="M21 5H3" /><path d="M15 12H3" /><path d="M17 19H3" />',
+  'align-right': '<path d="M21 5H3" /><path d="M21 12H9" /><path d="M21 19H7" />',
   'arrow-up-right': '<path d="M7 7h10v10" /><path d="M7 17 17 7" />',
+  'bold': '<path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8" />',
   'check': '<path d="M20 6 9 17l-5-5" />',
   'chevron-down': '<path d="m6 9 6 6 6-6" />',
   'chevron-up': '<path d="m18 15-6-6-6 6" />',
@@ -34,6 +38,7 @@ export const LUCIDE_ICONS: Readonly<Record<string, string>> = {
   'image-plus': '<path d="M16 5h6" /><path d="M19 2v6" /><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /><circle cx="9" cy="9" r="2" />',
   'image': '<rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />',
   'info': '<circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />',
+  'italic': '<line x1="19" x2="10" y1="4" y2="4" /><line x1="14" x2="5" y1="20" y2="20" /><line x1="15" x2="9" y1="4" y2="20" />',
   'layers': '<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" /><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" /><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" />',
   'lock-open': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" />',
   'lock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />',
@@ -53,9 +58,11 @@ export const LUCIDE_ICONS: Readonly<Record<string, string>> = {
   'square': '<rect width="18" height="18" x="3" y="3" rx="2" />',
   'star': '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" />',
   'sticker': '<path d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z" /><path d="M15 3v5a1 1 0 0 0 1 1h5" /><path d="M8 13h.01" /><path d="M16 13h.01" /><path d="M10 16s.8 1 2 1c1.3 0 2-1 2-1" />',
+  'strikethrough': '<path d="M16 4H9a3 3 0 0 0-2.83 4" /><path d="M14 12a4 4 0 0 1 0 8H6" /><line x1="4" x2="20" y1="12" y2="12" />',
   'trash-2': '<path d="M10 11v6" /><path d="M14 11v6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />',
   'triangle': '<path d="M13.73 4a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />',
   'type': '<path d="M12 4v16" /><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2" /><path d="M9 20h6" />',
+  'underline': '<path d="M6 4v6a6 6 0 0 0 12 0V4" /><line x1="4" x2="20" y1="20" y2="20" />',
   'undo-2': '<path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" />',
   'upload': '<path d="M12 3v12" /><path d="m17 8-5-5-5 5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />',
   'x': '<path d="M18 6 6 18" /><path d="m6 6 12 12" />',

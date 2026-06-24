@@ -258,6 +258,12 @@
 .asp-icon-btn:hover {
   background: var(--asp-surface-sunk);
 }
+.asp-icon-btn--on,
+.asp-icon-btn--on:hover {
+  background: var(--asp-accent-soft);
+  color: var(--asp-accent-soft-ink);
+  border-color: var(--asp-accent);
+}
 
 /* text add */
 .asp-text-add {

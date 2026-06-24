@@ -104,6 +104,13 @@ export class AspOptionsPanel {
   readonly fontSize = input<number>(28);
   readonly fonts = input<readonly FontOption[]>([]);
   readonly activeFont = input<string>('');
+  readonly textBold = input<boolean>(false);
+  readonly textItalic = input<boolean>(false);
+  readonly textUnderline = input<boolean>(false);
+  readonly textStrike = input<boolean>(false);
+  readonly textAlign = input<string>('left');
+  readonly lineHeight = input<number>(1.16);
+  readonly letterSpacing = input<number>(0);
   readonly redactMode = input<RedactMode>('pixelate');
 
   readonly frameOptions = input<readonly FrameOption[]>(FRAME_OPTIONS);
@@ -124,6 +131,14 @@ export class AspOptionsPanel {
   readonly fontChange = output<string>();
   /** Add + apply a custom Google font family by name. */
   readonly addFont = output<string>();
+  readonly toggleBold = output<void>();
+  readonly toggleItalic = output<void>();
+  readonly toggleUnderline = output<void>();
+  readonly toggleStrike = output<void>();
+  readonly textAlignChange = output<string>();
+  readonly lineHeightChange = output<number>();
+  readonly letterSpacingChange = output<number>();
+  readonly textBgChange = output<string>();
   readonly redactModeChange = output<RedactMode>();
   readonly applyRedaction = output<void>();
   readonly annotationColorChange = output<string>();
@@ -248,6 +263,14 @@ export class AspOptionsPanel {
 
   protected onFontChange(event: Event): void {
     this.fontChange.emit((event.target as HTMLSelectElement).value);
+  }
+
+  protected onLineHeight(event: Event): void {
+    this.lineHeightChange.emit(Number((event.target as HTMLInputElement).value) / 100);
+  }
+
+  protected onLetterSpacing(event: Event): void {
+    this.letterSpacingChange.emit(Number((event.target as HTMLInputElement).value));
   }
 
   protected onBackgroundImage(event: Event): void {
