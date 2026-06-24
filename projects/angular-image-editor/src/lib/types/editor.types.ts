@@ -66,8 +66,8 @@ export const ALL_FILTERS = [
 
 export type AspFilter = (typeof ALL_FILTERS)[number];
 
-/** Export formats. `json` serializes the re-editable Fabric scene. */
-export type AspExportFormat = 'png' | 'jpeg' | 'webp' | 'svg' | 'json';
+/** Export formats. `json` serializes the re-editable Fabric scene; `pdf` embeds a raster. */
+export type AspExportFormat = 'png' | 'jpeg' | 'webp' | 'svg' | 'json' | 'pdf';
 
 /** A structured error surfaced via the `errorOccurred` output. */
 export interface AspEditorError {

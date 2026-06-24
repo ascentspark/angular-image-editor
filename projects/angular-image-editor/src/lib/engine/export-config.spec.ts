@@ -29,6 +29,13 @@ describe('resolveExport', () => {
     });
   });
 
+  it('treats pdf as a pdf export with raster-style quality', () => {
+    const r = resolveExport('pdf', 80, ['png', 'pdf']);
+    expect(r.kind).toBe('pdf');
+    expect(r.mimeType).toBe('application/pdf');
+    expect(r.quality).toBeCloseTo(0.8, 5);
+  });
+
   it('treats json as a serialized-scene export', () => {
     const r = resolveExport('json', 50, ['png', 'json']);
     expect(r.kind).toBe('json');

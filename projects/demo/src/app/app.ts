@@ -4,6 +4,7 @@ import {
   AspImageEditorDialog,
   aspectOption,
   type AspAspectOption,
+  type AspExportFormat,
   type AspMode,
   type AspThemeMode,
   type AspTool,
@@ -35,6 +36,7 @@ export class App {
   ];
 
   protected readonly editorModes: readonly AspMode[] = ['viewer', 'basic', 'advanced', 'full'];
+  protected readonly allFormats: AspExportFormat[] = ['png', 'jpeg', 'webp', 'svg', 'pdf', 'json'];
 
   // CMS-style custom crop targets, built from exact pixel dimensions.
   protected readonly cmsAspects: AspAspectOption[] = [

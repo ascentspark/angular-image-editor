@@ -1311,12 +1311,30 @@ export class EditorEngine {
     if (cfg.kind === 'vector') {
       return new Blob([this.canvas.toSVG()], { type: cfg.mimeType });
     }
+    if (cfg.kind === 'pdf') {
+      return this.exportPdf(cfg.quality);
+    }
     const dataUrl = this.canvas.toDataURL({
       format: cfg.format === 'jpeg' ? 'jpeg' : cfg.format === 'webp' ? 'webp' : 'png',
       quality: cfg.quality,
       multiplier: 1,
     });
     return dataUrlToBlob(dataUrl);
+  }
+
+  /** Render the canvas into a single-page PDF sized to the canvas (jspdf lazy-loaded). */
+  private async exportPdf(quality: number): Promise<Blob> {
+    const width = this.canvas.getWidth();
+    const height = this.canvas.getHeight();
+    const dataUrl = this.canvas.toDataURL({ format: 'jpeg', quality, multiplier: 1 });
+    const { jsPDF } = await import('jspdf');
+    const pdf = new jsPDF({
+      orientation: width >= height ? 'landscape' : 'portrait',
+      unit: 'px',
+      format: [width, height],
+    });
+    pdf.addImage(dataUrl, 'JPEG', 0, 0, width, height);
+    return pdf.output('blob');
   }
 
   /** Pixel data of the current canvas, or null if no rendering context. */

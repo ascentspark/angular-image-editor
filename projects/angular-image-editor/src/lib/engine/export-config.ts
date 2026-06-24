@@ -8,7 +8,7 @@
 
 import type { AspExportFormat } from '../types/editor.types';
 
-export type ExportKind = 'raster' | 'vector' | 'json';
+export type ExportKind = 'raster' | 'vector' | 'json' | 'pdf';
 
 export interface ResolvedExport {
   readonly format: AspExportFormat;
@@ -24,6 +24,7 @@ const MIME: Record<AspExportFormat, string> = {
   webp: 'image/webp',
   svg: 'image/svg+xml',
   json: 'application/json',
+  pdf: 'application/pdf',
 };
 
 const KIND: Record<AspExportFormat, ExportKind> = {
@@ -32,6 +33,7 @@ const KIND: Record<AspExportFormat, ExportKind> = {
   webp: 'raster',
   svg: 'vector',
   json: 'json',
+  pdf: 'pdf',
 };
 
 const clamp = (v: number, min: number, max: number): number =>
@@ -49,7 +51,7 @@ export function resolveExport(
 ): ResolvedExport {
   const resolvedFormat = allowed.includes(format) ? format : (allowed[0] ?? 'png');
   const kind = KIND[resolvedFormat];
-  const quality = kind === 'raster' ? clamp(qualityPct, 10, 100) / 100 : 1;
+  const quality = kind === 'raster' || kind === 'pdf' ? clamp(qualityPct, 10, 100) / 100 : 1;
   return {
     format: resolvedFormat,
     mimeType: MIME[resolvedFormat],
