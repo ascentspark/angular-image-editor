@@ -368,10 +368,8 @@ export class AspImageEditor implements OnDestroy {
         event.preventDefault();
         void this.engine?.copy();
         break;
-      case 'v':
-        event.preventDefault();
-        void this.engine?.paste().then(() => this.sync());
-        break;
+      // Paste (Ctrl/Cmd+V) is handled by the `paste` event so OS-clipboard
+      // images can be detected; do not preventDefault here.
       case 'd':
         event.preventDefault();
         void this.engine?.duplicateActive().then(() => this.sync());
@@ -389,6 +387,29 @@ export class AspImageEditor implements OnDestroy {
   protected onKeyup(event: KeyboardEvent): void {
     if (event.key === ' ') {
       this.engine?.setPanMode(false);
+    }
+  }
+
+  @HostListener('document:paste', ['$event'])
+  protected onPaste(event: ClipboardEvent): void {
+    if (!this.keyboardEnabled() || !this.pointerInside || isTypingTarget(event.target)) {
+      return;
+    }
+    let imageFile: File | null = null;
+    const items = event.clipboardData?.items;
+    if (items) {
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          imageFile = item.getAsFile();
+          break;
+        }
+      }
+    }
+    event.preventDefault();
+    if (imageFile) {
+      void this.engine?.addImageObject(imageFile).then(() => this.sync());
+    } else {
+      void this.engine?.paste().then(() => this.sync());
     }
   }
 

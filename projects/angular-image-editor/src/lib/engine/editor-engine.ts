@@ -932,6 +932,30 @@ export class EditorEngine {
     this.addClones(clones, 'Paste');
   }
 
+  /** Add an image (e.g. pasted from the OS clipboard) as a movable object. */
+  async addImageObject(src: string | Blob): Promise<void> {
+    const raw = typeof src === 'string' ? src : await blobToDataUrl(src);
+    const url = raw.startsWith('data:') ? await downscaleDataUrl(raw, MAX_IMPORT_DIM) : raw;
+    const image = await this.fabric.FabricImage.fromURL(url, {}, {});
+    const cw = this.canvas.getWidth();
+    const ch = this.canvas.getHeight();
+    const scale = Math.min(1, (cw * 0.6) / (image.width || 1), (ch * 0.6) / (image.height || 1));
+    image.set({
+      left: cw / 2,
+      top: ch / 2,
+      originX: 'center',
+      originY: 'center',
+      scaleX: scale,
+      scaleY: scale,
+    });
+    image.set('aspId', this.nextId());
+    this.canvas.add(image);
+    this.canvas.setActiveObject(image);
+    this.canvas.requestRenderAll();
+    this.commit('Paste image');
+    this.notifySelection();
+  }
+
   /** Duplicate the current selection in place (offset). */
   async duplicateActive(): Promise<void> {
     const active = this.canvas.getActiveObjects();
