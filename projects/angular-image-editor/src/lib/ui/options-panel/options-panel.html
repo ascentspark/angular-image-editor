@@ -237,13 +237,35 @@
         }
 
         @if (isRedact()) {
-          <div class="asp-btn-row">
-            <button type="button" class="asp-chip" (click)="addRedaction.emit('blur')">Blur</button>
-            <button type="button" class="asp-chip" (click)="addRedaction.emit('pixelate')">Pixelate</button>
-            <button type="button" class="asp-chip asp-chip--active" (click)="addRedaction.emit('solid')">
+          <div class="asp-chip-row">
+            <button
+              type="button"
+              class="asp-chip"
+              [class.asp-chip--active]="redactMode() === 'blur'"
+              (click)="redactModeChange.emit('blur')"
+            >
+              Blur
+            </button>
+            <button
+              type="button"
+              class="asp-chip"
+              [class.asp-chip--active]="redactMode() === 'pixelate'"
+              (click)="redactModeChange.emit('pixelate')"
+            >
+              Pixelate
+            </button>
+            <button
+              type="button"
+              class="asp-chip"
+              [class.asp-chip--active]="redactMode() === 'solid'"
+              (click)="redactModeChange.emit('solid')"
+            >
               Solid
             </button>
           </div>
+          <button type="button" class="asp-btn-accent asp-redact-apply" (click)="applyRedaction.emit()">
+            Apply redaction
+          </button>
         }
 
         <p class="asp-hint">

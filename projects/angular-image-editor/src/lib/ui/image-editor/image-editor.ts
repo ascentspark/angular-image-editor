@@ -18,6 +18,7 @@ import {
 import {
   EditorEngine,
   type LayerInfo,
+  type RedactMode,
   type SelectionStyleInfo,
   type ShapeKind,
 } from '../../engine/editor-engine';
@@ -43,7 +44,6 @@ import {
   AspOptionsPanel,
   FRAME_OPTIONS,
   type AdjustChange,
-  type RedactMode,
 } from '../options-panel/options-panel';
 import { AspLayerList } from '../layers/layer-list';
 import { AspToolRail } from '../rail/tool-rail';
@@ -184,6 +184,8 @@ export class AspImageEditor implements OnDestroy {
   });
   protected readonly hasSelection = signal(false);
   protected readonly activeFrame = signal('none');
+  protected readonly redactMode = signal<RedactMode>('pixelate');
+  private redactActive = false;
 
   protected readonly layers = signal<LayerInfo[]>([]);
 
@@ -280,7 +282,21 @@ export class AspImageEditor implements OnDestroy {
         return;
       }
       const drawing = tool === 'pen' || tool === 'highlighter' || tool === 'eraser';
-      this.engine.setFreeDraw(drawing, { color, strokeWidth: width });
+      this.engine.setFreeDraw(drawing, { color, strokeWidth: width }, tool === 'highlighter');
+    });
+
+    // Redact tool shows a positioning marquee; leaving it discards an unapplied one.
+    effect(() => {
+      const isRedact = this.activeTool() === 'redact' && this.engineReady();
+      untracked(() => {
+        if (isRedact && !this.redactActive) {
+          this.engine?.addRedactionMarquee();
+          this.redactActive = true;
+        } else if (!isRedact && this.redactActive) {
+          this.engine?.cancelRedaction();
+          this.redactActive = false;
+        }
+      });
     });
   }
 
@@ -758,8 +774,16 @@ export class AspImageEditor implements OnDestroy {
     }
   }
 
-  protected addRedaction(mode: RedactMode): void {
-    void this.engine?.addRedaction(mode).then(() => this.sync());
+  protected setRedactMode(mode: RedactMode): void {
+    this.redactMode.set(mode);
+  }
+
+  protected applyRedaction(): void {
+    void this.engine?.applyRedaction(this.redactMode()).then(() => {
+      // The marquee is consumed; place a fresh one for the next redaction.
+      this.engine?.addRedactionMarquee();
+      this.sync();
+    });
   }
 
   protected setFill(color: string): void {

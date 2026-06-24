@@ -554,64 +554,6 @@ export class EditorEngine {
   }
 
   /**
-   * Add a redaction over the canvas center. `solid` lays an opaque box; `blur`
-   * and `pixelate` overlay a filtered copy of the underlying image clipped to
-   * the region, so the concealed content is genuinely destroyed in the export.
-   */
-  async addRedaction(mode: RedactMode): Promise<void> {
-    const cx = this.canvas.getWidth() / 2;
-    const cy = this.canvas.getHeight() / 2;
-    const width = 180;
-    const height = 80;
-
-    if (mode === 'solid' || !this.baseImage) {
-      const rect = new this.fabric.Rect({
-        left: cx,
-        top: cy,
-        originX: 'center',
-        originY: 'center',
-        width,
-        height,
-        fill: '#0b0f1a',
-      });
-      rect.set('aspId', this.nextId());
-      this.canvas.add(rect);
-      this.canvas.setActiveObject(rect);
-      this.canvas.requestRenderAll();
-      this.commit('Redact');
-      return;
-    }
-
-    const overlay = await this.baseImage.clone();
-    overlay.set({ selectable: false, evented: false });
-    overlay.set('aspRole', 'redaction');
-    overlay.set('aspId', this.nextId());
-    overlay.filters = [
-      mode === 'blur'
-        ? new this.fabric.filters.Blur({ blur: 0.35 })
-        : new this.fabric.filters.Pixelate({ blocksize: 14 }),
-    ];
-    overlay.applyFilters();
-    overlay.clipPath = new this.fabric.Rect({
-      left: cx,
-      top: cy,
-      originX: 'center',
-      originY: 'center',
-      width,
-      height,
-      absolutePositioned: true,
-    });
-    this.canvas.add(overlay);
-    this.canvas.requestRenderAll();
-    this.commit('Redact');
-  }
-
-  /** Backwards-compatible solid redaction helper. */
-  addRedactionBox(): void {
-    void this.addRedaction('solid');
-  }
-
-  /**
    * Add a movable/resizable redaction marquee the user positions over the area
    * to conceal. Transient (not committed) until {@link applyRedaction} bakes it.
    */

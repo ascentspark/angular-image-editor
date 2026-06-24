@@ -288,6 +288,11 @@
   background: var(--asp-accent-hover);
 }
 
+.asp-redact-apply {
+  width: 100%;
+  justify-content: center;
+}
+
 .asp-select {
   width: 100%;
   margin-top: 6px;

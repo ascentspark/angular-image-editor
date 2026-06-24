@@ -104,6 +104,7 @@ export class AspOptionsPanel {
   readonly fontSize = input<number>(28);
   readonly fonts = input<readonly FontOption[]>([]);
   readonly activeFont = input<string>('');
+  readonly redactMode = input<RedactMode>('pixelate');
 
   readonly frameOptions = input<readonly FrameOption[]>(FRAME_OPTIONS);
   readonly activeFrame = input<string>('none');
@@ -123,7 +124,8 @@ export class AspOptionsPanel {
   readonly fontChange = output<string>();
   /** Add + apply a custom Google font family by name. */
   readonly addFont = output<string>();
-  readonly addRedaction = output<RedactMode>();
+  readonly redactModeChange = output<RedactMode>();
+  readonly applyRedaction = output<void>();
   readonly annotationColorChange = output<string>();
   /** Live size change (slider drag) — apply without committing history. */
   readonly sizeInput = output<number>();
