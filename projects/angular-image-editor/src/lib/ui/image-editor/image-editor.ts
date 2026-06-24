@@ -838,6 +838,10 @@ export class AspImageEditor implements OnDestroy {
     this.sync();
   }
 
+  protected setBackgroundImageFromFile(file: File): void {
+    void this.engine?.setBackgroundImage(file).then(() => this.sync());
+  }
+
   protected deleteSelection(): void {
     this.engine?.deleteActive();
     this.sync();

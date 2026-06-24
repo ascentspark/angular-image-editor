@@ -727,6 +727,7 @@ export class EditorEngine {
    * the checkerboard). Fabric serializes `backgroundColor`, so it survives undo.
    */
   setBackground(color: string): void {
+    this.canvas.backgroundImage = undefined;
     this.canvas.backgroundColor = color === 'transparent' ? '' : color;
     this.canvas.requestRenderAll();
     this.commit('Background');
@@ -738,6 +739,7 @@ export class EditorEngine {
       offset: colors.length === 1 ? 0 : index / (colors.length - 1),
       color,
     }));
+    this.canvas.backgroundImage = undefined;
     this.canvas.backgroundColor = new this.fabric.Gradient({
       type: 'linear',
       gradientUnits: 'pixels',
@@ -746,6 +748,20 @@ export class EditorEngine {
     });
     this.canvas.requestRenderAll();
     this.commit('Background');
+  }
+
+  /** Set an uploaded image as the canvas background, scaled to cover. */
+  async setBackgroundImage(src: string | Blob): Promise<void> {
+    const raw = typeof src === 'string' ? src : await blobToDataUrl(src);
+    const url = raw.startsWith('data:') ? await downscaleDataUrl(raw, MAX_IMPORT_DIM) : raw;
+    const image = await this.fabric.FabricImage.fromURL(url, {}, {});
+    const cw = this.canvas.getWidth();
+    const ch = this.canvas.getHeight();
+    const scale = Math.max(cw / (image.width || 1), ch / (image.height || 1));
+    image.set({ originX: 'left', originY: 'top', left: 0, top: 0, scaleX: scale, scaleY: scale });
+    this.canvas.backgroundImage = image;
+    this.canvas.requestRenderAll();
+    this.commit('Background image');
   }
 
   /** Remove every canvas object tagged with the given `aspRole`. */

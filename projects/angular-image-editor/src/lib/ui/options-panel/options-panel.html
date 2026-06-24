@@ -344,6 +344,13 @@
             }
           </div>
         </div>
+        <div>
+          <div class="asp-section-label">Image</div>
+          <label class="asp-upload">
+            <asp-icon name="image-plus" [size]="15" /> Upload background image
+            <input type="file" accept="image/*" (change)="onBackgroundImage($event)" />
+          </label>
+        </div>
       </div>
     }
 

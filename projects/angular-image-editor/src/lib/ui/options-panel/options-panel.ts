@@ -138,6 +138,7 @@ export class AspOptionsPanel {
   readonly fillChange = output<string>();
   readonly setBackgroundColor = output<string>();
   readonly setBackgroundGradient = output<string[]>();
+  readonly setBackgroundImageFile = output<File>();
 
   protected readonly colors = ANNOTATION_COLORS;
   /** Shape-fill swatches — includes transparent (no fill). */
@@ -247,6 +248,15 @@ export class AspOptionsPanel {
 
   protected onFontChange(event: Event): void {
     this.fontChange.emit((event.target as HTMLSelectElement).value);
+  }
+
+  protected onBackgroundImage(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) {
+      this.setBackgroundImageFile.emit(file);
+    }
+    input.value = '';
   }
 
   protected onSizeInput(event: Event): void {

@@ -370,6 +370,31 @@
   justify-content: center;
 }
 
+.asp-upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: var(--asp-ctl-h);
+  border: 1px dashed var(--asp-line-strong);
+  border-radius: var(--asp-radius-sm);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--asp-ink-700);
+  position: relative;
+}
+.asp-upload:hover {
+  border-color: var(--asp-accent);
+  color: var(--asp-accent);
+}
+.asp-upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .asp-hint {
   font-size: 11.5px;
   color: var(--asp-ink-muted);
