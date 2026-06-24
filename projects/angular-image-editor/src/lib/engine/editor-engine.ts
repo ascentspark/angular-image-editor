@@ -41,6 +41,16 @@ export interface TextStyle {
   readonly fontFamily?: string;
 }
 
+/** Full serialized editor state stored in each history entry. */
+interface EditorSnapshot {
+  json: Record<string, unknown>;
+  rotation: number;
+  straighten: number;
+  adjustments: Record<AspFilter, number>;
+  looks: AspFilter[];
+  frame: string;
+}
+
 const ZOOM_MIN = 25;
 const ZOOM_MAX = 400;
 const FIT_PADDING = 0.92;
@@ -67,7 +77,8 @@ export class EditorEngine {
   private straighten = 0; // -45..45
   private zoomPct = 100;
   private adjustments: Record<AspFilter, number> = defaultAdjustments();
-  private readonly looks = new Set<AspFilter>();
+  private looks = new Set<AspFilter>();
+  private frame = 'none';
 
   private constructor(fabric: FabricModule, canvas: Fabric.Canvas) {
     this.fabric = fabric;
@@ -90,34 +101,30 @@ export class EditorEngine {
 
   // ---- image loading -------------------------------------------------------
 
-  /** Load an image from a URL or Blob, fit it to the canvas, and reset history. */
+  /**
+   * Load an image from a URL or Blob, fit it to the canvas, and reset history.
+   *
+   * A Blob is first read into a data URL so the image's serialized `src` survives
+   * in history snapshots (a transient object URL would be revoked and break undo).
+   */
   async loadImage(src: string | Blob): Promise<void> {
-    const isBlob = typeof src !== 'string';
-    const url = isBlob ? URL.createObjectURL(src) : src;
-    try {
-      const image = await this.fabric.FabricImage.fromURL(
-        url,
-        { crossOrigin: 'anonymous' },
-        {},
-      );
-      this.canvas.remove(...this.canvas.getObjects());
-      this.baseImage = image;
-      this.rotation = 0;
-      this.straighten = 0;
-      this.zoomPct = 100;
-      this.adjustments = defaultAdjustments();
-      this.looks.clear();
-      image.set({ selectable: false, evented: false, hasControls: false });
-      this.fitBaseImage();
-      this.canvas.add(image);
-      this.canvas.setZoom(1);
-      this.canvas.requestRenderAll();
-      this.history.reset('Opened image', this.snapshot());
-    } finally {
-      if (isBlob) {
-        URL.revokeObjectURL(url);
-      }
-    }
+    const url = typeof src === 'string' ? src : await blobToDataUrl(src);
+    const loadOptions = typeof src === 'string' ? { crossOrigin: 'anonymous' as const } : {};
+    const image = await this.fabric.FabricImage.fromURL(url, loadOptions, {});
+    this.canvas.remove(...this.canvas.getObjects());
+    this.baseImage = image;
+    this.rotation = 0;
+    this.straighten = 0;
+    this.zoomPct = 100;
+    this.adjustments = defaultAdjustments();
+    this.looks.clear();
+    this.frame = 'none';
+    image.set({ selectable: false, evented: false, hasControls: false });
+    this.fitBaseImage();
+    this.canvas.add(image);
+    this.canvas.setZoom(1);
+    this.canvas.requestRenderAll();
+    this.history.reset('Opened image', this.snapshot());
   }
 
   get hasImage(): boolean {
@@ -385,6 +392,7 @@ export class EditorEngine {
 
     const overlay = await this.baseImage.clone();
     overlay.set({ selectable: false, evented: false });
+    overlay.set('aspRole', 'redaction');
     overlay.filters = [
       mode === 'blur'
         ? new this.fabric.filters.Blur({ blur: 0.35 })
@@ -410,48 +418,50 @@ export class EditorEngine {
     void this.addRedaction('solid');
   }
 
-  private frameObject: Fabric.FabricObject | null = null;
-
   /**
    * Apply a decorative frame around the image. Each style maps to a distinct,
-   * real border rendering (none clears it). The frame is a non-interactive
-   * rectangle sized to the image's displayed bounds.
+   * real border rendering (`none` clears it). The frame is a non-interactive
+   * rectangle tagged with `aspRole: 'frame'` so it can be re-found and replaced
+   * even after a history restore rebuilds every canvas object.
    */
   applyFrame(style: string, color: string): void {
-    if (this.frameObject) {
-      this.canvas.remove(this.frameObject);
-      this.frameObject = null;
-    }
+    this.removeTagged('frame');
+    this.frame = style;
     const image = this.baseImage;
-    if (!image || style === 'none') {
-      this.canvas.requestRenderAll();
-      this.commit('Frame');
-      return;
+    if (image && style !== 'none') {
+      const width = (image.width ?? 0) * (image.scaleX ?? 1);
+      const height = (image.height ?? 0) * (image.scaleY ?? 1);
+      const spec = FRAME_STYLES[style] ?? FRAME_STYLES['line'];
+      const rect = new this.fabric.Rect({
+        left: image.left ?? this.canvas.getWidth() / 2,
+        top: image.top ?? this.canvas.getHeight() / 2,
+        originX: 'center',
+        originY: 'center',
+        width: width - spec.strokeWidth,
+        height: height - spec.strokeWidth,
+        fill: 'transparent',
+        stroke: spec.useColor ? color : spec.stroke,
+        strokeWidth: spec.strokeWidth,
+        strokeDashArray: spec.dash ? [...spec.dash] : null,
+        rx: spec.radius,
+        ry: spec.radius,
+        selectable: false,
+        evented: false,
+        strokeUniform: true,
+      });
+      rect.set('aspRole', 'frame');
+      this.canvas.add(rect);
     }
-    const width = (image.width ?? 0) * (image.scaleX ?? 1);
-    const height = (image.height ?? 0) * (image.scaleY ?? 1);
-    const spec = FRAME_STYLES[style] ?? FRAME_STYLES['line'];
-    const rect = new this.fabric.Rect({
-      left: image.left ?? this.canvas.getWidth() / 2,
-      top: image.top ?? this.canvas.getHeight() / 2,
-      originX: 'center',
-      originY: 'center',
-      width: width - spec.strokeWidth,
-      height: height - spec.strokeWidth,
-      fill: 'transparent',
-      stroke: spec.useColor ? color : spec.stroke,
-      strokeWidth: spec.strokeWidth,
-      strokeDashArray: spec.dash ? [...spec.dash] : null,
-      rx: spec.radius,
-      ry: spec.radius,
-      selectable: false,
-      evented: false,
-      strokeUniform: true,
-    });
-    this.frameObject = rect;
-    this.canvas.add(rect);
     this.canvas.requestRenderAll();
     this.commit('Frame');
+  }
+
+  /** Remove every canvas object tagged with the given `aspRole`. */
+  private removeTagged(role: string): void {
+    const tagged = this.canvas.getObjects().filter((o) => o.get('aspRole') === role);
+    if (tagged.length > 0) {
+      this.canvas.remove(...tagged);
+    }
   }
 
   /** Enable or disable freehand drawing. */
@@ -509,8 +519,21 @@ export class EditorEngine {
     }
   }
 
+  /**
+   * Serialize the full editor state — the Fabric scene PLUS the engine's own
+   * transform/adjustment/look/frame state — so a restore puts both back in sync
+   * (the canvas alone does not capture rotation buckets, slider values, etc).
+   */
   private snapshot(): string {
-    return JSON.stringify(this.canvas.toJSON());
+    const composite: EditorSnapshot = {
+      json: this.canvas.toObject(['aspRole']),
+      rotation: this.rotation,
+      straighten: this.straighten,
+      adjustments: { ...this.adjustments },
+      looks: [...this.looks],
+      frame: this.frame,
+    };
+    return JSON.stringify(composite);
   }
 
   private commit(label: string): void {
@@ -518,14 +541,20 @@ export class EditorEngine {
   }
 
   private async restore(state: string): Promise<void> {
-    await this.canvas.loadFromJSON(state);
+    const composite = JSON.parse(state) as EditorSnapshot;
+    await this.canvas.loadFromJSON(composite.json);
     this.baseImage = this.findBaseImage();
+    this.rotation = composite.rotation;
+    this.straighten = composite.straighten;
+    this.adjustments = { ...defaultAdjustments(), ...composite.adjustments };
+    this.looks = new Set(composite.looks);
+    this.frame = composite.frame;
     this.canvas.requestRenderAll();
   }
 
   private findBaseImage(): Fabric.FabricImage | null {
     for (const object of this.canvas.getObjects()) {
-      if (object.isType('image')) {
+      if (object.isType('image') && object.get('aspRole') !== 'redaction') {
         return object as Fabric.FabricImage;
       }
     }
@@ -536,12 +565,32 @@ export class EditorEngine {
   async reset(): Promise<void> {
     const first = this.history.entries[0];
     this.history.reset(first.label, first.state);
-    this.rotation = 0;
-    this.straighten = 0;
-    this.adjustments = defaultAdjustments();
-    this.looks.clear();
     this.resetView();
     await this.restore(first.state);
+  }
+
+  // ---- state accessors (for the host UI to resync after undo/redo/reset) ----
+
+  get rotationAngle(): number {
+    return this.rotation;
+  }
+
+  get straightenAngle(): number {
+    return this.straighten;
+  }
+
+  /** A copy of the current adjustment values. */
+  getAdjustments(): Record<AspFilter, number> {
+    return { ...this.adjustments };
+  }
+
+  /** The single active look (UI is single-select), or null. */
+  get activeLook(): AspFilter | null {
+    return this.looks.size === 1 ? [...this.looks][0] : null;
+  }
+
+  get activeFrame(): string {
+    return this.frame;
   }
 
   // ---- export --------------------------------------------------------------
@@ -604,6 +653,16 @@ const FRAME_STYLES: Record<string, FrameSpec> = {
   hook: { strokeWidth: 12, radius: 0, useColor: true, stroke: '#000000' },
   bead: { strokeWidth: 7, radius: 0, useColor: true, stroke: '#000000', dash: [2, 7] },
 };
+
+/** Read a Blob into a data URL (so it persists in serialized history). */
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read image blob'));
+    reader.readAsDataURL(blob);
+  });
+}
 
 /** Convert a data URL to a Blob without a network round-trip. */
 function dataUrlToBlob(dataUrl: string): Blob {

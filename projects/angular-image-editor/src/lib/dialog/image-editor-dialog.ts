@@ -78,11 +78,15 @@ export class AspImageEditorDialog {
       this.appRef.attachView(ref.hostView);
 
       let settled = false;
+      const subscriptions: { unsubscribe(): void }[] = [];
       const finish = (result: Blob | null): void => {
         if (settled) {
           return;
         }
         settled = true;
+        for (const sub of subscriptions) {
+          sub.unsubscribe();
+        }
         document.removeEventListener('keydown', onKeydown);
         this.appRef.detachView(ref.hostView);
         ref.destroy();
@@ -102,8 +106,8 @@ export class AspImageEditorDialog {
       });
       document.addEventListener('keydown', onKeydown);
 
-      ref.instance.saved.subscribe((blob: Blob) => finish(blob));
-      ref.instance.canceled.subscribe(() => finish(null));
+      subscriptions.push(ref.instance.saved.subscribe((blob: Blob) => finish(blob)));
+      subscriptions.push(ref.instance.canceled.subscribe(() => finish(null)));
     });
   }
 }

@@ -152,6 +152,24 @@ export class AspImageEditor implements OnDestroy {
     return 'workspace';
   });
 
+  /**
+   * The resolved theme. Invalid hex inputs are a developer error; rather than
+   * throwing and breaking the host app, we fall back to the default palette
+   * (keeping the requested mode) and warn once. Declared before the constructor
+   * so it is initialized before any effect that reads it.
+   */
+  private readonly theme = computed(() => {
+    try {
+      return deriveTheme(this.baseColor(), this.accentColor(), this.themeMode());
+    } catch (error) {
+      console.warn('[asp-image-editor] invalid theme color, using defaults:', error);
+      return deriveTheme(FALLBACK_BASE, FALLBACK_ACCENT, this.themeMode());
+    }
+  });
+
+  /** Serializes engine (re)binding/loading so concurrent effect fires can't race. */
+  private opChain: Promise<void> = Promise.resolve();
+
   constructor() {
     // Apply the derived theme to the host element whenever inputs change.
     effect(() => applyTheme(this.host.nativeElement, this.theme()));
@@ -188,7 +206,9 @@ export class AspImageEditor implements OnDestroy {
       if (!canvas || !stage) {
         return;
       }
-      void untracked(() => this.ensureEngineAndLoad(canvas, stage, src));
+      this.opChain = this.opChain
+        .catch(() => undefined)
+        .then(() => untracked(() => this.ensureEngineAndLoad(canvas, stage, src)));
     });
 
     // Free-draw follows the active tool + current brush settings.
@@ -203,15 +223,6 @@ export class AspImageEditor implements OnDestroy {
       this.engine.setFreeDraw(drawing, { color, strokeWidth: width });
     });
   }
-
-  private readonly theme = computed(() => {
-    try {
-      return deriveTheme(this.baseColor(), this.accentColor(), this.themeMode());
-    } catch (error) {
-      console.warn('[asp-image-editor] invalid theme color, using defaults:', error);
-      return deriveTheme(FALLBACK_BASE, FALLBACK_ACCENT, this.themeMode());
-    }
-  });
 
   ngOnDestroy(): void {
     this.resizeObserver?.disconnect();
@@ -292,11 +303,27 @@ export class AspImageEditor implements OnDestroy {
   protected async undo(): Promise<void> {
     await this.engine?.undo();
     this.sync();
+    this.syncUiFromEngine();
   }
 
   protected async redo(): Promise<void> {
     await this.engine?.redo();
     this.sync();
+    this.syncUiFromEngine();
+  }
+
+  /** Pull tool/adjustment/look/frame state from the engine into the panel signals. */
+  private syncUiFromEngine(): void {
+    const engine = this.engine;
+    if (!engine) {
+      return;
+    }
+    this.adjustments.set(engine.getAdjustments());
+    this.activeLook.set(engine.activeLook);
+    this.straighten.set(engine.straightenAngle);
+    this.activeFrame.set(engine.activeFrame);
+    // A crop's source aspect is not recoverable from the flattened scene.
+    this.activeCrop.set('free');
   }
 
   protected zoomIn(): void {
@@ -382,8 +409,8 @@ export class AspImageEditor implements OnDestroy {
   // ---- options panel handlers ----------------------------------------------
   protected reset(): void {
     void this.engine?.reset().then(() => {
-      this.resetUiState();
       this.sync();
+      this.syncUiFromEngine();
     });
   }
 
@@ -507,6 +534,9 @@ function triggerDownload(blob: Blob, filename: string): void {
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = filename;
+  document.body.appendChild(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+  anchor.remove();
+  // Defer revoke so browsers that initiate the download asynchronously can read it.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
