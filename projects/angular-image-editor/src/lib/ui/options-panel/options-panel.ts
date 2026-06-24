@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
 
 import { AspIcon } from '../../icons/asp-icon';
 import { AspColorField } from '../controls/color-field';
-import type { RedactMode, ShapeKind } from '../../engine/editor-engine';
+import type { ArtboardSize, RedactMode, ShapeKind } from '../../engine/editor-engine';
 import type { FilterMeta } from '../../registry/tool-registry';
 import type { AspAspectOption, AspAspectPreset, AspFilter, AspTool } from '../../types/editor.types';
 import type { FontOption } from '../image-editor/fonts';
@@ -41,6 +41,21 @@ export const BACKGROUND_COLORS: readonly string[] = [
   '#f4f6f9',
   '#1f6feb',
   '#0b0f1a',
+];
+
+/** A named artboard / output-size preset. */
+export interface ArtboardPreset {
+  readonly label: string;
+  readonly size: ArtboardSize;
+}
+
+/** Common social / CMS output sizes offered in the Canvas panel. */
+export const ARTBOARD_PRESETS: readonly ArtboardPreset[] = [
+  { label: 'Square 1080', size: { width: 1080, height: 1080 } },
+  { label: 'Portrait 4:5', size: { width: 1080, height: 1350 } },
+  { label: 'Story 9:16', size: { width: 1080, height: 1920 } },
+  { label: 'HD 16:9', size: { width: 1920, height: 1080 } },
+  { label: 'OG 1200×630', size: { width: 1200, height: 630 } },
 ];
 
 /** Named linear-gradient background presets. */
@@ -154,14 +169,43 @@ export class AspOptionsPanel {
   readonly setBackgroundColor = output<string>();
   readonly setBackgroundGradient = output<string[]>();
   readonly setBackgroundImageFile = output<File>();
+  /** Current artboard size (null = full canvas), and changes to it. */
+  readonly artboard = input<ArtboardSize | null>(null);
+  readonly artboardChange = output<ArtboardSize | null>();
 
   protected readonly colors = ANNOTATION_COLORS;
   /** Shape-fill swatches — includes transparent (no fill). */
   protected readonly fillColors: readonly string[] = ['transparent', ...ANNOTATION_COLORS];
   protected readonly backgroundColors = BACKGROUND_COLORS;
   protected readonly backgroundGradients = BACKGROUND_GRADIENTS;
+  protected readonly artboardPresets = ARTBOARD_PRESETS;
   protected readonly textValue = signal('Add a label');
   protected readonly customFontValue = signal('');
+  protected readonly customW = signal('1080');
+  protected readonly customH = signal('1080');
+
+  /** True when the given preset is the active artboard (exact W×H match). */
+  protected isArtboardActive(size: ArtboardSize): boolean {
+    const a = this.artboard();
+    return a !== null && a.width === size.width && a.height === size.height;
+  }
+
+  protected onCustomW(event: Event): void {
+    this.customW.set((event.target as HTMLInputElement).value);
+  }
+
+  protected onCustomH(event: Event): void {
+    this.customH.set((event.target as HTMLInputElement).value);
+  }
+
+  /** Apply the custom width/height, clamped to a sane 1–10000px range. */
+  protected applyCustomArtboard(): void {
+    const w = Math.round(Number(this.customW()));
+    const h = Math.round(Number(this.customH()));
+    if (Number.isFinite(w) && Number.isFinite(h) && w >= 1 && h >= 1 && w <= 10000 && h <= 10000) {
+      this.artboardChange.emit({ width: w, height: h });
+    }
+  }
 
   protected onTextInput(event: Event): void {
     this.textValue.set((event.target as HTMLInputElement).value);

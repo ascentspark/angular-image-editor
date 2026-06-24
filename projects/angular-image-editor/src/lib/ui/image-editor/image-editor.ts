@@ -17,6 +17,7 @@ import {
 
 import {
   EditorEngine,
+  type ArtboardSize,
   type LayerInfo,
   type RedactMode,
   type SelectionStyleInfo,
@@ -200,6 +201,7 @@ export class AspImageEditor implements OnDestroy {
   protected readonly exportOpen = signal(false);
   protected readonly historyOpen = signal(false);
   protected readonly snapEnabled = signal(true);
+  protected readonly artboard = signal<ArtboardSize | null>(null);
   protected readonly exportFormat = signal<AspExportFormat>('png');
   protected readonly exportQ = signal(90);
   protected readonly samples = signal<SampleImage[]>([]);
@@ -426,6 +428,11 @@ export class AspImageEditor implements OnDestroy {
     this.engine?.setSnapping(next);
   }
 
+  protected onArtboardChange(size: ArtboardSize | null): void {
+    this.artboard.set(size);
+    this.engine?.setArtboard(size);
+  }
+
   protected duplicate(): void {
     void this.engine?.duplicateActive().then(() => this.sync());
   }
@@ -450,6 +457,7 @@ export class AspImageEditor implements OnDestroy {
         this.engine.setSelectionListener((info) => this.onSelectionChange(info));
         this.engine.setLayersListener(() => this.refreshLayers());
         this.engine.setSnapping(this.snapEnabled());
+        this.engine.setArtboard(this.artboard());
         this.boundCanvas = canvas;
         this.lastSource = undefined;
         this.engineReady.set(true);

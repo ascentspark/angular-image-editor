@@ -414,3 +414,36 @@
   gap: 4px;
   align-items: flex-start;
 }
+
+/* Custom artboard width × height entry. */
+.asp-dim-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.asp-dim-input {
+  width: 0;
+  flex: 1 1 0;
+  min-width: 0;
+  height: var(--asp-ctl-h);
+  padding: 0 8px;
+  border: 1px solid var(--asp-line-strong);
+  border-radius: var(--asp-radius-sm);
+  background: var(--asp-surface);
+  color: var(--asp-ink-900);
+  font: inherit;
+  font-size: 12.5px;
+}
+.asp-dim-input:focus-visible {
+  outline: 2px solid var(--asp-accent);
+  outline-offset: 1px;
+}
+.asp-dim-x {
+  color: var(--asp-ink-muted);
+  font-size: 12px;
+}
+.asp-dim-row .asp-btn-line {
+  flex: 0 0 auto;
+  padding: 0 12px;
+}

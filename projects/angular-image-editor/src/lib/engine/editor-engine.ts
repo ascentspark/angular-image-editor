@@ -111,6 +111,12 @@ function defaultAdjustments(): Record<AspFilter, number> {
   return values;
 }
 
+/** A target output size in pixels for the artboard / export region. */
+export interface ArtboardSize {
+  readonly width: number;
+  readonly height: number;
+}
+
 /** A snap guide segment, expressed in scene (canvas) coordinates. */
 interface GuideLine {
   readonly x1: number;
@@ -147,6 +153,7 @@ export class EditorEngine {
   private panLast: { x: number; y: number } | null = null;
   private snapEnabled = true;
   private activeGuides: GuideLine[] = [];
+  private artboard: ArtboardSize | null = null;
   private selectionListener: ((info: SelectionStyleInfo | null) => void) | null = null;
   private layersListener: (() => void) | null = null;
 
@@ -188,9 +195,13 @@ export class EditorEngine {
     // Edge/center snapping with alignment guides while dragging an object.
     this.canvas.on('object:moving', (e) => this.applySnap(e.target));
     this.canvas.on('object:modified', () => this.clearGuides());
-    // Guides live on the top (overlay) context, redrawn after every render so
-    // they survive Fabric clearing the overlay to repaint selection controls.
-    this.canvas.on('after:render', () => this.drawGuides());
+    // The artboard mask and snap guides live on the top (overlay) context,
+    // redrawn after every render so they survive Fabric clearing the overlay to
+    // repaint selection controls. The mask goes first, guides on top.
+    this.canvas.on('after:render', () => {
+      this.drawArtboardMask();
+      this.drawGuides();
+    });
     // A freehand stroke becomes a Path on mouse-up — tag it, record it, and
     // surface it as a layer (otherwise drawings would not be undoable).
     this.canvas.on('path:created', (event) => {
@@ -408,6 +419,9 @@ export class EditorEngine {
       return;
     }
     const ctx = this.canvas.contextTop;
+    if (!ctx) {
+      return;
+    }
     const vpt = this.canvas.viewportTransform;
     ctx.save();
     ctx.lineWidth = 1;
@@ -430,8 +444,119 @@ export class EditorEngine {
       return;
     }
     this.activeGuides = [];
-    this.canvas.clearContext(this.canvas.contextTop);
+    this.clearOverlay();
     this.canvas.requestRenderAll();
+  }
+
+  /**
+   * Erase the overlay (top) context. `contextTop` can be momentarily undefined
+   * outside a render cycle, so this guards before touching it; clearing by the
+   * backing canvas's pixel size is correct regardless of retina scaling.
+   */
+  private clearOverlay(): void {
+    const ctx = this.canvas.contextTop;
+    if (ctx) {
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    }
+  }
+
+  // ---- artboard / output size ---------------------------------------------
+
+  /**
+   * Set (or clear) the artboard — a fixed output region. Content outside the
+   * region is dimmed on screen and excluded from raster/PDF export, which is
+   * rendered at exactly the artboard's pixel dimensions. `null` exports the
+   * whole canvas (the default).
+   */
+  setArtboard(size: ArtboardSize | null): void {
+    this.artboard = size && size.width > 0 && size.height > 0 ? size : null;
+    this.clearOverlay();
+    // Render synchronously so the overlay (top) context is realized this frame
+    // and the mask repaints immediately, rather than on a later deferred render.
+    this.canvas.renderAll();
+  }
+
+  getArtboard(): ArtboardSize | null {
+    return this.artboard;
+  }
+
+  /**
+   * The artboard's on-canvas rectangle in scene coordinates: the largest
+   * centered rectangle of the artboard's aspect ratio that fits the canvas.
+   * Returns null when no artboard is set.
+   */
+  private artboardRect(): { left: number; top: number; width: number; height: number } | null {
+    if (!this.artboard) {
+      return null;
+    }
+    const cw = this.canvas.getWidth();
+    const ch = this.canvas.getHeight();
+    const ar = this.artboard.width / this.artboard.height;
+    let width = cw;
+    let height = cw / ar;
+    if (height > ch) {
+      height = ch;
+      width = ch * ar;
+    }
+    return { left: (cw - width) / 2, top: (ch - height) / 2, width, height };
+  }
+
+  /** Render the artboard region to a data URL at exactly the artboard pixel size. */
+  private artboardDataUrl(format: 'png' | 'jpeg' | 'webp', quality: number): string {
+    const rect = this.artboardRect();
+    if (!rect || !this.artboard) {
+      return this.canvas.toDataURL({ format, quality, multiplier: 1 });
+    }
+    return this.canvas.toDataURL({
+      format,
+      quality,
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+      multiplier: this.artboard.width / rect.width,
+    });
+  }
+
+  /** Dim the canvas outside the artboard and outline it, on the overlay context. */
+  private drawArtboardMask(): void {
+    const rect = this.artboardRect();
+    if (!rect) {
+      return;
+    }
+    const ctx = this.canvas.contextTop;
+    if (!ctx) {
+      return;
+    }
+    const cw = this.canvas.getWidth();
+    const ch = this.canvas.getHeight();
+    const vpt = this.canvas.viewportTransform;
+    const tl = this.fabric.util.transformPoint(new this.fabric.Point(rect.left, rect.top), vpt);
+    const br = this.fabric.util.transformPoint(
+      new this.fabric.Point(rect.left + rect.width, rect.top + rect.height),
+      vpt,
+    );
+    const x = tl.x;
+    const y = tl.y;
+    const w = br.x - tl.x;
+    const h = br.y - tl.y;
+    ctx.save();
+    // Dim the four bands around the artboard (not a composite punch-through, so
+    // it is independent of any prior overlay content).
+    ctx.fillStyle = 'rgba(17, 21, 30, 0.46)';
+    ctx.fillRect(0, 0, cw, y);
+    ctx.fillRect(0, y + h, cw, ch - (y + h));
+    ctx.fillRect(0, y, x, h);
+    ctx.fillRect(x + w, y, cw - (x + w), h);
+    // Two-tone outline reads on any background.
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.setLineDash([]);
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    ctx.strokeStyle = '#ffffff';
+    ctx.setLineDash([5, 4]);
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    ctx.restore();
   }
 
   /** Create an engine bound to a `<canvas>` element. */
@@ -1463,19 +1588,19 @@ export class EditorEngine {
     if (cfg.kind === 'pdf') {
       return this.exportPdf(cfg.quality);
     }
-    const dataUrl = this.canvas.toDataURL({
-      format: cfg.format === 'jpeg' ? 'jpeg' : cfg.format === 'webp' ? 'webp' : 'png',
-      quality: cfg.quality,
-      multiplier: 1,
-    });
-    return dataUrlToBlob(dataUrl);
+    const rasterFormat = cfg.format === 'jpeg' ? 'jpeg' : cfg.format === 'webp' ? 'webp' : 'png';
+    return dataUrlToBlob(this.artboardDataUrl(rasterFormat, cfg.quality));
   }
 
-  /** Render the canvas into a single-page PDF sized to the canvas (jspdf lazy-loaded). */
+  /**
+   * Render into a single-page PDF. The page is sized to the artboard (when set)
+   * or the full canvas, and the image is the matching region. jsPDF is lazy-loaded.
+   */
   private async exportPdf(quality: number): Promise<Blob> {
-    const width = this.canvas.getWidth();
-    const height = this.canvas.getHeight();
-    const dataUrl = this.canvas.toDataURL({ format: 'jpeg', quality, multiplier: 1 });
+    const art = this.artboard;
+    const width = art ? art.width : this.canvas.getWidth();
+    const height = art ? art.height : this.canvas.getHeight();
+    const dataUrl = this.artboardDataUrl('jpeg', quality);
     const { jsPDF } = await import('jspdf');
     const pdf = new jsPDF({
       orientation: width >= height ? 'landscape' : 'portrait',

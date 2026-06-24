@@ -140,6 +140,8 @@
           (setBackgroundColor)="setBackgroundColor($event)"
           (setBackgroundGradient)="setBackgroundGradient($event)"
           (setBackgroundImageFile)="setBackgroundImageFromFile($event)"
+          [artboard]="artboard()"
+          (artboardChange)="onArtboardChange($event)"
         />
         <asp-layer-list
           [layers]="layers()"

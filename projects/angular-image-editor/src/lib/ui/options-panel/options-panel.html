@@ -371,6 +371,51 @@
     @case ('background') {
       <div class="asp-stack">
         <div>
+          <div class="asp-section-label">Output size</div>
+          <div class="asp-chip-row">
+            <button
+              type="button"
+              class="asp-chip"
+              [class.asp-chip--active]="artboard() === null"
+              (click)="artboardChange.emit(null)"
+            >
+              Full canvas
+            </button>
+            @for (preset of artboardPresets; track preset.label) {
+              <button
+                type="button"
+                class="asp-chip"
+                [class.asp-chip--active]="isArtboardActive(preset.size)"
+                (click)="artboardChange.emit(preset.size)"
+              >
+                {{ preset.label }}
+              </button>
+            }
+          </div>
+          <div class="asp-dim-row">
+            <input
+              type="number"
+              class="asp-dim-input"
+              min="1"
+              max="10000"
+              aria-label="Output width in pixels"
+              [value]="customW()"
+              (input)="onCustomW($event)"
+            />
+            <span class="asp-dim-x">×</span>
+            <input
+              type="number"
+              class="asp-dim-input"
+              min="1"
+              max="10000"
+              aria-label="Output height in pixels"
+              [value]="customH()"
+              (input)="onCustomH($event)"
+            />
+            <button type="button" class="asp-btn-line" (click)="applyCustomArtboard()">Set</button>
+          </div>
+        </div>
+        <div>
           <div class="asp-section-label">Color</div>
           <asp-color-field
             [colors]="backgroundColors"
