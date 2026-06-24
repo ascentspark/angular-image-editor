@@ -18,7 +18,7 @@ import { centeredCropRect, aspectRatioValue } from './crop';
 import { buildFabricFilters, LOOK_FILTERS } from './fabric-filters';
 import { loadFabric, type FabricModule } from './fabric-loader';
 import { resolveExport } from './export-config';
-import { EditHistory, type HistoryEntry } from './history';
+import { DeltaHistory, type HistoryStep } from './delta-history';
 import { FILTER_REGISTRY } from '../registry/tool-registry';
 import { ALL_FILTERS, type AspAspectPreset, type AspExportFormat, type AspFilter } from '../types/editor.types';
 
@@ -171,7 +171,7 @@ interface SceneBox {
 export class EditorEngine {
   private readonly canvas: Fabric.Canvas;
   private readonly fabric: FabricModule;
-  private readonly history: EditHistory<string>;
+  private readonly history: DeltaHistory;
 
   private baseImage: Fabric.FabricImage | null = null;
   private rotation = 0; // 0/90/180/270, in degrees
@@ -196,7 +196,7 @@ export class EditorEngine {
   private constructor(fabric: FabricModule, canvas: Fabric.Canvas) {
     this.fabric = fabric;
     this.canvas = canvas;
-    this.history = new EditHistory<string>('Opened editor', this.snapshot());
+    this.history = new DeltaHistory('Opened editor', this.snapshot());
     const notify = (): void => {
       this.notifySelection();
       this.notifyLayers();
@@ -1395,7 +1395,7 @@ export class EditorEngine {
     return this.history.canRedo;
   }
 
-  get historyEntries(): readonly HistoryEntry<string>[] {
+  get historyEntries(): readonly HistoryStep[] {
     return this.history.entries;
   }
 
@@ -1502,7 +1502,7 @@ export class EditorEngine {
 
   /** Reset all edits back to the freshly-loaded image. */
   async reset(): Promise<void> {
-    const first = this.history.entries[0];
+    const first = this.history.first;
     this.history.reset(first.label, first.state);
     this.resetView();
     await this.restore(first.state);

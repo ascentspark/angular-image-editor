@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "fabric": "^7.4.0",
+    "jsondiffpatch": "^0.7.3",
     "jspdf": "^4.2.1",
     "tslib": "^2.3.0"
   },

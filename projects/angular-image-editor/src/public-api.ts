@@ -53,6 +53,7 @@ export {
   type LayerInfo,
 } from './lib/engine/editor-engine';
 export { EditHistory, type HistoryEntry } from './lib/engine/history';
+export { DeltaHistory, type HistoryStep } from './lib/engine/delta-history';
 
 // Theming — derive and apply the editor's --asp-* palette from 3 inputs.
 export { deriveTheme, type AspThemeMode } from './lib/theme/derive-theme';

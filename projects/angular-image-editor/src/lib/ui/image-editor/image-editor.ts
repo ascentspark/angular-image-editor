@@ -23,7 +23,7 @@ import {
   type SelectionStyleInfo,
   type ShapeKind,
 } from '../../engine/editor-engine';
-import type { HistoryEntry } from '../../engine/history';
+import type { HistoryStep } from '../../engine/delta-history';
 import { AspIcon } from '../../icons/asp-icon';
 import { FILTER_REGISTRY, TOOL_REGISTRY, type FilterMeta, type ToolMeta } from '../../registry/tool-registry';
 import { resolveFilters, resolveTools } from '../../registry/resolve-tools';
@@ -161,7 +161,7 @@ export class AspImageEditor implements OnDestroy {
   protected readonly zoomPct = signal(100);
   protected readonly canUndo = signal(false);
   protected readonly canRedo = signal(false);
-  protected readonly historyEntries = signal<readonly HistoryEntry<string>[]>([]);
+  protected readonly historyEntries = signal<readonly HistoryStep[]>([]);
   protected readonly historyIndex = signal(0);
 
   protected readonly adjustments = signal<Record<string, number>>(defaultAdjustmentValues());

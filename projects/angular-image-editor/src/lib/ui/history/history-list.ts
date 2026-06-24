@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
 
 import { AspIcon } from '../../icons/asp-icon';
-import type { HistoryEntry } from '../../engine/history';
+import type { HistoryStep } from '../../engine/delta-history';
 
 /**
  * The History panel (bottom of the options column). Presentational: shows the
@@ -16,7 +16,7 @@ import type { HistoryEntry } from '../../engine/history';
   styleUrl: './history-list.css',
 })
 export class AspHistoryList {
-  readonly entries = input.required<readonly HistoryEntry<string>[]>();
+  readonly entries = input.required<readonly HistoryStep[]>();
   readonly currentIndex = input.required<number>();
 
   protected readonly collapsed = signal(false);
