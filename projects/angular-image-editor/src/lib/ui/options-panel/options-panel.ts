@@ -128,6 +128,7 @@ export class AspOptionsPanel {
   readonly setBackgroundColor = output<string>();
   readonly setBackgroundGradient = output<string[]>();
   readonly deleteSelection = output<void>();
+  readonly duplicateSelection = output<void>();
 
   protected readonly colors = ANNOTATION_COLORS;
   protected readonly backgroundColors = BACKGROUND_COLORS;

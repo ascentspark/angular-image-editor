@@ -99,6 +99,9 @@ export class EditorEngine {
   private looks = new Set<AspFilter>();
   private frame = 'none';
   private idCounter = 0;
+  private clipboard: Fabric.FabricObject[] = [];
+  private panMode = false;
+  private panLast: { x: number; y: number } | null = null;
   private selectionListener: ((info: SelectionStyleInfo | null) => void) | null = null;
   private layersListener: (() => void) | null = null;
 
@@ -113,6 +116,26 @@ export class EditorEngine {
     this.canvas.on('selection:created', notify);
     this.canvas.on('selection:updated', notify);
     this.canvas.on('selection:cleared', notify);
+    // Space-drag panning (only touches the viewport transform).
+    this.canvas.on('mouse:down', (opt) => {
+      if (this.panMode) {
+        this.panLast = { x: opt.viewportPoint.x, y: opt.viewportPoint.y };
+        this.canvas.setCursor('grabbing');
+      }
+    });
+    this.canvas.on('mouse:move', (opt) => {
+      if (this.panMode && this.panLast) {
+        const p = opt.viewportPoint;
+        this.canvas.relativePan(new this.fabric.Point(p.x - this.panLast.x, p.y - this.panLast.y));
+        this.panLast = { x: p.x, y: p.y };
+      }
+    });
+    this.canvas.on('mouse:up', () => {
+      if (this.panMode) {
+        this.panLast = null;
+        this.canvas.setCursor('grab');
+      }
+    });
     // A freehand stroke becomes a Path on mouse-up — tag it, record it, and
     // surface it as a layer (otherwise drawings would not be undoable).
     this.canvas.on('path:created', (event) => {
@@ -666,6 +689,87 @@ export class EditorEngine {
     this.canvas.requestRenderAll();
     this.commit('Delete');
     this.notifySelection();
+  }
+
+  /** Clear the active selection. */
+  discardSelection(): void {
+    this.canvas.discardActiveObject();
+    this.canvas.requestRenderAll();
+    this.notifySelection();
+  }
+
+  /** Select all editable (unlocked, non-base) objects. */
+  selectAll(): void {
+    const objects = this.canvas
+      .getObjects()
+      .filter((o) => o.selectable !== false && o.get('aspId') !== 'base');
+    if (objects.length === 0) {
+      return;
+    }
+    this.canvas.discardActiveObject();
+    this.setActive(objects);
+    this.canvas.requestRenderAll();
+    this.notifySelection();
+  }
+
+  /** Copy the current selection to the internal clipboard. */
+  async copy(): Promise<void> {
+    const active = this.canvas.getActiveObjects();
+    this.clipboard = await Promise.all(active.map((o) => o.clone()));
+  }
+
+  /** Paste the clipboard contents, offset and selected. */
+  async paste(): Promise<void> {
+    if (this.clipboard.length === 0) {
+      return;
+    }
+    const clones = await Promise.all(this.clipboard.map((o) => o.clone()));
+    this.addClones(clones, 'Paste');
+  }
+
+  /** Duplicate the current selection in place (offset). */
+  async duplicateActive(): Promise<void> {
+    const active = this.canvas.getActiveObjects();
+    if (active.length === 0) {
+      return;
+    }
+    const clones = await Promise.all(active.map((o) => o.clone()));
+    this.addClones(clones, 'Duplicate');
+  }
+
+  private addClones(clones: Fabric.FabricObject[], label: string): void {
+    for (const clone of clones) {
+      clone.set({ left: (clone.left ?? 0) + 16, top: (clone.top ?? 0) + 16 });
+      clone.set('aspId', this.nextId());
+      this.canvas.add(clone);
+    }
+    this.canvas.discardActiveObject();
+    this.setActive(clones);
+    this.canvas.requestRenderAll();
+    this.commit(label);
+    this.notifySelection();
+  }
+
+  private setActive(objects: Fabric.FabricObject[]): void {
+    if (objects.length === 1) {
+      this.canvas.setActiveObject(objects[0]);
+    } else if (objects.length > 1) {
+      this.canvas.setActiveObject(new this.fabric.ActiveSelection(objects, { canvas: this.canvas }));
+    }
+  }
+
+  /** Enable/disable space-drag panning (disables selection while active). */
+  setPanMode(enabled: boolean): void {
+    if (this.panMode === enabled) {
+      return;
+    }
+    this.panMode = enabled;
+    this.canvas.selection = !enabled;
+    this.canvas.defaultCursor = enabled ? 'grab' : 'default';
+    this.canvas.setCursor(enabled ? 'grab' : 'default');
+    if (!enabled) {
+      this.panLast = null;
+    }
   }
 
   // ---- history -------------------------------------------------------------

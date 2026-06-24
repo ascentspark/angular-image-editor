@@ -209,9 +209,14 @@
           }
         </p>
 
-        <button type="button" class="asp-btn-line asp-btn-danger" (click)="deleteSelection.emit()">
-          <asp-icon name="trash-2" [size]="15" /> Delete selected
-        </button>
+        <div class="asp-btn-row">
+          <button type="button" class="asp-btn-line" (click)="duplicateSelection.emit()">
+            <asp-icon name="copy" [size]="15" /> Duplicate
+          </button>
+          <button type="button" class="asp-btn-line asp-btn-danger" (click)="deleteSelection.emit()">
+            <asp-icon name="trash-2" [size]="15" /> Delete
+          </button>
+        </div>
       </div>
     }
 
@@ -264,12 +269,17 @@
 
     @case ('object') {
       <div class="asp-stack">
-        <button type="button" class="asp-btn-line asp-btn-danger" (click)="deleteSelection.emit()">
-          <asp-icon name="trash-2" [size]="15" /> Delete selected
-        </button>
+        <div class="asp-btn-row">
+          <button type="button" class="asp-btn-line" (click)="duplicateSelection.emit()">
+            <asp-icon name="copy" [size]="15" /> Duplicate
+          </button>
+          <button type="button" class="asp-btn-line asp-btn-danger" (click)="deleteSelection.emit()">
+            <asp-icon name="trash-2" [size]="15" /> Delete
+          </button>
+        </div>
         <p class="asp-hint">
           <asp-icon name="info" [size]="13" />
-          Select an object on the canvas to edit it.
+          Select an object on the canvas to edit it. Tip: Ctrl/Cmd+C/V/D, Delete, Space to pan.
         </p>
       </div>
     }

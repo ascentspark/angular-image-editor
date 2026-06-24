@@ -32,6 +32,9 @@
           </button>
           <span class="asp-divider"></span>
           <ng-container [ngTemplateOutlet]="zoomTpl" />
+          <button type="button" class="asp-iconbtn" title="Fit to screen" aria-label="Fit to screen" (click)="fitToScreen()">
+            <asp-icon name="scaling" [size]="16" />
+          </button>
           <span class="asp-spacer"></span>
           <ng-container [ngTemplateOutlet]="imageTpl" />
           <ng-container [ngTemplateOutlet]="exportTpl" />
@@ -101,6 +104,7 @@
           (setBackgroundColor)="setBackgroundColor($event)"
           (setBackgroundGradient)="setBackgroundGradient($event)"
           (deleteSelection)="deleteSelection()"
+          (duplicateSelection)="duplicate()"
         />
         }
         @if (showHistory()) {

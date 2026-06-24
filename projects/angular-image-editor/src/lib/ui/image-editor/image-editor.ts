@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  HostListener,
   computed,
   effect,
   inject,
@@ -97,6 +98,9 @@ export class AspImageEditor implements OnDestroy {
 
   /** Show the edit-history panel in the workspace (hosts that don't want it set false). */
   readonly showHistory = input<boolean>(true);
+
+  /** Enable keyboard shortcuts while the pointer is over the editor. */
+  readonly keyboardEnabled = input<boolean>(true);
 
   readonly saved = output<Blob>();
   readonly canceled = output<void>();
@@ -253,6 +257,96 @@ export class AspImageEditor implements OnDestroy {
   ngOnDestroy(): void {
     this.resizeObserver?.disconnect();
     void this.engine?.destroy();
+  }
+
+  // ---- keyboard + pointer scope --------------------------------------------
+  private pointerInside = false;
+
+  @HostListener('mouseenter')
+  protected onPointerEnter(): void {
+    this.pointerInside = true;
+  }
+
+  @HostListener('mouseleave')
+  protected onPointerLeave(): void {
+    this.pointerInside = false;
+    this.engine?.setPanMode(false);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  protected onKeydown(event: KeyboardEvent): void {
+    if (!this.keyboardEnabled() || !this.pointerInside || isTypingTarget(event.target)) {
+      return;
+    }
+    const meta = event.ctrlKey || event.metaKey;
+    const key = event.key.toLowerCase();
+
+    if (event.key === ' ') {
+      event.preventDefault();
+      this.engine?.setPanMode(true);
+      return;
+    }
+    if (key === 'escape') {
+      if (this.layout() === 'basic') {
+        this.cancel();
+      } else {
+        this.engine?.discardSelection();
+      }
+      return;
+    }
+    if (key === 'delete' || key === 'backspace') {
+      event.preventDefault();
+      this.deleteSelection();
+      return;
+    }
+    if (!meta) {
+      return;
+    }
+    switch (key) {
+      case 'z':
+        event.preventDefault();
+        void (event.shiftKey ? this.redo() : this.undo());
+        break;
+      case 'y':
+        event.preventDefault();
+        void this.redo();
+        break;
+      case 'c':
+        event.preventDefault();
+        void this.engine?.copy();
+        break;
+      case 'v':
+        event.preventDefault();
+        void this.engine?.paste().then(() => this.sync());
+        break;
+      case 'd':
+        event.preventDefault();
+        void this.engine?.duplicateActive().then(() => this.sync());
+        break;
+      case 'a':
+        event.preventDefault();
+        this.engine?.selectAll();
+        break;
+      default:
+        break;
+    }
+  }
+
+  @HostListener('document:keyup', ['$event'])
+  protected onKeyup(event: KeyboardEvent): void {
+    if (event.key === ' ') {
+      this.engine?.setPanMode(false);
+    }
+  }
+
+  /** Reset zoom + viewport so the image fits the stage. */
+  protected fitToScreen(): void {
+    this.engine?.resetView();
+    this.sync();
+  }
+
+  protected duplicate(): void {
+    void this.engine?.duplicateActive().then(() => this.sync());
   }
 
   // ---- engine lifecycle ----------------------------------------------------
@@ -612,6 +706,20 @@ export class AspImageEditor implements OnDestroy {
     this.engine?.deleteActive();
     this.sync();
   }
+}
+
+/** True if the keyboard event originates from an editable field, so editor shortcuts should yield. */
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  const tag = target.tagName;
+  return (
+    tag === 'INPUT' ||
+    tag === 'TEXTAREA' ||
+    tag === 'SELECT' ||
+    target.isContentEditable
+  );
 }
 
 function defaultAdjustmentValues(): Record<string, number> {
