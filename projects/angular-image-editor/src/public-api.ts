@@ -32,6 +32,16 @@ export {
 } from './lib/registry/tool-registry';
 export { resolveTools, resolveFilters } from './lib/registry/resolve-tools';
 
+// Engine — advanced/headless access to the Fabric-backed editing surface.
+export {
+  EditorEngine,
+  type EngineOptions,
+  type ShapeKind,
+  type AnnotationStyle,
+  type TextStyle,
+} from './lib/engine/editor-engine';
+export { EditHistory, type HistoryEntry } from './lib/engine/history';
+
 // Theming — derive and apply the editor's --asp-* palette from 3 inputs.
 export { deriveTheme, type AspThemeMode } from './lib/theme/derive-theme';
 export { applyTheme } from './lib/theme/apply-theme';

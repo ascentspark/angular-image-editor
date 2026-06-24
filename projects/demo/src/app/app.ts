@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { AspImageEditor, type AspThemeMode } from '@ascentspark/angular-image-editor';
+import { EngineHarness } from './engine-harness/engine-harness';
 
 interface ThemePreset {
   readonly label: string;
@@ -7,14 +8,22 @@ interface ThemePreset {
   readonly accent: string;
 }
 
+type DemoView = 'theme' | 'engine';
+
 @Component({
   selector: 'demo-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AspImageEditor],
+  imports: [AspImageEditor, EngineHarness],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
 export class App {
+  protected readonly view = signal<DemoView>('theme');
+
+  protected setView(view: DemoView): void {
+    this.view.set(view);
+  }
+
   protected readonly presets: readonly ThemePreset[] = [
     { label: 'Default blue', base: '#f4f6f9', accent: '#1f6feb' },
     { label: 'Wazure navy', base: '#f4f6f9', accent: '#02375e' },
