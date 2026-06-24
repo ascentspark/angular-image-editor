@@ -51,6 +51,9 @@ export {
   type TextStyle,
   type SelectionStyleInfo,
   type LayerInfo,
+  type ArtboardSize,
+  type ManualGuide,
+  type Viewport,
 } from './lib/engine/editor-engine';
 export { EditHistory, type HistoryEntry } from './lib/engine/history';
 export { DeltaHistory, type HistoryStep } from './lib/engine/delta-history';

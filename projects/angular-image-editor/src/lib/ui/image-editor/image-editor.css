@@ -332,6 +332,67 @@
 }
 
 /* ---- stage / canvas ---- */
+/* Wrapper that frames the stage with measurement rulers when enabled. With
+   rulers off it is a transparent flex passthrough; on, it becomes a grid with
+   an 18px ruler track on the top and left plus a clickable corner. */
+.asp-stagewrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.asp-stagewrap--rulers {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  grid-template-rows: 18px 1fr;
+}
+.asp-stagewrap--rulers .asp-stage {
+  grid-column: 2;
+  grid-row: 2;
+}
+.asp-ruler {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--asp-surface-sunk);
+  touch-action: none;
+}
+.asp-ruler--h {
+  grid-column: 2;
+  grid-row: 1;
+  border-bottom: 1px solid var(--asp-line);
+  cursor: row-resize;
+}
+.asp-ruler--v {
+  grid-column: 1;
+  grid-row: 2;
+  border-right: 1px solid var(--asp-line);
+  cursor: col-resize;
+}
+.asp-ruler-corner {
+  grid-column: 1;
+  grid-row: 1;
+  border: 0;
+  border-right: 1px solid var(--asp-line);
+  border-bottom: 1px solid var(--asp-line);
+  background: var(--asp-surface-sunk);
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+}
+.asp-ruler-corner::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-right: 1.5px solid var(--asp-ink-faint);
+  border-bottom: 1.5px solid var(--asp-ink-faint);
+  border-radius: 0 0 3px 0;
+}
+.asp-ruler-corner:hover::after {
+  border-color: var(--asp-accent);
+}
+
 .asp-stage {
   flex: 1;
   min-height: 0;
@@ -350,10 +411,20 @@
   display: block;
 }
 
+.asp-guides-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
 .asp-crop-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 2;
 }
 .asp-crop-overlay__v {
   position: absolute;

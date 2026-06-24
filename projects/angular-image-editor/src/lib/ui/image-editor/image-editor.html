@@ -47,6 +47,17 @@
           >
             <asp-icon name="magnet" [size]="16" />
           </button>
+          <button
+            type="button"
+            class="asp-iconbtn"
+            [class.asp-iconbtn--on]="rulersEnabled()"
+            [attr.aria-pressed]="rulersEnabled()"
+            [title]="rulersEnabled() ? 'Rulers & guides on' : 'Rulers & guides off'"
+            aria-label="Toggle rulers and guides"
+            (click)="toggleRulers()"
+          >
+            <asp-icon name="ruler" [size]="16" />
+          </button>
           @if (showHistory()) {
           <div class="asp-pop">
             <button type="button" class="asp-iconbtn" title="History" aria-label="Edit history" (click)="toggleHistory()">
@@ -65,16 +76,42 @@
           <ng-container [ngTemplateOutlet]="exportTpl" />
         </div>
 
-        <div #stageEl class="asp-stage">
-          <canvas #canvasEl></canvas>
-          @if (activeTool() === 'crop') {
-            <div class="asp-crop-overlay" aria-hidden="true">
-              <span class="asp-crop-overlay__v" style="left: 33.33%"></span>
-              <span class="asp-crop-overlay__v" style="left: 66.66%"></span>
-              <span class="asp-crop-overlay__h" style="top: 33.33%"></span>
-              <span class="asp-crop-overlay__h" style="top: 66.66%"></span>
-            </div>
+        <div class="asp-stagewrap" [class.asp-stagewrap--rulers]="rulersEnabled()">
+          @if (rulersEnabled()) {
+            <button
+              type="button"
+              class="asp-ruler-corner"
+              title="Clear all guides"
+              aria-label="Clear all guides"
+              (click)="clearGuides()"
+            ></button>
+            <canvas
+              #rulerTopEl
+              class="asp-ruler asp-ruler--h"
+              aria-hidden="true"
+              (pointerdown)="startGuideDraft('h', $event)"
+            ></canvas>
+            <canvas
+              #rulerLeftEl
+              class="asp-ruler asp-ruler--v"
+              aria-hidden="true"
+              (pointerdown)="startGuideDraft('v', $event)"
+            ></canvas>
           }
+          <div #stageEl class="asp-stage">
+            <canvas #canvasEl></canvas>
+            @if (rulersEnabled()) {
+              <canvas #guidesOverlayEl class="asp-guides-overlay" aria-hidden="true"></canvas>
+            }
+            @if (activeTool() === 'crop') {
+              <div class="asp-crop-overlay" aria-hidden="true">
+                <span class="asp-crop-overlay__v" style="left: 33.33%"></span>
+                <span class="asp-crop-overlay__v" style="left: 66.66%"></span>
+                <span class="asp-crop-overlay__h" style="top: 33.33%"></span>
+                <span class="asp-crop-overlay__h" style="top: 66.66%"></span>
+              </div>
+            }
+          </div>
         </div>
       </div>
 

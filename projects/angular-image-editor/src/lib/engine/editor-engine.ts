@@ -91,6 +91,7 @@ interface EditorSnapshot {
   adjustments: Record<AspFilter, number>;
   looks: AspFilter[];
   frame: string;
+  guides?: ManualGuide[];
 }
 
 /** A versioned template: a full editor snapshot plus the artboard. */
@@ -150,6 +151,23 @@ export interface ArtboardSize {
   readonly height: number;
 }
 
+/** A user-placed guide line at a fixed scene coordinate. */
+export interface ManualGuide {
+  readonly id: string;
+  /** `h` = horizontal line at scene-y `pos`; `v` = vertical line at scene-x `pos`. */
+  readonly orientation: 'h' | 'v';
+  readonly pos: number;
+}
+
+/** The current view transform plus canvas size — everything a ruler needs. */
+export interface Viewport {
+  readonly zoom: number;
+  readonly panX: number;
+  readonly panY: number;
+  readonly width: number;
+  readonly height: number;
+}
+
 /** A snap guide segment, expressed in scene (canvas) coordinates. */
 interface GuideLine {
   readonly x1: number;
@@ -187,11 +205,23 @@ export class EditorEngine {
   private snapEnabled = true;
   private activeGuides: GuideLine[] = [];
   private artboard: ArtboardSize | null = null;
+  private rulersEnabled = false;
+  private manualGuides: ManualGuide[] = [];
+  /** Live preview of a guide being dragged from a ruler (not yet committed). */
+  private guideDraft: ManualGuide | null = null;
+  /** Id of an existing manual guide being dragged on the canvas, if any. */
+  private draggingGuideId: string | null = null;
+  private guideIdCounter = 0;
   private selectionListener: ((info: SelectionStyleInfo | null) => void) | null = null;
   private layersListener: (() => void) | null = null;
+  private viewportListener: (() => void) | null = null;
+  private guidesListener: (() => void) | null = null;
+  private lastViewportKey = '';
 
   /** Snap distance in *screen* pixels; divided by zoom to get a scene threshold. */
   private static readonly SNAP_PX = 7;
+  /** Pointer proximity (screen px) for grabbing a manual guide on the canvas. */
+  private static readonly GUIDE_GRAB_PX = 6;
 
   private constructor(fabric: FabricModule, canvas: Fabric.Canvas) {
     this.fabric = fabric;
@@ -209,6 +239,15 @@ export class EditorEngine {
       if (this.panMode) {
         this.panLast = { x: opt.viewportPoint.x, y: opt.viewportPoint.y };
         this.canvas.setCursor('grabbing');
+        return;
+      }
+      // Grab an existing manual guide when clicking empty canvas near its line.
+      if (this.rulersEnabled && !opt.target) {
+        const guide = this.guideAtViewport(opt.viewportPoint.x, opt.viewportPoint.y);
+        if (guide) {
+          this.draggingGuideId = guide.id;
+          this.canvas.selection = false;
+        }
       }
     });
     this.canvas.on('mouse:move', (opt) => {
@@ -216,24 +255,40 @@ export class EditorEngine {
         const p = opt.viewportPoint;
         this.canvas.relativePan(new this.fabric.Point(p.x - this.panLast.x, p.y - this.panLast.y));
         this.panLast = { x: p.x, y: p.y };
+        return;
+      }
+      if (this.draggingGuideId) {
+        this.dragGuideTo(opt.viewportPoint.x, opt.viewportPoint.y);
+        return;
+      }
+      // Resize cursor when hovering a grabbable guide.
+      if (this.rulersEnabled && !opt.target) {
+        const guide = this.guideAtViewport(opt.viewportPoint.x, opt.viewportPoint.y);
+        if (guide) {
+          this.canvas.setCursor(guide.orientation === 'h' ? 'row-resize' : 'col-resize');
+        }
       }
     });
-    this.canvas.on('mouse:up', () => {
+    this.canvas.on('mouse:up', (opt) => {
       if (this.panMode) {
         this.panLast = null;
         this.canvas.setCursor('grab');
+      }
+      if (this.draggingGuideId) {
+        this.endGuideDrag(opt.viewportPoint.x, opt.viewportPoint.y);
       }
       this.clearGuides();
     });
     // Edge/center snapping with alignment guides while dragging an object.
     this.canvas.on('object:moving', (e) => this.applySnap(e.target));
     this.canvas.on('object:modified', () => this.clearGuides());
-    // The artboard mask and snap guides live on the top (overlay) context,
-    // redrawn after every render so they survive Fabric clearing the overlay to
-    // repaint selection controls. The mask goes first, guides on top.
+    // The artboard mask, manual guides, and snap guides live on the top (overlay)
+    // context, redrawn after every render so they survive Fabric clearing the
+    // overlay to repaint selection controls. Mask first, then guides on top.
     this.canvas.on('after:render', () => {
       this.drawArtboardMask();
       this.drawGuides();
+      this.notifyViewportIfChanged();
     });
     // A freehand stroke becomes a Path on mouse-up — tag it, record it, and
     // surface it as a layer (otherwise drawings would not be undoable).
@@ -409,6 +464,10 @@ export class EditorEngine {
       xLines.push(ob.left, ob.cx, ob.right);
       yLines.push(ob.top, ob.cy, ob.bottom);
     }
+    // User-placed guides are snap targets too.
+    for (const guide of this.manualGuides) {
+      (guide.orientation === 'v' ? xLines : yLines).push(guide.pos);
+    }
 
     const snapX = this.bestSnap([box.left, box.cx, box.right], xLines, threshold);
     const snapY = this.bestSnap([box.top, box.cy, box.bottom], yLines, threshold);
@@ -490,6 +549,171 @@ export class EditorEngine {
     const ctx = this.canvas.contextTop;
     if (ctx) {
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    }
+  }
+
+  // ---- rulers & manual guides ---------------------------------------------
+
+  /** Register a callback fired when the view transform or canvas size changes. */
+  setViewportListener(cb: () => void): void {
+    this.viewportListener = cb;
+  }
+
+  /** Register a callback fired when manual guides (or the live draft) change. */
+  setGuidesListener(cb: () => void): void {
+    this.guidesListener = cb;
+  }
+
+  private notifyGuides(): void {
+    this.guidesListener?.();
+  }
+
+  /** Current view transform + canvas size, in CSS pixels / scene units. */
+  getViewport(): Viewport {
+    const vpt = this.canvas.viewportTransform;
+    return {
+      zoom: vpt[0],
+      panX: vpt[4],
+      panY: vpt[5],
+      width: this.canvas.getWidth(),
+      height: this.canvas.getHeight(),
+    };
+  }
+
+  private notifyViewportIfChanged(): void {
+    if (!this.viewportListener) {
+      return;
+    }
+    const v = this.getViewport();
+    const key = `${v.zoom}|${v.panX}|${v.panY}|${v.width}|${v.height}`;
+    if (key !== this.lastViewportKey) {
+      this.lastViewportKey = key;
+      this.viewportListener();
+    }
+  }
+
+  /** Show/hide rulers; when off, an in-progress guide draft is dropped. */
+  setRulersEnabled(enabled: boolean): void {
+    this.rulersEnabled = enabled;
+    if (!enabled) {
+      this.guideDraft = null;
+    }
+    this.notifyGuides();
+  }
+
+  isRulersEnabled(): boolean {
+    return this.rulersEnabled;
+  }
+
+  getManualGuides(): readonly ManualGuide[] {
+    return this.manualGuides;
+  }
+
+  /** The live guide preview during a ruler drag, or null. */
+  getGuideDraft(): ManualGuide | null {
+    return this.guideDraft;
+  }
+
+  /** Map a viewport (screen, CSS-px) point to scene coordinates. */
+  viewportToScene(vx: number, vy: number): { x: number; y: number } {
+    const vpt = this.canvas.viewportTransform;
+    // vpt = [scaleX, skewY, skewX, scaleY, panX, panY]; divide by the *scale*
+    // components (indices 0 and 3), not the skew components (1 and 2).
+    return { x: (vx - vpt[4]) / vpt[0], y: (vy - vpt[5]) / vpt[3] };
+  }
+
+  /** Map a client (page) point to canvas viewport (CSS-px) coordinates. */
+  clientToViewport(clientX: number, clientY: number): { x: number; y: number } {
+    const rect = this.canvas.getElement().getBoundingClientRect();
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }
+
+  /**
+   * Show a live guide preview at a scene position (during a ruler drag).
+   * Pass `null` to clear the preview. Does not touch history.
+   */
+  setGuideDraft(orientation: 'h' | 'v', scenePos: number | null): void {
+    this.guideDraft =
+      scenePos === null ? null : { id: 'draft', orientation, pos: Math.round(scenePos) };
+    this.notifyGuides();
+  }
+
+  /** Commit a new manual guide at a scene position and record it in history. */
+  addManualGuide(orientation: 'h' | 'v', scenePos: number): void {
+    this.guideDraft = null;
+    this.guideIdCounter += 1;
+    this.manualGuides = [
+      ...this.manualGuides,
+      { id: `g${this.guideIdCounter}`, orientation, pos: Math.round(scenePos) },
+    ];
+    this.notifyGuides();
+    this.commit('Add guide');
+  }
+
+  /** Remove every manual guide and record it in history (no-op if already empty). */
+  clearManualGuides(): void {
+    if (this.manualGuides.length === 0) {
+      return;
+    }
+    this.manualGuides = [];
+    this.notifyGuides();
+    this.commit('Clear guides');
+  }
+
+  /** The manual guide whose line is within grab range of a screen point, or null. */
+  private guideAtViewport(vx: number, vy: number): ManualGuide | null {
+    const zoom = this.canvas.getZoom();
+    const threshold = EditorEngine.GUIDE_GRAB_PX;
+    const scene = this.viewportToScene(vx, vy);
+    let best: ManualGuide | null = null;
+    let bestDist = threshold;
+    for (const guide of this.manualGuides) {
+      const distScene = guide.orientation === 'h' ? scene.y - guide.pos : scene.x - guide.pos;
+      const distPx = Math.abs(distScene) * zoom;
+      if (distPx <= bestDist) {
+        bestDist = distPx;
+        best = guide;
+      }
+    }
+    return best;
+  }
+
+  /** Live-move the guide being dragged to the scene coordinate under the pointer. */
+  private dragGuideTo(vx: number, vy: number): void {
+    if (!this.draggingGuideId) {
+      return;
+    }
+    const scene = this.viewportToScene(vx, vy);
+    this.manualGuides = this.manualGuides.map((g) => {
+      if (g.id !== this.draggingGuideId) {
+        return g;
+      }
+      const pos = Math.round(g.orientation === 'h' ? scene.y : scene.x);
+      return { ...g, pos };
+    });
+    this.canvas.setCursor('grabbing');
+    this.notifyGuides();
+  }
+
+  /**
+   * Finish a guide drag. Dropping the line outside the canvas removes it;
+   * otherwise the move is committed to history. Restores object selection.
+   */
+  private endGuideDrag(vx: number, vy: number): void {
+    const id = this.draggingGuideId;
+    this.draggingGuideId = null;
+    this.canvas.selection = true;
+    if (!id) {
+      return;
+    }
+    const outside = vx < 0 || vy < 0 || vx > this.canvas.getWidth() || vy > this.canvas.getHeight();
+    if (outside) {
+      this.manualGuides = this.manualGuides.filter((g) => g.id !== id);
+      this.notifyGuides();
+      this.commit('Remove guide');
+    } else {
+      this.notifyGuides();
+      this.commit('Move guide');
     }
   }
 
@@ -1463,6 +1687,7 @@ export class EditorEngine {
       adjustments: { ...this.adjustments },
       looks: [...this.looks],
       frame: this.frame,
+      guides: [...this.manualGuides],
     };
     return JSON.stringify(composite);
   }
@@ -1481,6 +1706,7 @@ export class EditorEngine {
     this.adjustments = { ...defaultAdjustments(), ...composite.adjustments };
     this.looks = new Set(composite.looks);
     this.frame = composite.frame;
+    this.manualGuides = composite.guides ? [...composite.guides] : [];
     // Re-apply per-object lock state (serialized via aspLocked).
     for (const object of this.canvas.getObjects()) {
       if (object.get('aspLocked') === true) {
@@ -1489,6 +1715,7 @@ export class EditorEngine {
     }
     this.canvas.requestRenderAll();
     this.notifyLayers();
+    this.notifyGuides();
   }
 
   private findBaseImage(): Fabric.FabricImage | null {

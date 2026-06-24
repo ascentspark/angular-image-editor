@@ -24,6 +24,7 @@ import {
   type ShapeKind,
 } from '../../engine/editor-engine';
 import type { HistoryStep } from '../../engine/delta-history';
+import { drawRuler, type RulerColors } from '../../engine/rulers';
 import { AspIcon } from '../../icons/asp-icon';
 import { FILTER_REGISTRY, TOOL_REGISTRY, type FilterMeta, type ToolMeta } from '../../registry/tool-registry';
 import { resolveFilters, resolveTools } from '../../registry/resolve-tools';
@@ -121,6 +122,9 @@ export class AspImageEditor implements OnDestroy {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly canvasRef = viewChild<ElementRef<HTMLCanvasElement>>('canvasEl');
   private readonly stageRef = viewChild<ElementRef<HTMLElement>>('stageEl');
+  private readonly rulerTopRef = viewChild<ElementRef<HTMLCanvasElement>>('rulerTopEl');
+  private readonly rulerLeftRef = viewChild<ElementRef<HTMLCanvasElement>>('rulerLeftEl');
+  private readonly guidesOverlayRef = viewChild<ElementRef<HTMLCanvasElement>>('guidesOverlayEl');
 
   // ---- engine + readiness --------------------------------------------------
   private engine: EditorEngine | null = null;
@@ -201,6 +205,13 @@ export class AspImageEditor implements OnDestroy {
   protected readonly exportOpen = signal(false);
   protected readonly historyOpen = signal(false);
   protected readonly snapEnabled = signal(true);
+  protected readonly rulersEnabled = signal(false);
+  /** Bumped by the engine's viewport listener to re-render rulers on zoom/pan/resize. */
+  private readonly rulerVersion = signal(0);
+  /** Bumped by the engine's guides listener to repaint the guides overlay. */
+  private readonly guidesVersion = signal(0);
+  /** Tears down an in-flight ruler→guide drag; also called on destroy. */
+  private guideDraftCleanup: (() => void) | null = null;
   protected readonly artboard = signal<ArtboardSize | null>(null);
   protected readonly exportFormat = signal<AspExportFormat>('png');
   protected readonly exportQ = signal(90);
@@ -295,6 +306,28 @@ export class AspImageEditor implements OnDestroy {
       this.engine.setFreeDraw(drawing, { color, strokeWidth: width }, tool === 'highlighter');
     });
 
+    // Re-render the rulers whenever they are toggled on, their canvases appear,
+    // or the viewport changes (rulerVersion is bumped by the engine listener).
+    effect(() => {
+      this.rulerVersion();
+      const on = this.rulersEnabled();
+      const top = this.rulerTopRef()?.nativeElement;
+      const left = this.rulerLeftRef()?.nativeElement;
+      if (on && top && left && this.engineReady() && this.engine) {
+        this.renderRulers(top, left);
+      }
+    });
+
+    // Repaint the guides overlay on guide changes or viewport changes.
+    effect(() => {
+      this.guidesVersion();
+      this.rulerVersion();
+      const el = this.guidesOverlayRef()?.nativeElement;
+      if (this.rulersEnabled() && el && this.engineReady() && this.engine) {
+        this.renderGuidesOverlay(el);
+      }
+    });
+
     // Redact tool shows a positioning marquee; leaving it discards an unapplied one.
     effect(() => {
       const isRedact = this.activeTool() === 'redact' && this.engineReady();
@@ -311,6 +344,7 @@ export class AspImageEditor implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.guideDraftCleanup?.();
     this.resizeObserver?.disconnect();
     void this.engine?.destroy();
   }
@@ -433,6 +467,148 @@ export class AspImageEditor implements OnDestroy {
     this.engine?.setArtboard(size);
   }
 
+  protected toggleRulers(): void {
+    const next = !this.rulersEnabled();
+    this.rulersEnabled.set(next);
+    this.engine?.setRulersEnabled(next);
+  }
+
+  /** Clear all user-placed guides (the ruler corner button). */
+  protected clearGuides(): void {
+    this.engine?.clearManualGuides();
+  }
+
+  /**
+   * Begin dragging a new guide out of a ruler. The top ruler pulls a horizontal
+   * guide; the left ruler a vertical one. A live preview tracks the pointer;
+   * releasing over the canvas commits it, releasing outside cancels.
+   */
+  protected startGuideDraft(orientation: 'h' | 'v', event: PointerEvent): void {
+    const engine = this.engine;
+    if (!engine || !this.rulersEnabled()) {
+      return;
+    }
+    event.preventDefault();
+    this.guideDraftCleanup?.();
+
+    const scenePosAt = (clientX: number, clientY: number): number => {
+      const vp = engine.clientToViewport(clientX, clientY);
+      const scene = engine.viewportToScene(vp.x, vp.y);
+      return orientation === 'h' ? scene.y : scene.x;
+    };
+    const onMove = (e: PointerEvent): void => {
+      engine.setGuideDraft(orientation, scenePosAt(e.clientX, e.clientY));
+    };
+    const onUp = (e: PointerEvent): void => {
+      this.guideDraftCleanup?.();
+      const vp = engine.clientToViewport(e.clientX, e.clientY);
+      const view = engine.getViewport();
+      const overCanvas = vp.x >= 0 && vp.y >= 0 && vp.x <= view.width && vp.y <= view.height;
+      if (overCanvas) {
+        engine.addManualGuide(orientation, scenePosAt(e.clientX, e.clientY));
+      } else {
+        engine.setGuideDraft(orientation, null);
+      }
+    };
+    this.guideDraftCleanup = (): void => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      this.guideDraftCleanup = null;
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    onMove(event);
+  }
+
+  /** Paint both ruler strips from the engine's viewport, scaled for the display. */
+  private renderRulers(top: HTMLCanvasElement, left: HTMLCanvasElement): void {
+    const engine = this.engine;
+    if (!engine) {
+      return;
+    }
+    const view = engine.getViewport();
+    const styles = getComputedStyle(this.host.nativeElement);
+    const colors: RulerColors = {
+      bg: styles.getPropertyValue('--asp-surface-sunk').trim() || '#f1f3f6',
+      tick: styles.getPropertyValue('--asp-ink-faint').trim() || '#9aa4b2',
+      label: styles.getPropertyValue('--asp-ink-muted').trim() || '#6b7280',
+    };
+    const dpr = window.devicePixelRatio || 1;
+
+    const paint = (el: HTMLCanvasElement, orientation: 'h' | 'v'): void => {
+      const cssW = el.clientWidth;
+      const cssH = el.clientHeight;
+      if (cssW === 0 || cssH === 0) {
+        return;
+      }
+      el.width = Math.round(cssW * dpr);
+      el.height = Math.round(cssH * dpr);
+      const ctx = el.getContext('2d');
+      if (!ctx) {
+        return;
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (orientation === 'h') {
+        drawRuler(ctx, 'h', cssW, cssH, { zoom: view.zoom, pan: view.panX }, colors);
+      } else {
+        drawRuler(ctx, 'v', cssH, cssW, { zoom: view.zoom, pan: view.panY }, colors);
+      }
+    };
+    paint(top, 'h');
+    paint(left, 'v');
+  }
+
+  /**
+   * Paint the user's guides (and any live draft) onto a dedicated overlay canvas
+   * that sits above the Fabric canvas. Drawing here — rather than on Fabric's own
+   * overlay context — keeps guides stable, since Fabric clears its overlay on its
+   * own schedule (e.g. on mouse-up) without redrawing ours.
+   */
+  private renderGuidesOverlay(el: HTMLCanvasElement): void {
+    const engine = this.engine;
+    if (!engine) {
+      return;
+    }
+    const cssW = el.clientWidth;
+    const cssH = el.clientHeight;
+    if (cssW === 0 || cssH === 0) {
+      return;
+    }
+    const dpr = window.devicePixelRatio || 1;
+    el.width = Math.round(cssW * dpr);
+    el.height = Math.round(cssH * dpr);
+    const ctx = el.getContext('2d');
+    if (!ctx) {
+      return;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    const view = engine.getViewport();
+    ctx.lineWidth = 1;
+    const paintGuide = (orientation: 'h' | 'v', pos: number, color: string): void => {
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      if (orientation === 'h') {
+        const y = Math.round(pos * view.zoom + view.panY) + 0.5;
+        ctx.moveTo(0, y);
+        ctx.lineTo(cssW, y);
+      } else {
+        const x = Math.round(pos * view.zoom + view.panX) + 0.5;
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, cssH);
+      }
+      ctx.stroke();
+    };
+    for (const guide of engine.getManualGuides()) {
+      paintGuide(guide.orientation, guide.pos, '#12b5cb');
+    }
+    const draft = engine.getGuideDraft();
+    if (draft) {
+      paintGuide(draft.orientation, draft.pos, '#0a8aa0');
+    }
+  }
+
   protected duplicate(): void {
     void this.engine?.duplicateActive().then(() => this.sync());
   }
@@ -456,8 +632,14 @@ export class AspImageEditor implements OnDestroy {
         this.engine = await EditorEngine.create(canvas, { width, height });
         this.engine.setSelectionListener((info) => this.onSelectionChange(info));
         this.engine.setLayersListener(() => this.refreshLayers());
+        this.engine.setViewportListener(() => this.rulerVersion.update((v) => v + 1));
+        this.engine.setGuidesListener(() => {
+          this.guidesVersion.update((v) => v + 1);
+          this.sync();
+        });
         this.engine.setSnapping(this.snapEnabled());
         this.engine.setArtboard(this.artboard());
+        this.engine.setRulersEnabled(this.rulersEnabled());
         this.boundCanvas = canvas;
         this.lastSource = undefined;
         this.engineReady.set(true);
