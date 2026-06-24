@@ -199,6 +199,7 @@ export class AspImageEditor implements OnDestroy {
   protected readonly pickerOpen = signal(false);
   protected readonly exportOpen = signal(false);
   protected readonly historyOpen = signal(false);
+  protected readonly snapEnabled = signal(true);
   protected readonly exportFormat = signal<AspExportFormat>('png');
   protected readonly exportQ = signal(90);
   protected readonly samples = signal<SampleImage[]>([]);
@@ -419,6 +420,12 @@ export class AspImageEditor implements OnDestroy {
     this.sync();
   }
 
+  protected toggleSnap(): void {
+    const next = !this.snapEnabled();
+    this.snapEnabled.set(next);
+    this.engine?.setSnapping(next);
+  }
+
   protected duplicate(): void {
     void this.engine?.duplicateActive().then(() => this.sync());
   }
@@ -442,6 +449,7 @@ export class AspImageEditor implements OnDestroy {
         this.engine = await EditorEngine.create(canvas, { width, height });
         this.engine.setSelectionListener((info) => this.onSelectionChange(info));
         this.engine.setLayersListener(() => this.refreshLayers());
+        this.engine.setSnapping(this.snapEnabled());
         this.boundCanvas = canvas;
         this.lastSource = undefined;
         this.engineReady.set(true);

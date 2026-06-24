@@ -111,6 +111,24 @@ function defaultAdjustments(): Record<AspFilter, number> {
   return values;
 }
 
+/** A snap guide segment, expressed in scene (canvas) coordinates. */
+interface GuideLine {
+  readonly x1: number;
+  readonly y1: number;
+  readonly x2: number;
+  readonly y2: number;
+}
+
+/** Axis-aligned bounding box in scene coordinates, with derived centers. */
+interface SceneBox {
+  readonly left: number;
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+  readonly cx: number;
+  readonly cy: number;
+}
+
 export class EditorEngine {
   private readonly canvas: Fabric.Canvas;
   private readonly fabric: FabricModule;
@@ -127,8 +145,13 @@ export class EditorEngine {
   private clipboard: Fabric.FabricObject[] = [];
   private panMode = false;
   private panLast: { x: number; y: number } | null = null;
+  private snapEnabled = true;
+  private activeGuides: GuideLine[] = [];
   private selectionListener: ((info: SelectionStyleInfo | null) => void) | null = null;
   private layersListener: (() => void) | null = null;
+
+  /** Snap distance in *screen* pixels; divided by zoom to get a scene threshold. */
+  private static readonly SNAP_PX = 7;
 
   private constructor(fabric: FabricModule, canvas: Fabric.Canvas) {
     this.fabric = fabric;
@@ -160,7 +183,14 @@ export class EditorEngine {
         this.panLast = null;
         this.canvas.setCursor('grab');
       }
+      this.clearGuides();
     });
+    // Edge/center snapping with alignment guides while dragging an object.
+    this.canvas.on('object:moving', (e) => this.applySnap(e.target));
+    this.canvas.on('object:modified', () => this.clearGuides());
+    // Guides live on the top (overlay) context, redrawn after every render so
+    // they survive Fabric clearing the overlay to repaint selection controls.
+    this.canvas.on('after:render', () => this.drawGuides());
     // A freehand stroke becomes a Path on mouse-up — tag it, record it, and
     // surface it as a layer (otherwise drawings would not be undoable).
     this.canvas.on('path:created', (event) => {
@@ -283,6 +313,125 @@ export class EditorEngine {
       object.set('fontFamily', style.fontFamily);
     }
     object.setCoords();
+  }
+
+  // ---- snapping & alignment guides ----------------------------------------
+
+  /** Enable/disable edge & center snapping. Clears any visible guides when off. */
+  setSnapping(enabled: boolean): void {
+    this.snapEnabled = enabled;
+    if (!enabled) {
+      this.clearGuides();
+    }
+  }
+
+  /** Scene-space bounding box of an object from its absolute corner coords. */
+  private sceneBox(object: Fabric.FabricObject): SceneBox {
+    object.setCoords();
+    const c = object.aCoords;
+    const xs = [c.tl.x, c.tr.x, c.bl.x, c.br.x];
+    const ys = [c.tl.y, c.tr.y, c.bl.y, c.br.y];
+    const left = Math.min(...xs);
+    const right = Math.max(...xs);
+    const top = Math.min(...ys);
+    const bottom = Math.max(...ys);
+    return { left, top, right, bottom, cx: (left + right) / 2, cy: (top + bottom) / 2 };
+  }
+
+  /**
+   * Nudge a dragged object so a near edge/center aligns to the canvas or another
+   * object, and record the guide lines to draw. Snap threshold is constant in
+   * *screen* pixels (zoom-aware) so it feels the same at any zoom.
+   */
+  private applySnap(target?: Fabric.FabricObject): void {
+    if (!target || !this.snapEnabled) {
+      this.activeGuides = [];
+      return;
+    }
+    const threshold = EditorEngine.SNAP_PX / this.canvas.getZoom();
+    const cw = this.canvas.getWidth();
+    const ch = this.canvas.getHeight();
+    const box = this.sceneBox(target);
+
+    // Candidate lines to snap to: canvas edges/center plus every other object's
+    // edges/centers. The redaction marquee is transient and never a snap target.
+    const xLines = [0, cw / 2, cw];
+    const yLines = [0, ch / 2, ch];
+    for (const other of this.canvas.getObjects()) {
+      if (other === target || other.get('aspRole') === 'redact-marquee') {
+        continue;
+      }
+      const ob = this.sceneBox(other);
+      xLines.push(ob.left, ob.cx, ob.right);
+      yLines.push(ob.top, ob.cy, ob.bottom);
+    }
+
+    const snapX = this.bestSnap([box.left, box.cx, box.right], xLines, threshold);
+    const snapY = this.bestSnap([box.top, box.cy, box.bottom], yLines, threshold);
+
+    const guides: GuideLine[] = [];
+    if (snapX) {
+      target.set('left', (target.left ?? 0) + snapX.delta);
+      guides.push({ x1: snapX.line, y1: 0, x2: snapX.line, y2: ch });
+    }
+    if (snapY) {
+      target.set('top', (target.top ?? 0) + snapY.delta);
+      guides.push({ x1: 0, y1: snapY.line, x2: cw, y2: snapY.line });
+    }
+    if (snapX || snapY) {
+      target.setCoords();
+    }
+    this.activeGuides = guides;
+  }
+
+  /** Pick the smallest within-threshold offset from any anchor to any line. */
+  private bestSnap(
+    anchors: readonly number[],
+    lines: readonly number[],
+    threshold: number,
+  ): { delta: number; line: number } | null {
+    let best: { delta: number; line: number } | null = null;
+    for (const anchor of anchors) {
+      for (const line of lines) {
+        const delta = line - anchor;
+        if (Math.abs(delta) <= threshold && (!best || Math.abs(delta) < Math.abs(best.delta))) {
+          best = { delta, line };
+        }
+      }
+    }
+    return best;
+  }
+
+  /** Paint active guides onto the overlay context, mapped through the viewport. */
+  private drawGuides(): void {
+    if (!this.activeGuides.length) {
+      return;
+    }
+    const ctx = this.canvas.contextTop;
+    const vpt = this.canvas.viewportTransform;
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#ff2d78';
+    ctx.setLineDash([5, 4]);
+    for (const g of this.activeGuides) {
+      const p1 = this.fabric.util.transformPoint(new this.fabric.Point(g.x1, g.y1), vpt);
+      const p2 = this.fabric.util.transformPoint(new this.fabric.Point(g.x2, g.y2), vpt);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /** Drop the guides and repaint so the overlay is clean. */
+  private clearGuides(): void {
+    if (!this.activeGuides.length) {
+      return;
+    }
+    this.activeGuides = [];
+    this.canvas.clearContext(this.canvas.contextTop);
+    this.canvas.requestRenderAll();
   }
 
   /** Create an engine bound to a `<canvas>` element. */

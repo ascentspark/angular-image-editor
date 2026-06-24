@@ -73,6 +73,14 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+.asp-iconbtn--on {
+  background: var(--asp-accent-soft);
+  border-color: var(--asp-accent);
+  color: var(--asp-accent);
+}
+.asp-iconbtn--on:hover:not(:disabled) {
+  background: var(--asp-accent-soft);
+}
 
 .asp-divider {
   width: 1px;

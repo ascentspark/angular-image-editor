@@ -36,6 +36,17 @@
           <button type="button" class="asp-iconbtn" title="Fit to screen" aria-label="Fit to screen" (click)="fitToScreen()">
             <asp-icon name="scaling" [size]="16" />
           </button>
+          <button
+            type="button"
+            class="asp-iconbtn"
+            [class.asp-iconbtn--on]="snapEnabled()"
+            [attr.aria-pressed]="snapEnabled()"
+            [title]="snapEnabled() ? 'Snapping on' : 'Snapping off'"
+            aria-label="Toggle snapping"
+            (click)="toggleSnap()"
+          >
+            <asp-icon name="magnet" [size]="16" />
+          </button>
           @if (showHistory()) {
           <div class="asp-pop">
             <button type="button" class="asp-iconbtn" title="History" aria-label="Edit history" (click)="toggleHistory()">
