@@ -1,0 +1,238 @@
+<div class="asp-panel__head">
+  <div class="asp-panel__title">{{ toolTitle() }}</div>
+  <button type="button" class="asp-panel__reset" (click)="resetRequested.emit()">
+    <asp-icon name="rotate-ccw" [size]="13" />
+    Reset
+  </button>
+</div>
+
+<div class="asp-panel__body">
+  @switch (kind()) {
+    @case ('adjust') {
+      <div class="asp-stack">
+        @for (def of adjustmentDefs(); track def.key) {
+          <div>
+            <div class="asp-field-row">
+              <span class="asp-field-label">{{ def.label }}</span>
+              <span class="asp-field-value">{{ displayValue(def) }}</span>
+            </div>
+            <input
+              type="range"
+              class="asp-range"
+              [min]="def.min ?? 0"
+              [max]="def.max ?? 100"
+              [value]="valueOf(def)"
+              (input)="onAdjustInput(def, $event)"
+              (change)="onAdjustCommit(def, $event)"
+              [attr.aria-label]="def.label"
+            />
+          </div>
+        }
+      </div>
+    }
+
+    @case ('filters') {
+      <div class="asp-filter-grid">
+        <button
+          type="button"
+          class="asp-filter"
+          [class.asp-filter--active]="activeLook() === null"
+          (click)="selectLook.emit(null)"
+        >
+          <span class="asp-filter__thumb asp-filter__thumb--none"></span>
+          <span class="asp-filter__label">Original</span>
+        </button>
+        @for (def of lookDefs(); track def.key) {
+          <button
+            type="button"
+            class="asp-filter"
+            [class.asp-filter--active]="activeLook() === def.key"
+            (click)="selectLook.emit(def.key)"
+          >
+            <span class="asp-filter__thumb" [attr.data-look]="def.key"></span>
+            <span class="asp-filter__label">{{ def.label }}</span>
+          </button>
+        }
+      </div>
+    }
+
+    @case ('crop') {
+      <div class="asp-section-label">Aspect ratio</div>
+      <div class="asp-chip-row">
+        @for (preset of aspectPresets(); track preset) {
+          <button
+            type="button"
+            class="asp-chip"
+            [class.asp-chip--active]="activeCrop() === preset"
+            (click)="selectCrop.emit(preset)"
+          >
+            {{ preset === 'free' ? 'Free' : preset === 'original' ? 'Original' : preset }}
+          </button>
+        }
+      </div>
+      <p class="asp-hint">Choose a ratio to crop to a centered region. Apply commits the crop.</p>
+    }
+
+    @case ('transform') {
+      <div class="asp-stack">
+        <div class="asp-btn-row">
+          <button type="button" class="asp-btn-line" (click)="rotate.emit(-90)">
+            <asp-icon name="rotate-ccw" [size]="16" /> 90°
+          </button>
+          <button type="button" class="asp-btn-line" (click)="rotate.emit(90)">
+            <asp-icon name="rotate-cw" [size]="16" /> 90°
+          </button>
+        </div>
+        <div class="asp-btn-row">
+          <button type="button" class="asp-btn-line" (click)="flip.emit('h')">
+            <asp-icon name="flip-horizontal-2" [size]="16" /> Flip H
+          </button>
+          <button type="button" class="asp-btn-line" (click)="flip.emit('v')">
+            <asp-icon name="flip-vertical-2" [size]="16" /> Flip V
+          </button>
+        </div>
+        <div>
+          <div class="asp-field-row">
+            <span class="asp-field-label">Straighten</span>
+            <span class="asp-field-value">{{ straighten() }}°</span>
+          </div>
+          <input
+            type="range"
+            class="asp-range"
+            min="-45"
+            max="45"
+            [value]="straighten()"
+            (input)="onStraightenInput($event)"
+            (change)="onStraightenCommit($event)"
+            aria-label="Straighten angle"
+          />
+        </div>
+      </div>
+    }
+
+    @case ('annotate') {
+      <div class="asp-stack">
+        @if (isText()) {
+          <div>
+            <label class="asp-field-label" for="asp-text-input">Text</label>
+            <div class="asp-text-add">
+              <input
+                id="asp-text-input"
+                class="asp-input"
+                [value]="textValue()"
+                (input)="onTextInput($event)"
+              />
+              <button type="button" class="asp-btn-accent" (click)="onAddText()">Add</button>
+            </div>
+          </div>
+        }
+
+        <div class="asp-color-row">
+          <span class="asp-field-label asp-color-row__label">Color</span>
+          <div class="asp-swatches">
+            @for (color of colors; track color) {
+              <button
+                type="button"
+                class="asp-swatch"
+                [class.asp-swatch--active]="annotationColor() === color"
+                [class.asp-swatch--white]="color === '#ffffff'"
+                [style.background]="color"
+                [attr.aria-label]="'Color ' + color"
+                (click)="annotationColorChange.emit(color)"
+              ></button>
+            }
+          </div>
+        </div>
+
+        <div>
+          <div class="asp-field-row">
+            <span class="asp-field-label">{{ strokeLabel() }}</span>
+            <span class="asp-field-value">{{ annotationWidth() }} px</span>
+          </div>
+          <input
+            type="range"
+            class="asp-range"
+            min="1"
+            max="48"
+            [value]="annotationWidth()"
+            (input)="onWidthInput($event)"
+            [attr.aria-label]="strokeLabel()"
+          />
+        </div>
+
+        @if (isShape()) {
+          <div class="asp-btn-row">
+            <button type="button" class="asp-icon-btn" title="Rectangle" (click)="addShape.emit('rect')">
+              <asp-icon name="square" [size]="17" />
+            </button>
+            <button type="button" class="asp-icon-btn" title="Ellipse" (click)="addShape.emit('ellipse')">
+              <asp-icon name="circle" [size]="17" />
+            </button>
+            <button type="button" class="asp-icon-btn" title="Line" (click)="addShape.emit('line')">
+              <asp-icon name="minus" [size]="17" />
+            </button>
+            <button type="button" class="asp-icon-btn" title="Arrow" (click)="addShape.emit('arrow')">
+              <asp-icon name="arrow-up-right" [size]="17" />
+            </button>
+          </div>
+        }
+
+        @if (isRedact()) {
+          <div class="asp-btn-row">
+            <button type="button" class="asp-chip" (click)="addRedaction.emit('blur')">Blur</button>
+            <button type="button" class="asp-chip" (click)="addRedaction.emit('pixelate')">Pixelate</button>
+            <button type="button" class="asp-chip asp-chip--active" (click)="addRedaction.emit('solid')">
+              Solid
+            </button>
+          </div>
+        }
+
+        <p class="asp-hint">
+          <asp-icon name="info" [size]="13" />
+          @if (isShape()) {
+            Pick a shape to drop it on the canvas, then drag to position or resize.
+          } @else if (isRedact()) {
+            Add a redaction, then drag it over the area to conceal.
+          } @else {
+            Draw directly on the canvas. Click an annotation to move, resize, or delete it.
+          }
+        </p>
+
+        <button type="button" class="asp-btn-line asp-btn-danger" (click)="deleteSelection.emit()">
+          <asp-icon name="trash-2" [size]="15" /> Delete selected
+        </button>
+      </div>
+    }
+
+    @case ('frame') {
+      <div class="asp-frame-grid">
+        @for (frame of frameOptions(); track frame.key) {
+          <button
+            type="button"
+            class="asp-chip asp-frame"
+            [class.asp-chip--active]="activeFrame() === frame.key"
+            (click)="selectFrame.emit(frame.key)"
+          >
+            {{ frame.label }}
+          </button>
+        }
+      </div>
+    }
+
+    @case ('object') {
+      <div class="asp-stack">
+        <button type="button" class="asp-btn-line asp-btn-danger" (click)="deleteSelection.emit()">
+          <asp-icon name="trash-2" [size]="15" /> Delete selected
+        </button>
+        <p class="asp-hint">
+          <asp-icon name="info" [size]="13" />
+          Select an object on the canvas to edit it.
+        </p>
+      </div>
+    }
+
+    @default {
+      <p class="asp-hint">Select a tool to see its options.</p>
+    }
+  }
+</div>

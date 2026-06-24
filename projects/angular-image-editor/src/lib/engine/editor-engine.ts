@@ -28,6 +28,8 @@ export interface EngineOptions {
 
 export type ShapeKind = 'rect' | 'ellipse' | 'line' | 'arrow';
 
+export type RedactMode = 'blur' | 'pixelate' | 'solid';
+
 export interface AnnotationStyle {
   readonly color: string;
   readonly strokeWidth: number;
@@ -353,21 +355,103 @@ export class EditorEngine {
     this.commit('Add text');
   }
 
-  /** Add a solid redaction box (opaque rectangle) at the canvas center. */
-  addRedactionBox(): void {
-    const rect = new this.fabric.Rect({
-      left: this.canvas.getWidth() / 2,
-      top: this.canvas.getHeight() / 2,
+  /**
+   * Add a redaction over the canvas center. `solid` lays an opaque box; `blur`
+   * and `pixelate` overlay a filtered copy of the underlying image clipped to
+   * the region, so the concealed content is genuinely destroyed in the export.
+   */
+  async addRedaction(mode: RedactMode): Promise<void> {
+    const cx = this.canvas.getWidth() / 2;
+    const cy = this.canvas.getHeight() / 2;
+    const width = 180;
+    const height = 80;
+
+    if (mode === 'solid' || !this.baseImage) {
+      const rect = new this.fabric.Rect({
+        left: cx,
+        top: cy,
+        originX: 'center',
+        originY: 'center',
+        width,
+        height,
+        fill: '#0b0f1a',
+      });
+      this.canvas.add(rect);
+      this.canvas.setActiveObject(rect);
+      this.canvas.requestRenderAll();
+      this.commit('Redact');
+      return;
+    }
+
+    const overlay = await this.baseImage.clone();
+    overlay.set({ selectable: false, evented: false });
+    overlay.filters = [
+      mode === 'blur'
+        ? new this.fabric.filters.Blur({ blur: 0.35 })
+        : new this.fabric.filters.Pixelate({ blocksize: 14 }),
+    ];
+    overlay.applyFilters();
+    overlay.clipPath = new this.fabric.Rect({
+      left: cx,
+      top: cy,
       originX: 'center',
       originY: 'center',
-      width: 180,
-      height: 60,
-      fill: '#0b0f1a',
+      width,
+      height,
+      absolutePositioned: true,
     });
-    this.canvas.add(rect);
-    this.canvas.setActiveObject(rect);
+    this.canvas.add(overlay);
     this.canvas.requestRenderAll();
     this.commit('Redact');
+  }
+
+  /** Backwards-compatible solid redaction helper. */
+  addRedactionBox(): void {
+    void this.addRedaction('solid');
+  }
+
+  private frameObject: Fabric.FabricObject | null = null;
+
+  /**
+   * Apply a decorative frame around the image. Each style maps to a distinct,
+   * real border rendering (none clears it). The frame is a non-interactive
+   * rectangle sized to the image's displayed bounds.
+   */
+  applyFrame(style: string, color: string): void {
+    if (this.frameObject) {
+      this.canvas.remove(this.frameObject);
+      this.frameObject = null;
+    }
+    const image = this.baseImage;
+    if (!image || style === 'none') {
+      this.canvas.requestRenderAll();
+      this.commit('Frame');
+      return;
+    }
+    const width = (image.width ?? 0) * (image.scaleX ?? 1);
+    const height = (image.height ?? 0) * (image.scaleY ?? 1);
+    const spec = FRAME_STYLES[style] ?? FRAME_STYLES['line'];
+    const rect = new this.fabric.Rect({
+      left: image.left ?? this.canvas.getWidth() / 2,
+      top: image.top ?? this.canvas.getHeight() / 2,
+      originX: 'center',
+      originY: 'center',
+      width: width - spec.strokeWidth,
+      height: height - spec.strokeWidth,
+      fill: 'transparent',
+      stroke: spec.useColor ? color : spec.stroke,
+      strokeWidth: spec.strokeWidth,
+      strokeDashArray: spec.dash ? [...spec.dash] : null,
+      rx: spec.radius,
+      ry: spec.radius,
+      selectable: false,
+      evented: false,
+      strokeUniform: true,
+    });
+    this.frameObject = rect;
+    this.canvas.add(rect);
+    this.canvas.requestRenderAll();
+    this.commit('Frame');
   }
 
   /** Enable or disable freehand drawing. */
@@ -503,6 +587,23 @@ export class EditorEngine {
     await this.canvas.dispose();
   }
 }
+
+interface FrameSpec {
+  readonly strokeWidth: number;
+  readonly radius: number;
+  readonly useColor: boolean;
+  readonly stroke: string;
+  readonly dash?: readonly number[];
+}
+
+/** Distinct, real frame renderings keyed by the panel's frame option. */
+const FRAME_STYLES: Record<string, FrameSpec> = {
+  line: { strokeWidth: 8, radius: 0, useColor: true, stroke: '#000000' },
+  mat: { strokeWidth: 20, radius: 0, useColor: false, stroke: '#ffffff' },
+  inset: { strokeWidth: 6, radius: 10, useColor: true, stroke: '#000000' },
+  hook: { strokeWidth: 12, radius: 0, useColor: true, stroke: '#000000' },
+  bead: { strokeWidth: 7, radius: 0, useColor: true, stroke: '#000000', dash: [2, 7] },
+};
 
 /** Convert a data URL to a Blob without a network round-trip. */
 function dataUrlToBlob(dataUrl: string): Blob {

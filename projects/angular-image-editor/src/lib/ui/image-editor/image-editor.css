@@ -3,147 +3,362 @@
   background: var(--asp-bg);
   color: var(--asp-ink);
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --asp-stage-checker-a: var(--asp-surface-sunk);
+  --asp-stage-checker-b: var(--asp-surface-2);
+}
+
+.asp-card {
+  background: var(--asp-surface);
+  border: 1px solid var(--asp-line);
   border-radius: var(--asp-radius-lg);
+}
+
+.asp-workspace {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 268px;
+  gap: 14px;
+  height: 100%;
+  min-height: 540px;
+}
+
+.asp-workspace__rail {
+  min-height: 0;
+}
+
+.asp-workspace__canvas {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.asp-workspace__panel {
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
-.asp-preview {
-  display: flex;
-  flex-direction: column;
+.asp-workspace__options {
+  flex: 1;
+  min-height: 0;
 }
 
-.asp-preview__bar {
+/* ---- top bar ---- */
+.asp-topbar {
+  flex: none;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 11px 14px;
-  background: var(--asp-surface);
   border-bottom: 1px solid var(--asp-line);
+  flex-wrap: wrap;
+}
+
+.asp-iconbtn {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--asp-line-strong);
+  background: var(--asp-surface);
+  cursor: pointer;
+  border-radius: var(--asp-radius-sm);
+  color: var(--asp-ink-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.asp-iconbtn:hover:not(:disabled) {
+  background: var(--asp-surface-sunk);
+}
+.asp-iconbtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.asp-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--asp-line);
+  margin: 0 2px;
+}
+
+.asp-zoom {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  background: var(--asp-surface-sunk);
+  border-radius: var(--asp-radius-md);
+  padding: 2px;
+}
+.asp-zoom__btn {
+  width: 28px;
+  height: 26px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(--asp-radius-sm);
+  color: var(--asp-ink-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.asp-zoom__btn:hover {
+  background: var(--asp-surface);
+}
+.asp-zoom__label {
+  min-width: 46px;
+  text-align: center;
+  font-family: var(--asp-font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--asp-ink);
 }
 
 .asp-spacer {
   flex: 1;
 }
 
-.asp-preview__title {
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.asp-preview__muted {
-  font-size: 12px;
-  color: var(--asp-ink-muted);
-}
-
-.asp-preview__body {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  padding: 16px;
-}
-
-.asp-card {
+.asp-btn-line {
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--asp-line-strong);
   background: var(--asp-surface);
-  border: 1px solid var(--asp-line);
-  border-radius: var(--asp-radius-md);
-  padding: 16px;
-}
-
-.asp-card__title {
-  margin: 0 0 10px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.asp-text {
-  margin: 0 0 6px;
-  font-size: 13px;
-}
-.asp-text--700 {
+  cursor: pointer;
+  border-radius: var(--asp-radius-sm);
   color: var(--asp-ink-700);
-}
-.asp-text--muted {
-  color: var(--asp-ink-muted);
-  font-size: 12px;
-}
-
-.asp-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-
-.asp-swatch {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 56px;
-  height: 34px;
-  padding: 0 8px;
-  font-size: 11px;
-  color: var(--asp-ink-700);
-  border: 1px solid var(--asp-line);
-  border-radius: var(--asp-radius-sm);
+  gap: 7px;
 }
-.asp-swatch--line {
-  background: var(--asp-surface);
-  border-color: var(--asp-line-strong);
-  border-width: 2px;
+.asp-btn-line:hover {
+  background: var(--asp-surface-sunk);
 }
 
-.asp-btn {
-  height: var(--asp-ctl-h);
+.asp-btn-accent {
+  height: 34px;
   padding: 0 14px;
+  border: 0;
+  background: var(--asp-accent);
+  color: var(--asp-accent-ink);
+  cursor: pointer;
+  border-radius: var(--asp-radius-sm);
   font: inherit;
   font-size: 12.5px;
   font-weight: 700;
-  border-radius: var(--asp-radius-sm);
-  cursor: pointer;
-  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
-.asp-btn--accent {
-  background: var(--asp-accent);
-  color: var(--asp-accent-ink);
-}
-.asp-btn--accent:hover {
+.asp-btn-accent:hover {
   background: var(--asp-accent-hover);
 }
-.asp-btn--soft {
-  background: var(--asp-accent-soft);
-  color: var(--asp-accent-soft-ink);
-}
-.asp-btn--ghost {
-  background: var(--asp-surface);
-  color: var(--asp-ink-700);
-  border-color: var(--asp-line-strong);
-  font-weight: 600;
-}
-.asp-focus {
+
+.asp-iconbtn:focus-visible,
+.asp-zoom__btn:focus-visible,
+.asp-btn-line:focus-visible,
+.asp-btn-accent:focus-visible,
+.asp-fmt:focus-visible,
+.asp-sample:focus-visible,
+.asp-upload:focus-within {
   outline: none;
   box-shadow: 0 0 0 3px var(--asp-ring);
 }
 
-.asp-pill {
-  font-size: 11px;
+/* ---- popovers ---- */
+.asp-pop {
+  position: relative;
+}
+.asp-pop__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 18;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: default;
+}
+.asp-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  z-index: 19;
+  width: 230px;
+  background: var(--asp-surface);
+  border: 1px solid var(--asp-line);
+  border-radius: var(--asp-radius-md);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.2);
+  padding: 12px;
+}
+.asp-menu--right {
+  right: 0;
+}
+.asp-menu--export {
+  width: 248px;
+  padding: 14px;
+}
+.asp-menu__title {
+  font-size: 10.5px;
   font-weight: 700;
-  padding: 3px 10px;
-  border-radius: var(--asp-radius-pill);
-  color: #fff;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--asp-ink-muted);
+  margin-bottom: 9px;
 }
-.asp-pill--success {
-  background: var(--asp-success);
+.asp-menu__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--asp-ink);
 }
-.asp-pill--warning {
-  background: var(--asp-warning);
+.asp-menu__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 14px 0 7px;
 }
-.asp-pill--error {
-  background: var(--asp-error);
+.asp-menu__value {
+  font-family: var(--asp-font-mono);
+  font-size: 12px;
+  color: var(--asp-ink-700);
 }
 
-@media (max-width: 560px) {
-  .asp-preview__body {
+.asp-sample-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 11px;
+}
+.asp-sample {
+  width: 100%;
+  aspect-ratio: 1.5 / 1;
+  border-radius: var(--asp-radius-sm);
+  border: 2px solid transparent;
+  cursor: pointer;
+  background-size: cover;
+  background-position: center;
+}
+.asp-sample:hover {
+  border-color: var(--asp-accent);
+}
+
+.asp-upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  border: 1px dashed var(--asp-line-strong);
+  border-radius: var(--asp-radius-sm);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--asp-ink-700);
+  position: relative;
+}
+.asp-upload:hover {
+  border-color: var(--asp-accent);
+  color: var(--asp-accent);
+}
+.asp-upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.asp-fmt-row {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+.asp-fmt {
+  flex: 1;
+  padding: 7px 0;
+  border-radius: var(--asp-radius-sm);
+  border: 1px solid var(--asp-line-strong);
+  background: var(--asp-surface);
+  color: var(--asp-ink-700);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.asp-fmt--active {
+  border-color: var(--asp-accent);
+  background: var(--asp-accent-soft);
+  color: var(--asp-accent-soft-ink);
+}
+.asp-range {
+  width: 100%;
+  accent-color: var(--asp-accent);
+}
+.asp-download {
+  width: 100%;
+  justify-content: center;
+  margin-top: 13px;
+  height: var(--asp-ctl-h);
+}
+
+/* ---- stage / canvas ---- */
+.asp-stage {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: repeating-conic-gradient(
+      var(--asp-stage-checker-a) 0% 25%,
+      var(--asp-stage-checker-b) 0% 50%
+    )
+    50% / 22px 22px;
+}
+.asp-stage canvas {
+  display: block;
+}
+
+.asp-crop-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.asp-crop-overlay__v {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.5);
+}
+.asp-crop-overlay__h {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.asp-placeholder {
+  padding: 40px;
+  text-align: center;
+  color: var(--asp-ink-muted);
+}
+
+/* ---- responsive: rail + panel become stacked sheets ---- */
+@media (max-width: 760px) {
+  .asp-workspace {
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+  .asp-workspace__rail {
+    order: 1;
+  }
+  .asp-workspace__canvas {
+    order: 2;
+    height: 56vh;
+  }
+  .asp-workspace__panel {
+    order: 3;
+    max-height: 50vh;
   }
 }

@@ -1,0 +1,51 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  border-top: 1px solid var(--asp-line);
+  padding: 11px 12px;
+  max-height: 166px;
+}
+
+.asp-history__title {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--asp-ink-muted);
+  margin-bottom: 7px;
+}
+
+.asp-history__scroll {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.asp-history__row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: var(--asp-radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--asp-ink);
+}
+
+.asp-history__row--current {
+  font-weight: 700;
+  background: var(--asp-accent-soft);
+  color: var(--asp-accent-soft-ink);
+}
+
+.asp-history__row--future {
+  color: var(--asp-ink-faint);
+}
+
+.asp-history__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

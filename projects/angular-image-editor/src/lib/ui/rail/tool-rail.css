@@ -1,0 +1,67 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 7px;
+  overflow-y: auto;
+  background: var(--asp-surface);
+  border: 1px solid var(--asp-line);
+  border-radius: var(--asp-radius-lg);
+}
+
+.asp-rail__tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 10px 4px;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  border-radius: var(--asp-radius-md);
+  background: transparent;
+  color: var(--asp-ink-muted);
+  transition: background 0.14s, color 0.14s;
+}
+
+.asp-rail__tool:hover {
+  background: var(--asp-surface-sunk);
+  color: var(--asp-ink-700);
+}
+
+.asp-rail__tool:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--asp-ring);
+}
+
+.asp-rail__tool--active,
+.asp-rail__tool--active:hover {
+  background: var(--asp-accent-soft);
+  color: var(--asp-accent-soft-ink);
+  font-weight: 700;
+}
+
+.asp-rail__label {
+  line-height: 1;
+}
+
+@media (max-width: 760px) {
+  :host {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px;
+  }
+  .asp-rail__tool {
+    flex: 1 0 58px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .asp-rail__tool {
+    transition: none;
+  }
+}

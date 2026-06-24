@@ -1,0 +1,305 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.asp-panel__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--asp-line);
+}
+
+.asp-panel__title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--asp-ink);
+}
+
+.asp-panel__reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--asp-ink-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.asp-panel__reset:hover {
+  color: var(--asp-accent);
+}
+.asp-panel__reset:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--asp-ring);
+  border-radius: var(--asp-radius-sm);
+}
+
+.asp-panel__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.asp-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* fields + sliders */
+.asp-field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.asp-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--asp-ink);
+}
+.asp-field-value {
+  font-family: var(--asp-font-mono);
+  font-size: 11px;
+  color: var(--asp-ink-muted);
+}
+.asp-range {
+  width: 100%;
+  accent-color: var(--asp-accent);
+}
+
+/* filters grid */
+.asp-filter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+.asp-filter {
+  border: 2px solid transparent;
+  border-radius: var(--asp-radius-md);
+  padding: 3px;
+  cursor: pointer;
+  background: transparent;
+  font: inherit;
+}
+.asp-filter--active {
+  border-color: var(--asp-accent);
+}
+.asp-filter:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--asp-ring);
+}
+.asp-filter__thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1.4 / 1;
+  border-radius: var(--asp-radius-sm);
+  background: linear-gradient(135deg, #f59e0b, #ec4899, #7c3aed);
+}
+.asp-filter__thumb--none {
+  filter: none;
+}
+.asp-filter__thumb[data-look='grayscale'] {
+  filter: grayscale(1);
+}
+.asp-filter__thumb[data-look='sepia'] {
+  filter: sepia(0.7);
+}
+.asp-filter__thumb[data-look='invert'] {
+  filter: invert(1);
+}
+.asp-filter__thumb[data-look='sharpen'] {
+  filter: contrast(1.4) saturate(1.1);
+}
+.asp-filter__label {
+  display: block;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--asp-ink-700);
+  margin-top: 5px;
+}
+
+/* chips */
+.asp-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--asp-ink-muted);
+  margin-bottom: 10px;
+}
+.asp-chip-row,
+.asp-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.asp-chip {
+  padding: 7px 12px;
+  border-radius: var(--asp-radius-sm);
+  border: 1px solid var(--asp-line-strong);
+  background: var(--asp-surface);
+  color: var(--asp-ink-700);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.asp-chip:hover {
+  background: var(--asp-surface-sunk);
+}
+.asp-chip--active,
+.asp-chip--active:hover {
+  border-color: var(--asp-accent);
+  background: var(--asp-accent-soft);
+  color: var(--asp-accent-soft-ink);
+}
+.asp-chip:focus-visible,
+.asp-btn-line:focus-visible,
+.asp-icon-btn:focus-visible,
+.asp-btn-accent:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--asp-ring);
+}
+
+/* outline buttons */
+.asp-btn-line {
+  flex: 1;
+  height: var(--asp-ctl-h);
+  border: 1px solid var(--asp-line-strong);
+  background: var(--asp-surface);
+  cursor: pointer;
+  border-radius: var(--asp-radius-sm);
+  color: var(--asp-ink-700);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.asp-btn-line:hover {
+  background: var(--asp-surface-sunk);
+}
+.asp-btn-danger {
+  color: var(--asp-error);
+  border-color: color-mix(in oklab, var(--asp-error) 40%, var(--asp-line-strong));
+}
+
+.asp-icon-btn {
+  flex: 1;
+  height: 36px;
+  border: 1px solid var(--asp-line-strong);
+  background: var(--asp-surface);
+  border-radius: var(--asp-radius-sm);
+  color: var(--asp-ink-700);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.asp-icon-btn:hover {
+  background: var(--asp-surface-sunk);
+}
+
+/* text add */
+.asp-text-add {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.asp-input {
+  flex: 1;
+  height: var(--asp-ctl-h);
+  background: var(--asp-surface-2);
+  border: 1px solid var(--asp-line-strong);
+  border-radius: var(--asp-radius-sm);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--asp-ink);
+  outline: 0;
+}
+.asp-input:focus {
+  border-color: var(--asp-accent);
+  box-shadow: 0 0 0 3px var(--asp-ring);
+}
+.asp-btn-accent {
+  height: var(--asp-ctl-h);
+  padding: 0 14px;
+  border: 0;
+  cursor: pointer;
+  border-radius: var(--asp-radius-sm);
+  background: var(--asp-accent);
+  color: var(--asp-accent-ink);
+  font: inherit;
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.asp-btn-accent:hover {
+  background: var(--asp-accent-hover);
+}
+
+/* colors */
+.asp-color-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.asp-color-row__label {
+  flex: 1;
+}
+.asp-swatches {
+  display: flex;
+  gap: 5px;
+}
+.asp-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+.asp-swatch--white {
+  border: 1px solid var(--asp-line-strong);
+}
+.asp-swatch--active {
+  box-shadow: 0 0 0 2px var(--asp-surface), 0 0 0 3px var(--asp-accent);
+}
+
+/* frame */
+.asp-frame-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+.asp-frame {
+  height: var(--asp-ctl-h);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.asp-hint {
+  font-size: 11.5px;
+  color: var(--asp-ink-muted);
+  line-height: 1.5;
+  background: var(--asp-surface-2);
+  border: 1px dashed var(--asp-line-strong);
+  border-radius: var(--asp-radius-sm);
+  padding: 9px 11px;
+  margin: 0;
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+}

@@ -1,0 +1,13 @@
+@for (tool of tools(); track tool.key) {
+  <button
+    type="button"
+    class="asp-rail__tool"
+    [class.asp-rail__tool--active]="tool.key === activeTool()"
+    [attr.aria-pressed]="tool.key === activeTool()"
+    [attr.title]="tool.label"
+    (click)="toolSelect.emit(tool.key)"
+  >
+    <asp-icon [name]="tool.icon" [size]="21" />
+    <span class="asp-rail__label">{{ tool.label }}</span>
+  </button>
+}

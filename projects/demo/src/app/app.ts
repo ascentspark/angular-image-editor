@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
-import { AspImageEditor, type AspThemeMode } from '@ascentspark/angular-image-editor';
-import { EngineHarness } from './engine-harness/engine-harness';
+import { AspImageEditor, type AspMode, type AspThemeMode } from '@ascentspark/angular-image-editor';
 
 interface ThemePreset {
   readonly label: string;
@@ -8,22 +7,14 @@ interface ThemePreset {
   readonly accent: string;
 }
 
-type DemoView = 'theme' | 'engine';
-
 @Component({
   selector: 'demo-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AspImageEditor, EngineHarness],
+  imports: [AspImageEditor],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
 export class App {
-  protected readonly view = signal<DemoView>('theme');
-
-  protected setView(view: DemoView): void {
-    this.view.set(view);
-  }
-
   protected readonly presets: readonly ThemePreset[] = [
     { label: 'Default blue', base: '#f4f6f9', accent: '#1f6feb' },
     { label: 'Wazure navy', base: '#f4f6f9', accent: '#02375e' },
@@ -32,9 +23,12 @@ export class App {
     { label: 'Royal purple', base: '#faf5ff', accent: '#7c3aed' },
   ];
 
+  protected readonly editorModes: readonly AspMode[] = ['viewer', 'basic', 'advanced', 'full'];
+
   protected readonly base = signal(this.presets[0].base);
   protected readonly accent = signal(this.presets[0].accent);
-  protected readonly mode = signal<AspThemeMode>('light');
+  protected readonly themeMode = signal<AspThemeMode>('light');
+  protected readonly editorMode = signal<AspMode>('advanced');
 
   protected applyPreset(preset: ThemePreset): void {
     this.base.set(preset.base);
@@ -42,7 +36,11 @@ export class App {
   }
 
   protected toggleMode(): void {
-    this.mode.update((m) => (m === 'light' ? 'dark' : 'light'));
+    this.themeMode.update((m) => (m === 'light' ? 'dark' : 'light'));
+  }
+
+  protected setEditorMode(mode: AspMode): void {
+    this.editorMode.set(mode);
   }
 
   protected onBaseInput(event: Event): void {
@@ -51,5 +49,9 @@ export class App {
 
   protected onAccentInput(event: Event): void {
     this.accent.set((event.target as HTMLInputElement).value);
+  }
+
+  protected onSaved(blob: Blob): void {
+    console.info('[demo] saved blob', blob.type, blob.size, 'bytes');
   }
 }
