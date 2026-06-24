@@ -733,6 +733,12 @@ export class AspImageEditor implements OnDestroy {
     void this.engine?.addRedaction(mode).then(() => this.sync());
   }
 
+  protected setFill(color: string): void {
+    if (this.engine?.setActiveFill(color)) {
+      this.sync();
+    }
+  }
+
   protected setAnnotationColor(color: string): void {
     this.annotationColor.set(color);
     // Apply to the current selection (no-op + no history entry if nothing selected).

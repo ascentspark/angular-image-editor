@@ -8,83 +8,101 @@
 
 <div class="asp-panel__body">
   @switch (kind()) {
-    @case ('adjust') {
-      <div class="asp-stack">
-        @for (def of adjustmentDefs(); track def.key) {
-          <div>
-            <div class="asp-field-row">
-              <span class="asp-field-label">{{ def.label }}</span>
-              <span class="asp-field-value">{{ displayValue(def) }}</span>
-            </div>
-            <input
-              type="range"
-              class="asp-range"
-              [min]="def.min ?? 0"
-              [max]="def.max ?? 100"
-              [value]="valueOf(def)"
-              (input)="onAdjustInput(def, $event)"
-              (change)="onAdjustCommit(def, $event)"
-              [attr.aria-label]="def.label"
-            />
-          </div>
-        }
-      </div>
-    }
-
-    @case ('filters') {
-      <div class="asp-filter-grid">
+    @case ('color') {
+      <div class="asp-tabs">
         <button
           type="button"
-          class="asp-filter"
-          [class.asp-filter--active]="activeLook() === null"
-          (click)="selectLook.emit(null)"
+          class="asp-tab"
+          [class.asp-tab--active]="!isColorFilters()"
+          (click)="requestTool.emit('adjust')"
         >
-          <span class="asp-filter__thumb asp-filter__thumb--none"></span>
-          <span class="asp-filter__label">Original</span>
+          Adjust
         </button>
-        @for (def of lookDefs(); track def.key) {
+        <button
+          type="button"
+          class="asp-tab"
+          [class.asp-tab--active]="isColorFilters()"
+          (click)="requestTool.emit('filters')"
+        >
+          Filters
+        </button>
+      </div>
+
+      @if (!isColorFilters()) {
+        <div class="asp-stack">
+          @for (def of adjustmentDefs(); track def.key) {
+            <div>
+              <div class="asp-field-row">
+                <span class="asp-field-label">{{ def.label }}</span>
+                <span class="asp-field-value">{{ displayValue(def) }}</span>
+              </div>
+              <input
+                type="range"
+                class="asp-range"
+                [min]="def.min ?? 0"
+                [max]="def.max ?? 100"
+                [value]="valueOf(def)"
+                (input)="onAdjustInput(def, $event)"
+                (change)="onAdjustCommit(def, $event)"
+                [attr.aria-label]="def.label"
+              />
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="asp-filter-grid">
           <button
             type="button"
             class="asp-filter"
-            [class.asp-filter--active]="activeLook() === def.key"
-            (click)="selectLook.emit(def.key)"
+            [class.asp-filter--active]="activeLook() === null"
+            (click)="selectLook.emit(null)"
           >
-            <span class="asp-filter__thumb" [attr.data-look]="def.key"></span>
-            <span class="asp-filter__label">{{ def.label }}</span>
+            <span class="asp-filter__thumb asp-filter__thumb--none"></span>
+            <span class="asp-filter__label">Original</span>
           </button>
-        }
-      </div>
-    }
-
-    @case ('crop') {
-      <div class="asp-section-label">Aspect ratio</div>
-      <div class="asp-chip-row">
-        @for (preset of aspectPresets(); track preset) {
-          <button
-            type="button"
-            class="asp-chip"
-            [class.asp-chip--active]="activeCrop() === preset && !activeAspectLabel()"
-            (click)="selectCrop.emit(preset)"
-          >
-            {{ preset === 'free' ? 'Free' : preset === 'original' ? 'Original' : preset }}
-          </button>
-        }
-        @for (option of aspectRatios(); track option.label) {
-          <button
-            type="button"
-            class="asp-chip"
-            [class.asp-chip--active]="activeAspectLabel() === option.label"
-            (click)="selectCustomCrop.emit(option)"
-          >
-            {{ option.label }}
-          </button>
-        }
-      </div>
-      <p class="asp-hint">Choose a ratio to crop to a centered region of that proportion.</p>
+          @for (def of lookDefs(); track def.key) {
+            <button
+              type="button"
+              class="asp-filter"
+              [class.asp-filter--active]="activeLook() === def.key"
+              (click)="selectLook.emit(def.key)"
+            >
+              <span class="asp-filter__thumb" [attr.data-look]="def.key"></span>
+              <span class="asp-filter__label">{{ def.label }}</span>
+            </button>
+          }
+        </div>
+      }
     }
 
     @case ('transform') {
       <div class="asp-stack">
+        <div>
+          <div class="asp-section-label">Aspect ratio</div>
+          <div class="asp-chip-row">
+            @for (preset of aspectPresets(); track preset) {
+              <button
+                type="button"
+                class="asp-chip"
+                [class.asp-chip--active]="activeCrop() === preset && !activeAspectLabel()"
+                (click)="selectCrop.emit(preset)"
+              >
+                {{ preset === 'free' ? 'Free' : preset === 'original' ? 'Original' : preset }}
+              </button>
+            }
+            @for (option of aspectRatios(); track option.label) {
+              <button
+                type="button"
+                class="asp-chip"
+                [class.asp-chip--active]="activeAspectLabel() === option.label"
+                (click)="selectCustomCrop.emit(option)"
+              >
+                {{ option.label }}
+              </button>
+            }
+          </div>
+        </div>
+
         <div class="asp-btn-row">
           <button type="button" class="asp-btn-line" (click)="rotate.emit(-90)">
             <asp-icon name="rotate-ccw" [size]="16" /> 90°
@@ -145,29 +163,34 @@
                 (change)="onFontChange($event)"
               >
                 @for (font of fonts(); track font.value) {
-                  <option [value]="font.value" [style.font-family]="font.value">{{ font.label }}</option>
+                  <option [value]="font.value">{{ font.label }}</option>
                 }
               </select>
             </div>
           }
         }
 
-        <div class="asp-color-row">
-          <span class="asp-field-label asp-color-row__label">Color</span>
-          <div class="asp-swatches">
-            @for (color of colors; track color) {
-              <button
-                type="button"
-                class="asp-swatch"
-                [class.asp-swatch--active]="annotationColor() === color"
-                [class.asp-swatch--white]="color === '#ffffff'"
-                [style.background]="color"
-                [attr.aria-label]="'Color ' + color"
-                (click)="annotationColorChange.emit(color)"
-              ></button>
-            }
-          </div>
+        <div>
+          <span class="asp-field-label">{{ isText() ? 'Text color' : 'Color' }}</span>
+          <asp-color-field
+            class="asp-mt"
+            [colors]="colors"
+            [value]="annotationColor()"
+            (colorChange)="annotationColorChange.emit($event)"
+          />
         </div>
+
+        @if (isShape()) {
+          <div>
+            <span class="asp-field-label">Fill</span>
+            <asp-color-field
+              class="asp-mt"
+              [colors]="fillColors"
+              [value]="''"
+              (colorChange)="fillChange.emit($event)"
+            />
+          </div>
+        }
 
         <div>
           <div class="asp-field-row">
@@ -218,35 +241,39 @@
           @if (isShape()) {
             Pick a shape to drop it on the canvas, then drag to position or resize.
           } @else if (isRedact()) {
-            Add a redaction, then drag it over the area to conceal.
+            Position the redaction box over the area, then Apply to conceal it.
+          } @else if (isText()) {
+            Add text, then drag it on the canvas. Edit color, size, and font here.
           } @else {
-            Draw directly on the canvas. Click an annotation to move, resize, or delete it.
+            Draw directly on the canvas. Manage objects in the Layers panel.
           }
         </p>
-
-        <div class="asp-btn-row">
-          <button type="button" class="asp-btn-line" (click)="duplicateSelection.emit()">
-            <asp-icon name="copy" [size]="15" /> Duplicate
-          </button>
-          <button type="button" class="asp-btn-line asp-btn-danger" (click)="deleteSelection.emit()">
-            <asp-icon name="trash-2" [size]="15" /> Delete
-          </button>
-        </div>
       </div>
     }
 
     @case ('frame') {
-      <div class="asp-frame-grid">
-        @for (frame of frameOptions(); track frame.key) {
-          <button
-            type="button"
-            class="asp-chip asp-frame"
-            [class.asp-chip--active]="activeFrame() === frame.key"
-            (click)="selectFrame.emit(frame.key)"
-          >
-            {{ frame.label }}
-          </button>
-        }
+      <div class="asp-stack">
+        <div class="asp-frame-grid">
+          @for (frame of frameOptions(); track frame.key) {
+            <button
+              type="button"
+              class="asp-chip asp-frame"
+              [class.asp-chip--active]="activeFrame() === frame.key"
+              (click)="selectFrame.emit(frame.key)"
+            >
+              {{ frame.label }}
+            </button>
+          }
+        </div>
+        <div>
+          <span class="asp-field-label">Frame color</span>
+          <asp-color-field
+            class="asp-mt"
+            [colors]="colors"
+            [value]="annotationColor()"
+            (colorChange)="annotationColorChange.emit($event)"
+          />
+        </div>
       </div>
     }
 
@@ -254,20 +281,11 @@
       <div class="asp-stack">
         <div>
           <div class="asp-section-label">Color</div>
-          <div class="asp-swatches asp-swatches--wrap">
-            @for (color of backgroundColors; track color) {
-              <button
-                type="button"
-                class="asp-swatch asp-swatch--lg"
-                [class.asp-swatch--white]="color === '#ffffff'"
-                [class.asp-swatch--transparent]="color === 'transparent'"
-                [style.background]="color === 'transparent' ? null : color"
-                [attr.aria-label]="color === 'transparent' ? 'Transparent' : 'Background ' + color"
-                [attr.title]="color === 'transparent' ? 'Transparent' : color"
-                (click)="setBackgroundColor.emit(color)"
-              ></button>
-            }
-          </div>
+          <asp-color-field
+            [colors]="backgroundColors"
+            [value]="''"
+            (colorChange)="setBackgroundColor.emit($event)"
+          />
         </div>
         <div>
           <div class="asp-section-label">Gradient</div>
@@ -282,36 +300,12 @@
       </div>
     }
 
-    @case ('object') {
-      <div class="asp-stack">
-        <div class="asp-btn-row">
-          <button type="button" class="asp-btn-line" (click)="duplicateSelection.emit()">
-            <asp-icon name="copy" [size]="15" /> Duplicate
-          </button>
-          <button type="button" class="asp-btn-line asp-btn-danger" (click)="deleteSelection.emit()">
-            <asp-icon name="trash-2" [size]="15" /> Delete
-          </button>
-        </div>
-        <div class="asp-btn-row">
-          <button type="button" class="asp-btn-line" (click)="groupSelection.emit()">
-            <asp-icon name="group" [size]="15" /> Group
-          </button>
-          <button type="button" class="asp-btn-line" (click)="ungroupSelection.emit()">Ungroup</button>
-        </div>
-        <div class="asp-section-label">Align to canvas</div>
-        <div class="asp-chip-row">
-          <button type="button" class="asp-chip" (click)="alignSelection.emit('left')">Left</button>
-          <button type="button" class="asp-chip" (click)="alignSelection.emit('center-h')">Center</button>
-          <button type="button" class="asp-chip" (click)="alignSelection.emit('right')">Right</button>
-          <button type="button" class="asp-chip" (click)="alignSelection.emit('top')">Top</button>
-          <button type="button" class="asp-chip" (click)="alignSelection.emit('center-v')">Middle</button>
-          <button type="button" class="asp-chip" (click)="alignSelection.emit('bottom')">Bottom</button>
-        </div>
-        <p class="asp-hint">
-          <asp-icon name="info" [size]="13" />
-          Shift-click to multi-select. Tip: Ctrl/Cmd+C/V/D, Delete, Space to pan.
-        </p>
-      </div>
+    @case ('select') {
+      <p class="asp-hint">
+        <asp-icon name="info" [size]="13" />
+        Click an object on the canvas to select it. Use the Layers panel to lock,
+        reorder, group, align, or change opacity. Shift-click to multi-select.
+      </p>
     }
 
     @default {

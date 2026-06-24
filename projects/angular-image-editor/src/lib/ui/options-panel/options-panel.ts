@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 
 import { AspIcon } from '../../icons/asp-icon';
+import { AspColorField } from '../controls/color-field';
 import type { RedactMode, ShapeKind } from '../../engine/editor-engine';
 import type { FilterMeta } from '../../registry/tool-registry';
 import type { AspAspectOption, AspAspectPreset, AspFilter, AspTool } from '../../types/editor.types';
@@ -24,14 +25,12 @@ export const FRAME_OPTIONS: readonly FrameOption[] = [
 ];
 
 export type PanelKind =
-  | 'adjust'
-  | 'filters'
-  | 'crop'
+  | 'color'
   | 'transform'
   | 'annotate'
   | 'frame'
   | 'background'
-  | 'object'
+  | 'select'
   | 'none';
 
 /** Background color swatches (`transparent` clears to the checkerboard). */
@@ -74,7 +73,7 @@ export const ANNOTATION_COLORS: readonly string[] = [
 @Component({
   selector: 'asp-options-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AspIcon],
+  imports: [AspIcon, AspColorField],
   templateUrl: './options-panel.html',
   styleUrl: './options-panel.css',
 })
@@ -132,12 +131,18 @@ export class AspOptionsPanel {
   /** Final size change (slider release) — commit to history. */
   readonly sizeCommit = output<number>();
   readonly selectFrame = output<string>();
+  /** Switch the Color panel sub-tool (Adjust ⟷ Filters tabs). */
+  readonly requestTool = output<AspTool>();
+  /** Fill color for the selected shape. */
+  readonly fillChange = output<string>();
   readonly setBackgroundColor = output<string>();
   readonly setBackgroundGradient = output<string[]>();
   readonly deleteSelection = output<void>();
   readonly duplicateSelection = output<void>();
 
   protected readonly colors = ANNOTATION_COLORS;
+  /** Shape-fill swatches — includes transparent (no fill). */
+  protected readonly fillColors: readonly string[] = ['transparent', ...ANNOTATION_COLORS];
   protected readonly backgroundColors = BACKGROUND_COLORS;
   protected readonly backgroundGradients = BACKGROUND_GRADIENTS;
   protected readonly textValue = signal('Add a label');
@@ -158,19 +163,20 @@ export class AspOptionsPanel {
     }
     switch (tool) {
       case 'adjust':
-        return 'adjust';
       case 'filters':
-        return 'filters';
+        return 'color';
       case 'crop':
-        return 'crop';
       case 'rotate':
       case 'straighten':
       case 'flip':
+      case 'resize':
         return 'transform';
       case 'frame':
         return 'frame';
       case 'background':
         return 'background';
+      case 'select':
+        return 'select';
       case 'pen':
       case 'highlighter':
       case 'eraser':
@@ -182,9 +188,11 @@ export class AspOptionsPanel {
       case 'redact':
         return 'annotate';
       default:
-        return 'object';
+        return 'none';
     }
   });
+
+  protected readonly isColorFilters = computed(() => this.activeTool() === 'filters');
 
   protected readonly isText = computed(() => this.activeTool() === 'text');
   protected readonly isShape = computed(() => this.activeTool() === 'shapes');

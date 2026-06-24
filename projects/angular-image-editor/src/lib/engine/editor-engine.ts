@@ -811,6 +811,24 @@ export class EditorEngine {
     this.canvas.freeDrawingBrush = brush;
   }
 
+  /** Set the fill of the active non-text object(s) (`'transparent'` clears it). */
+  setActiveFill(color: string, commit = true): boolean {
+    const active = this.canvas.getActiveObjects();
+    if (active.length === 0) {
+      return false;
+    }
+    for (const object of active) {
+      if (!object.isType('textbox', 'i-text', 'text')) {
+        object.set('fill', color);
+      }
+    }
+    this.canvas.requestRenderAll();
+    if (commit) {
+      this.commit('Fill');
+    }
+    return true;
+  }
+
   /** Set opacity (0–1) on the active object(s). Returns false if nothing selected. */
   setOpacity(value: number, commit = true): boolean {
     const active = this.canvas.getActiveObjects();

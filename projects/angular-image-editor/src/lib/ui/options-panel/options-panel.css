@@ -53,6 +53,42 @@
   gap: 15px;
 }
 
+.asp-mt {
+  display: block;
+  margin-top: 8px;
+}
+
+/* segmented tabs (Color: Adjust | Filters) */
+.asp-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--asp-surface-sunk);
+  border-radius: var(--asp-radius-md);
+  margin-bottom: 16px;
+}
+.asp-tab {
+  flex: 1;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--asp-ink-muted);
+  border-radius: var(--asp-radius-sm);
+}
+.asp-tab--active {
+  background: var(--asp-surface);
+  color: var(--asp-ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.asp-tab:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--asp-ring);
+}
+
 /* fields + sliders */
 .asp-field-row {
   display: flex;
