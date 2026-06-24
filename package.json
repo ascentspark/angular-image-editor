@@ -1,0 +1,44 @@
+{
+  "name": "angular-image-editor-workspace",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve demo",
+    "build": "ng build angular-image-editor",
+    "build:lib": "ng build angular-image-editor",
+    "build:demo": "ng build demo",
+    "watch": "ng build angular-image-editor --watch --configuration development",
+    "test": "ng test",
+    "test:lib": "ng test angular-image-editor --watch=false",
+    "test:demo": "ng test demo --watch=false",
+    "lint": "ng lint",
+    "pack:lib": "npm run build:lib && cd dist/angular-image-editor && npm pack"
+  },
+  "private": true,
+  "packageManager": "npm@11.12.1",
+  "dependencies": {
+    "@angular/common": "^22.0.0",
+    "@angular/compiler": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "@angular/forms": "^22.0.0",
+    "@angular/platform-browser": "^22.0.0",
+    "@angular/router": "^22.0.0",
+    "fabric": "^7.4.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.0.4",
+    "@angular/cli": "^22.0.3",
+    "@angular/compiler-cli": "^22.0.0",
+    "@eslint/js": "^10.0.1",
+    "angular-eslint": "22.0.0",
+    "eslint": "^10.3.0",
+    "jsdom": "^28.0.0",
+    "ng-packagr": "^22.0.0",
+    "prettier": "^3.8.1",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "8.60.1",
+    "vitest": "^4.0.8"
+  }
+}
