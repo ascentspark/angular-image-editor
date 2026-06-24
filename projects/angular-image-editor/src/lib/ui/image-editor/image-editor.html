@@ -64,6 +64,7 @@
           [straighten]="straighten()"
           [annotationColor]="annotationColor()"
           [annotationWidth]="annotationWidth()"
+          [fontSize]="fontSize()"
           [frameOptions]="frameOptions"
           [activeFrame]="activeFrame()"
           (resetRequested)="reset()"
@@ -79,7 +80,8 @@
           (addText)="addText($event)"
           (addRedaction)="addRedaction($event)"
           (annotationColorChange)="setAnnotationColor($event)"
-          (annotationWidthChange)="setAnnotationWidth($event)"
+          (sizeInput)="onSizeInput($event)"
+          (sizeCommit)="onSizeCommit($event)"
           (selectFrame)="selectFrame($event)"
           (deleteSelection)="deleteSelection()"
         />

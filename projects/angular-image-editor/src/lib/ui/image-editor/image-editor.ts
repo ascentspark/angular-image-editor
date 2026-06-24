@@ -14,7 +14,7 @@ import {
   type OnDestroy,
 } from '@angular/core';
 
-import { EditorEngine, type ShapeKind } from '../../engine/editor-engine';
+import { EditorEngine, type SelectionStyleInfo, type ShapeKind } from '../../engine/editor-engine';
 import type { HistoryEntry } from '../../engine/history';
 import { AspIcon } from '../../icons/asp-icon';
 import { FILTER_REGISTRY, TOOL_REGISTRY, type FilterMeta, type ToolMeta } from '../../registry/tool-registry';
@@ -127,6 +127,8 @@ export class AspImageEditor implements OnDestroy {
   protected readonly straighten = signal(0);
   protected readonly annotationColor = signal(ANNOTATION_COLORS[0]);
   protected readonly annotationWidth = signal(4);
+  protected readonly fontSize = signal(28);
+  protected readonly hasSelection = signal(false);
   protected readonly activeFrame = signal('none');
 
   protected readonly pickerOpen = signal(false);
@@ -246,6 +248,7 @@ export class AspImageEditor implements OnDestroy {
         await this.engine?.destroy();
         const { width, height } = stageSize(stage);
         this.engine = await EditorEngine.create(canvas, { width, height });
+        this.engine.setSelectionListener((info) => this.onSelectionChange(info));
         this.boundCanvas = canvas;
         this.lastSource = undefined;
         this.engineReady.set(true);
@@ -479,8 +482,22 @@ export class AspImageEditor implements OnDestroy {
   }
 
   protected addText(text: string): void {
-    this.engine?.addText(text, { color: this.annotationColor(), fontSize: Math.max(12, this.annotationWidth() * 6) });
+    this.engine?.addText(text, { color: this.annotationColor(), fontSize: this.fontSize() });
     this.sync();
+  }
+
+  /** Reflect the selected object's editable style into the panel signals. */
+  private onSelectionChange(info: SelectionStyleInfo | null): void {
+    this.hasSelection.set(info !== null);
+    if (!info) {
+      return;
+    }
+    this.annotationColor.set(info.color);
+    if (info.kind === 'text') {
+      this.fontSize.set(Math.round(info.size));
+    } else {
+      this.annotationWidth.set(Math.round(info.size));
+    }
   }
 
   protected addRedaction(mode: RedactMode): void {
@@ -489,10 +506,32 @@ export class AspImageEditor implements OnDestroy {
 
   protected setAnnotationColor(color: string): void {
     this.annotationColor.set(color);
+    // Apply to the current selection (no-op + no history entry if nothing selected).
+    if (this.engine?.styleActiveObject({ color })) {
+      this.sync();
+    }
   }
 
-  protected setAnnotationWidth(width: number): void {
-    this.annotationWidth.set(width);
+  /** Live size drag — apply to the selection without committing each frame. */
+  protected onSizeInput(size: number): void {
+    if (this.activeTool() === 'text') {
+      this.fontSize.set(size);
+    } else {
+      this.annotationWidth.set(size);
+    }
+    this.engine?.styleActiveObject({ size }, false);
+  }
+
+  /** Size drag released — commit one history entry. */
+  protected onSizeCommit(size: number): void {
+    if (this.activeTool() === 'text') {
+      this.fontSize.set(size);
+    } else {
+      this.annotationWidth.set(size);
+    }
+    if (this.engine?.styleActiveObject({ size }, true)) {
+      this.sync();
+    }
   }
 
   protected selectFrame(frame: string): void {

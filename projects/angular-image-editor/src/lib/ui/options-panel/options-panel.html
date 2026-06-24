@@ -147,15 +147,16 @@
         <div>
           <div class="asp-field-row">
             <span class="asp-field-label">{{ strokeLabel() }}</span>
-            <span class="asp-field-value">{{ annotationWidth() }} px</span>
+            <span class="asp-field-value">{{ sizeValue() }} px</span>
           </div>
           <input
             type="range"
             class="asp-range"
-            min="1"
-            max="48"
-            [value]="annotationWidth()"
-            (input)="onWidthInput($event)"
+            [min]="sizeMin()"
+            [max]="sizeMax()"
+            [value]="sizeValue()"
+            (input)="onSizeInput($event)"
+            (change)="onSizeCommit($event)"
             [attr.aria-label]="strokeLabel()"
           />
         </div>

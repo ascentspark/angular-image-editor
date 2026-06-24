@@ -41,6 +41,14 @@ export interface TextStyle {
   readonly fontFamily?: string;
 }
 
+/** Editable style of the current selection, surfaced to the host UI. */
+export interface SelectionStyleInfo {
+  /** `'text'` → color is fill + size is fontSize; `'stroke'` → color is stroke + size is strokeWidth. */
+  readonly kind: 'text' | 'stroke';
+  readonly color: string;
+  readonly size: number;
+}
+
 /** Full serialized editor state stored in each history entry. */
 interface EditorSnapshot {
   json: Record<string, unknown>;
@@ -79,11 +87,96 @@ export class EditorEngine {
   private adjustments: Record<AspFilter, number> = defaultAdjustments();
   private looks = new Set<AspFilter>();
   private frame = 'none';
+  private selectionListener: ((info: SelectionStyleInfo | null) => void) | null = null;
 
   private constructor(fabric: FabricModule, canvas: Fabric.Canvas) {
     this.fabric = fabric;
     this.canvas = canvas;
     this.history = new EditHistory<string>('Opened editor', this.snapshot());
+    const notify = (): void => this.notifySelection();
+    this.canvas.on('selection:created', notify);
+    this.canvas.on('selection:updated', notify);
+    this.canvas.on('selection:cleared', notify);
+  }
+
+  /** Register a callback fired when the active selection (and its style) changes. */
+  setSelectionListener(cb: (info: SelectionStyleInfo | null) => void): void {
+    this.selectionListener = cb;
+  }
+
+  private notifySelection(): void {
+    const active = this.canvas.getActiveObject();
+    this.selectionListener?.(active ? this.describeSelection(active) : null);
+  }
+
+  private describeSelection(object: Fabric.FabricObject): SelectionStyleInfo {
+    if (object.isType('textbox', 'i-text', 'text')) {
+      const fill = object.get('fill');
+      const fontSize = object.get('fontSize');
+      return {
+        kind: 'text',
+        color: typeof fill === 'string' ? fill : '#000000',
+        size: typeof fontSize === 'number' ? fontSize : 24,
+      };
+    }
+    let target = object;
+    if (object.isType('group', 'activeselection')) {
+      const children = (object as Fabric.Group).getObjects();
+      target = children.find((c) => typeof c.get('stroke') === 'string') ?? children[0] ?? object;
+    }
+    const stroke = target.get('stroke');
+    const fill = target.get('fill');
+    const strokeWidth = target.get('strokeWidth');
+    return {
+      kind: 'stroke',
+      color: typeof stroke === 'string' ? stroke : typeof fill === 'string' ? fill : '#000000',
+      size: typeof strokeWidth === 'number' ? strokeWidth : 4,
+    };
+  }
+
+  /**
+   * Apply a color and/or size to the currently selected object(s), routing by
+   * object type (text → fill/fontSize, shapes & paths → stroke/strokeWidth, and
+   * recursing into groups such as arrows). Returns false if nothing is selected.
+   * Pass `commit: false` for live slider drags; commit once on release.
+   */
+  styleActiveObject(style: { color?: string; size?: number }, commit = true): boolean {
+    const active = this.canvas.getActiveObject();
+    if (!active) {
+      return false;
+    }
+    this.styleOne(active, style);
+    this.canvas.requestRenderAll();
+    if (commit) {
+      this.commit('Restyle');
+    }
+    this.notifySelection();
+    return true;
+  }
+
+  private styleOne(object: Fabric.FabricObject, style: { color?: string; size?: number }): void {
+    if (object.isType('group', 'activeselection')) {
+      for (const child of (object as Fabric.Group).getObjects()) {
+        this.styleOne(child, style);
+      }
+      return;
+    }
+    const isText = object.isType('textbox', 'i-text', 'text');
+    if (style.color !== undefined) {
+      if (isText || typeof object.get('stroke') !== 'string') {
+        object.set('fill', style.color);
+      } else {
+        object.set('stroke', style.color);
+      }
+    }
+    if (style.size !== undefined) {
+      if (isText) {
+        object.set('fontSize', Math.max(6, style.size));
+      } else {
+        object.set('strokeWidth', style.size);
+      }
+    }
+    object.setCoords();
   }
 
   /** Create an engine bound to a `<canvas>` element. */
@@ -318,6 +411,7 @@ export class EditorEngine {
     this.canvas.setActiveObject(object);
     this.canvas.requestRenderAll();
     this.commit('Add shape');
+    this.notifySelection();
   }
 
   private buildArrow(cx: number, cy: number, style: AnnotationStyle): Fabric.FabricObject {
@@ -360,6 +454,7 @@ export class EditorEngine {
     this.canvas.setActiveObject(textbox);
     this.canvas.requestRenderAll();
     this.commit('Add text');
+    this.notifySelection();
   }
 
   /**
@@ -485,6 +580,7 @@ export class EditorEngine {
     this.canvas.discardActiveObject();
     this.canvas.requestRenderAll();
     this.commit('Delete');
+    this.notifySelection();
   }
 
   // ---- history -------------------------------------------------------------

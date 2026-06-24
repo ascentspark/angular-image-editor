@@ -81,6 +81,7 @@ export class AspOptionsPanel {
   // annotate
   readonly annotationColor = input<string>(ANNOTATION_COLORS[0]);
   readonly annotationWidth = input<number>(4);
+  readonly fontSize = input<number>(28);
 
   readonly frameOptions = input<readonly FrameOption[]>(FRAME_OPTIONS);
   readonly activeFrame = input<string>('none');
@@ -98,7 +99,10 @@ export class AspOptionsPanel {
   readonly addText = output<string>();
   readonly addRedaction = output<RedactMode>();
   readonly annotationColorChange = output<string>();
-  readonly annotationWidthChange = output<number>();
+  /** Live size change (slider drag) — apply without committing history. */
+  readonly sizeInput = output<number>();
+  /** Final size change (slider release) — commit to history. */
+  readonly sizeCommit = output<number>();
   readonly selectFrame = output<string>();
   readonly deleteSelection = output<void>();
 
@@ -153,6 +157,9 @@ export class AspOptionsPanel {
   protected readonly isRedact = computed(() => this.activeTool() === 'redact');
 
   protected readonly strokeLabel = computed(() => (this.isText() ? 'Font size' : 'Thickness'));
+  protected readonly sizeValue = computed(() => (this.isText() ? this.fontSize() : this.annotationWidth()));
+  protected readonly sizeMin = computed(() => (this.isText() ? 8 : 1));
+  protected readonly sizeMax = computed(() => (this.isText() ? 120 : 48));
 
   protected displayValue(def: FilterMeta): string {
     const value = this.adjustments()[def.key] ?? def.defaultValue ?? 0;
@@ -184,7 +191,11 @@ export class AspOptionsPanel {
     this.straightenCommit.emit(Number((event.target as HTMLInputElement).value));
   }
 
-  protected onWidthInput(event: Event): void {
-    this.annotationWidthChange.emit(Number((event.target as HTMLInputElement).value));
+  protected onSizeInput(event: Event): void {
+    this.sizeInput.emit(Number((event.target as HTMLInputElement).value));
+  }
+
+  protected onSizeCommit(event: Event): void {
+    this.sizeCommit.emit(Number((event.target as HTMLInputElement).value));
   }
 }
