@@ -35,7 +35,7 @@
   color: var(--asp-ink-700);
 }
 .asp-rail__tool:focus-visible,
-.asp-rail__chevron:focus-visible {
+.asp-rail__flyout-toggle:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--asp-ring);
 }
@@ -50,26 +50,41 @@
   text-align: center;
 }
 
-/* flyout affordance — a small chevron in the slot's top-right corner */
-.asp-rail__chevron {
+/* Flyout affordance — a Photoshop-style filled triangle tucked into the slot's
+   bottom-right corner. Universally read as "this slot holds more tools". */
+.asp-rail__flyout-toggle {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 16px;
-  height: 16px;
+  bottom: 0;
+  right: 0;
+  width: 18px;
+  height: 18px;
   border: 0;
+  padding: 0;
   background: transparent;
-  color: var(--asp-ink-faint);
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--asp-radius-sm);
-  transform: rotate(90deg);
+  border-radius: 0 0 var(--asp-radius-md) 0;
 }
-.asp-rail__chevron:hover {
-  color: var(--asp-ink-700);
-  background: var(--asp-surface-sunk);
+.asp-rail__flyout-toggle::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  background: var(--asp-ink-muted);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  transition: background 0.14s, transform 0.14s;
+}
+.asp-rail__flyout-toggle:hover::after,
+.asp-rail__flyout-toggle--open::after {
+  background: var(--asp-accent);
+}
+.asp-rail__flyout-toggle--open::after {
+  transform: scale(1.25);
+}
+/* On the active (accent-soft) slot, keep the triangle legible. */
+.asp-rail__tool--active ~ .asp-rail__flyout-toggle::after {
+  background: var(--asp-accent);
 }
 
 .asp-rail__scrim {

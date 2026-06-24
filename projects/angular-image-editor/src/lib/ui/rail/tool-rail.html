@@ -15,13 +15,13 @@
     @if (hasFlyout(group)) {
       <button
         type="button"
-        class="asp-rail__chevron"
-        [attr.aria-label]="group.label + ' options'"
+        class="asp-rail__flyout-toggle"
+        [class.asp-rail__flyout-toggle--open]="openGroup() === group.id"
+        [attr.aria-label]="group.label + ' — more tools'"
         [attr.aria-expanded]="openGroup() === group.id"
+        title="More tools"
         (click)="toggleFlyout(group.id, $event)"
-      >
-        <asp-icon name="chevron-up" [size]="12" />
-      </button>
+      ></button>
 
       @if (openGroup() === group.id) {
         <button type="button" class="asp-rail__scrim" aria-label="Close" (click)="closeFlyout()"></button>
