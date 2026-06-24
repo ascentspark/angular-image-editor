@@ -132,7 +132,9 @@ formats · OS-clipboard image paste → clipboard · Snapping guides → drag be
   fix. No net-new feature surface beyond these — just correct homes + the three
   fixes the user called out.
 - **R2+ — features**: fold in the remaining deferred A/B items into the homes
-  above, one batch per plan.
+  above, one batch per plan. **Done (2026-06-24)** — R2-1..R2-9 all shipped and
+  verified; see `docs/plans/2026-06-24-ui-ia-redesign-R2.md` for the per-task
+  status and verification record.
 
 ## Verification
 
