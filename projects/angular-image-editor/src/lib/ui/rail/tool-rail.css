@@ -9,6 +9,10 @@
   border-radius: var(--asp-radius-lg);
 }
 
+.asp-rail__slot {
+  position: relative;
+}
+
 .asp-rail__tool {
   display: flex;
   flex-direction: column;
@@ -26,26 +30,95 @@
   color: var(--asp-ink-muted);
   transition: background 0.14s, color 0.14s;
 }
-
 .asp-rail__tool:hover {
   background: var(--asp-surface-sunk);
   color: var(--asp-ink-700);
 }
-
-.asp-rail__tool:focus-visible {
+.asp-rail__tool:focus-visible,
+.asp-rail__chevron:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--asp-ring);
 }
-
 .asp-rail__tool--active,
 .asp-rail__tool--active:hover {
   background: var(--asp-accent-soft);
   color: var(--asp-accent-soft-ink);
   font-weight: 700;
 }
-
 .asp-rail__label {
   line-height: 1;
+  text-align: center;
+}
+
+/* flyout affordance — a small chevron in the slot's top-right corner */
+.asp-rail__chevron {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  background: transparent;
+  color: var(--asp-ink-faint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--asp-radius-sm);
+  transform: rotate(90deg);
+}
+.asp-rail__chevron:hover {
+  color: var(--asp-ink-700);
+  background: var(--asp-surface-sunk);
+}
+
+.asp-rail__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 28;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: default;
+}
+.asp-rail__flyout {
+  position: fixed;
+  z-index: 29;
+  min-width: 150px;
+  background: var(--asp-surface);
+  border: 1px solid var(--asp-line);
+  border-radius: var(--asp-radius-md);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.2);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.asp-rail__flyout-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--asp-ink-700);
+  border-radius: var(--asp-radius-sm);
+  text-align: left;
+}
+.asp-rail__flyout-item:hover {
+  background: var(--asp-surface-sunk);
+}
+.asp-rail__flyout-item--active {
+  background: var(--asp-accent-soft);
+  color: var(--asp-accent-soft-ink);
+}
+.asp-rail__flyout-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--asp-ring);
 }
 
 @media (max-width: 760px) {
@@ -55,8 +128,8 @@
     gap: 4px;
     padding: 8px;
   }
-  .asp-rail__tool {
-    flex: 1 0 58px;
+  .asp-rail__slot {
+    flex: 1 0 64px;
   }
 }
 

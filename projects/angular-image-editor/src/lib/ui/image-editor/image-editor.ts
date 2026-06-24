@@ -25,6 +25,7 @@ import type { HistoryEntry } from '../../engine/history';
 import { AspIcon } from '../../icons/asp-icon';
 import { FILTER_REGISTRY, TOOL_REGISTRY, type FilterMeta, type ToolMeta } from '../../registry/tool-registry';
 import { resolveFilters, resolveTools } from '../../registry/resolve-tools';
+import { groupForTool, resolveGroups, type ResolvedGroup } from '../../registry/toolbar-groups';
 import { applyTheme } from '../../theme/apply-theme';
 import { deriveTheme, type AspThemeMode } from '../../theme/derive-theme';
 import type {
@@ -128,9 +129,16 @@ export class AspImageEditor implements OnDestroy {
   protected readonly engineReady = signal(false);
 
   // ---- resolved configuration ----------------------------------------------
-  protected readonly resolvedTools = computed<ToolMeta[]>(() =>
-    resolveTools(this.mode(), this.tools(), this.disabledTools()).map((t) => TOOL_REGISTRY[t]),
+  protected readonly resolvedToolKeys = computed<AspTool[]>(() =>
+    resolveTools(this.mode(), this.tools(), this.disabledTools()),
   );
+  protected readonly resolvedTools = computed<ToolMeta[]>(() =>
+    this.resolvedToolKeys().map((t) => TOOL_REGISTRY[t]),
+  );
+  protected readonly resolvedGroups = computed<ResolvedGroup[]>(() =>
+    resolveGroups(this.resolvedToolKeys()),
+  );
+  protected readonly activeMembers = signal<Record<string, AspTool>>({});
   protected readonly resolvedFilters = computed<AspFilter[]>(() =>
     resolveFilters(this.mode(), this.filters()),
   );
@@ -218,16 +226,17 @@ export class AspImageEditor implements OnDestroy {
     // Apply the derived theme to the host element whenever inputs change.
     effect(() => applyTheme(this.host.nativeElement, this.theme()));
 
-    // Default the active tool to the first resolved tool (and keep it valid).
+    // Default the active tool to Color (adjust) when available, else the first
+    // resolved tool; keep it valid as the resolved set changes.
     effect(() => {
-      const tools = this.resolvedTools();
+      const keys = this.resolvedToolKeys();
       const current = untracked(this.activeTool);
-      if (tools.length === 0) {
+      if (keys.length === 0) {
         if (current !== null) {
           this.activeTool.set(null);
         }
-      } else if (current === null || !tools.some((t) => t.key === current)) {
-        this.activeTool.set(tools[0].key);
+      } else if (current === null || !keys.includes(current)) {
+        this.activeTool.set(keys.includes('adjust') ? 'adjust' : keys[0]);
       }
     });
 
@@ -475,6 +484,10 @@ export class AspImageEditor implements OnDestroy {
   // ---- top bar -------------------------------------------------------------
   protected selectTool(tool: AspTool): void {
     this.activeTool.set(tool);
+    const group = groupForTool(tool);
+    if (group) {
+      this.activeMembers.update((members) => ({ ...members, [group.id]: tool }));
+    }
   }
 
   protected async undo(): Promise<void> {

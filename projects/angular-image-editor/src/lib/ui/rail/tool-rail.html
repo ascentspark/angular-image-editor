@@ -1,13 +1,50 @@
-@for (tool of tools(); track tool.key) {
-  <button
-    type="button"
-    class="asp-rail__tool"
-    [class.asp-rail__tool--active]="tool.key === activeTool()"
-    [attr.aria-pressed]="tool.key === activeTool()"
-    [attr.title]="tool.label"
-    (click)="toolSelect.emit(tool.key)"
-  >
-    <asp-icon [name]="tool.icon" [size]="21" />
-    <span class="asp-rail__label">{{ tool.label }}</span>
-  </button>
+@for (group of groups(); track group.id) {
+  <div class="asp-rail__slot">
+    <button
+      type="button"
+      class="asp-rail__tool"
+      [class.asp-rail__tool--active]="isActive(group)"
+      [attr.aria-pressed]="isActive(group)"
+      [attr.title]="group.label"
+      (click)="pick(activeMemberOf(group))"
+    >
+      <asp-icon [name]="memberIcon(activeMemberOf(group))" [size]="21" />
+      <span class="asp-rail__label">{{ group.label }}</span>
+    </button>
+
+    @if (hasFlyout(group)) {
+      <button
+        type="button"
+        class="asp-rail__chevron"
+        [attr.aria-label]="group.label + ' options'"
+        [attr.aria-expanded]="openGroup() === group.id"
+        (click)="toggleFlyout(group.id, $event)"
+      >
+        <asp-icon name="chevron-up" [size]="12" />
+      </button>
+
+      @if (openGroup() === group.id) {
+        <button type="button" class="asp-rail__scrim" aria-label="Close" (click)="closeFlyout()"></button>
+        <div
+          class="asp-rail__flyout"
+          role="menu"
+          [style.top.px]="flyoutPos().top"
+          [style.left.px]="flyoutPos().left"
+        >
+          @for (member of group.members; track member) {
+            <button
+              type="button"
+              class="asp-rail__flyout-item"
+              [class.asp-rail__flyout-item--active]="member === activeTool()"
+              role="menuitem"
+              (click)="pick(member)"
+            >
+              <asp-icon [name]="memberIcon(member)" [size]="17" />
+              {{ memberLabel(member) }}
+            </button>
+          }
+        </div>
+      }
+    }
+  </div>
 }

@@ -3,8 +3,9 @@
     <div class="asp-workspace">
       <asp-tool-rail
         class="asp-workspace__rail"
-        [tools]="resolvedTools()"
+        [groups]="resolvedGroups()"
         [activeTool]="activeTool()"
+        [activeMembers]="activeMembers()"
         (toolSelect)="selectTool($event)"
       />
 
