@@ -234,6 +234,15 @@
   border-color: color-mix(in oklab, var(--asp-error) 40%, var(--asp-line-strong));
 }
 
+.asp-shape-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.asp-shape-grid .asp-icon-btn {
+  flex: none;
+}
+
 .asp-icon-btn {
   flex: 1;
   height: 36px;

@@ -27,7 +27,16 @@ export interface EngineOptions {
   readonly height: number;
 }
 
-export type ShapeKind = 'rect' | 'ellipse' | 'line' | 'arrow';
+export type ShapeKind =
+  | 'rect'
+  | 'ellipse'
+  | 'line'
+  | 'arrow'
+  | 'triangle'
+  | 'diamond'
+  | 'pentagon'
+  | 'hexagon'
+  | 'star';
 
 export type RedactMode = 'blur' | 'pixelate' | 'solid';
 
@@ -497,6 +506,21 @@ export class EditorEngine {
         break;
       case 'arrow':
         object = this.buildArrow(cx, cy, style);
+        break;
+      case 'triangle':
+        object = new this.fabric.Triangle({ ...common, width: 150, height: 130 });
+        break;
+      case 'diamond':
+        object = new this.fabric.Polygon(polygonPoints(4, 80), common);
+        break;
+      case 'pentagon':
+        object = new this.fabric.Polygon(polygonPoints(5, 80), common);
+        break;
+      case 'hexagon':
+        object = new this.fabric.Polygon(polygonPoints(6, 80), common);
+        break;
+      case 'star':
+        object = new this.fabric.Polygon(starPoints(5, 85, 38), common);
         break;
       default:
         return;
@@ -1253,6 +1277,23 @@ const FRAME_STYLES: Record<string, FrameSpec> = {
   hook: { strokeWidth: 12, radius: 0, useColor: true, stroke: '#000000' },
   bead: { strokeWidth: 7, radius: 0, useColor: true, stroke: '#000000', dash: [2, 7] },
 };
+
+/** Vertices of a regular polygon centered at the origin (first vertex pointing up). */
+function polygonPoints(sides: number, radius: number): { x: number; y: number }[] {
+  return Array.from({ length: sides }, (_, i) => {
+    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / sides;
+    return { x: radius * Math.cos(angle), y: radius * Math.sin(angle) };
+  });
+}
+
+/** Vertices of an N-point star alternating outer/inner radius. */
+function starPoints(points: number, outer: number, inner: number): { x: number; y: number }[] {
+  return Array.from({ length: points * 2 }, (_, i) => {
+    const radius = i % 2 === 0 ? outer : inner;
+    const angle = -Math.PI / 2 + (i * Math.PI) / points;
+    return { x: radius * Math.cos(angle), y: radius * Math.sin(angle) };
+  });
+}
 
 /** Convert a hex color to an `rgba()` string at the given alpha; passes other values through. */
 function translucent(color: string, alpha: number): string {

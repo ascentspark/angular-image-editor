@@ -220,12 +220,27 @@
         </div>
 
         @if (isShape()) {
-          <div class="asp-btn-row">
+          <div class="asp-shape-grid">
             <button type="button" class="asp-icon-btn" title="Rectangle" (click)="addShape.emit('rect')">
               <asp-icon name="square" [size]="17" />
             </button>
             <button type="button" class="asp-icon-btn" title="Ellipse" (click)="addShape.emit('ellipse')">
               <asp-icon name="circle" [size]="17" />
+            </button>
+            <button type="button" class="asp-icon-btn" title="Triangle" (click)="addShape.emit('triangle')">
+              <asp-icon name="triangle" [size]="17" />
+            </button>
+            <button type="button" class="asp-icon-btn" title="Diamond" (click)="addShape.emit('diamond')">
+              <asp-icon name="diamond" [size]="17" />
+            </button>
+            <button type="button" class="asp-icon-btn" title="Pentagon" (click)="addShape.emit('pentagon')">
+              <asp-icon name="pentagon" [size]="17" />
+            </button>
+            <button type="button" class="asp-icon-btn" title="Hexagon" (click)="addShape.emit('hexagon')">
+              <asp-icon name="hexagon" [size]="17" />
+            </button>
+            <button type="button" class="asp-icon-btn" title="Star" (click)="addShape.emit('star')">
+              <asp-icon name="star" [size]="17" />
             </button>
             <button type="button" class="asp-icon-btn" title="Line" (click)="addShape.emit('line')">
               <asp-icon name="minus" [size]="17" />
