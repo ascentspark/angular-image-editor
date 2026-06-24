@@ -55,18 +55,6 @@
       </div>
 
       <div class="asp-workspace__panel asp-card">
-        @if (showLayers()) {
-          <asp-layer-list
-            class="asp-workspace__options"
-            [layers]="layers()"
-            (selectLayer)="onSelectLayer($event)"
-            (toggleLock)="onToggleLayerLock($event)"
-            (toggleVisible)="onToggleLayerVisible($event)"
-            (moveUp)="onMoveLayer($event, 'up')"
-            (moveDown)="onMoveLayer($event, 'down')"
-            (removeLayer)="onDeleteLayer($event)"
-          />
-        } @else {
         <asp-options-panel
           class="asp-workspace__options"
           [activeTool]="activeTool()"
@@ -102,9 +90,6 @@
           (addShape)="addShape($event)"
           (addText)="addText($event)"
           (fontChange)="onFontChange($event)"
-          (groupSelection)="groupSelection()"
-          (ungroupSelection)="ungroupSelection()"
-          (alignSelection)="alignSelection($event)"
           (addRedaction)="addRedaction($event)"
           (annotationColorChange)="setAnnotationColor($event)"
           (sizeInput)="onSizeInput($event)"
@@ -112,13 +97,23 @@
           (selectFrame)="selectFrame($event)"
           (setBackgroundColor)="setBackgroundColor($event)"
           (setBackgroundGradient)="setBackgroundGradient($event)"
-          (deleteSelection)="deleteSelection()"
-          (duplicateSelection)="duplicate()"
         />
-        }
-        @if (showHistory()) {
-          <asp-history-list [entries]="historyEntries()" [currentIndex]="historyIndex()" />
-        }
+        <asp-layer-list
+          [layers]="layers()"
+          (selectLayer)="onSelectLayer($event)"
+          (toggleLock)="onToggleLayerLock($event)"
+          (toggleVisible)="onToggleLayerVisible($event)"
+          (moveUp)="onMoveLayer($event, 'up')"
+          (moveDown)="onMoveLayer($event, 'down')"
+          (removeLayer)="onDeleteLayer($event)"
+          (groupSelection)="groupSelection()"
+          (ungroupSelection)="ungroupSelection()"
+          (duplicateSelection)="duplicate()"
+          (deleteSelection)="deleteSelection()"
+          (alignSelection)="alignSelection($event)"
+          (opacityInput)="onLayerOpacityInput($event)"
+          (opacityCommit)="onLayerOpacityCommit($event)"
+        />
       </div>
     </div>
   }

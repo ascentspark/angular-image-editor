@@ -1,70 +1,152 @@
-<div class="asp-layers__head">
+<button
+  type="button"
+  class="asp-layers__head"
+  [attr.aria-expanded]="!collapsed()"
+  (click)="toggle()"
+>
   <span class="asp-layers__title">Layers</span>
-</div>
+  <asp-icon [name]="collapsed() ? 'chevron-up' : 'chevron-down'" [size]="15" />
+</button>
 
-<div class="asp-layers__scroll">
-  @for (layer of layers(); track layer.id) {
-    <div class="asp-layers__row" [class.asp-layers__row--selected]="layer.selected">
+@if (!collapsed()) {
+  <!-- object-ops act on the current selection -->
+  <div class="asp-layers__ops">
+    <div class="asp-layers__opsrow">
       <button
         type="button"
-        class="asp-layers__name"
-        [disabled]="layer.locked"
-        (click)="selectLayer.emit(layer.id)"
-        [attr.aria-pressed]="layer.selected"
+        class="asp-layers__op"
+        title="Group"
+        aria-label="Group selection"
+        [disabled]="!hasSelection()"
+        (click)="groupSelection.emit()"
       >
-        {{ layer.label }}
+        <asp-icon name="group" [size]="15" />
       </button>
-
-      <div class="asp-layers__actions">
+      <button
+        type="button"
+        class="asp-layers__op"
+        title="Ungroup"
+        aria-label="Ungroup"
+        [disabled]="!hasSelection()"
+        (click)="ungroupSelection.emit()"
+      >
+        <asp-icon name="layers" [size]="15" />
+      </button>
+      <div class="asp-layers__align">
         <button
           type="button"
-          class="asp-layers__btn"
-          [attr.title]="layer.visible ? 'Hide' : 'Show'"
-          [attr.aria-label]="layer.visible ? 'Hide layer' : 'Show layer'"
-          (click)="toggleVisible.emit(layer.id)"
+          class="asp-layers__op"
+          title="Align"
+          aria-label="Align"
+          [attr.aria-expanded]="alignOpen()"
+          [disabled]="!hasSelection()"
+          (click)="toggleAlign()"
         >
-          <asp-icon [name]="layer.visible ? 'eye' : 'eye-off'" [size]="15" />
+          <asp-icon name="align-horizontal-distribute-center" [size]="15" />
         </button>
-        <button
-          type="button"
-          class="asp-layers__btn"
-          [class.asp-layers__btn--on]="layer.locked"
-          [attr.title]="layer.locked ? 'Unlock' : 'Lock'"
-          [attr.aria-label]="layer.locked ? 'Unlock layer' : 'Lock layer'"
-          (click)="toggleLock.emit(layer.id)"
-        >
-          <asp-icon [name]="layer.locked ? 'lock' : 'lock-open'" [size]="15" />
-        </button>
-        <button
-          type="button"
-          class="asp-layers__btn"
-          title="Bring forward"
-          aria-label="Bring layer forward"
-          (click)="moveUp.emit(layer.id)"
-        >
-          <asp-icon name="chevron-up" [size]="15" />
-        </button>
-        <button
-          type="button"
-          class="asp-layers__btn"
-          title="Send backward"
-          aria-label="Send layer backward"
-          (click)="moveDown.emit(layer.id)"
-        >
-          <asp-icon name="chevron-down" [size]="15" />
-        </button>
-        @if (layer.removable) {
-          <button
-            type="button"
-            class="asp-layers__btn asp-layers__btn--danger"
-            title="Delete"
-            aria-label="Delete layer"
-            (click)="removeLayer.emit(layer.id)"
-          >
-            <asp-icon name="trash-2" [size]="15" />
-          </button>
+        @if (alignOpen()) {
+          <button type="button" class="asp-layers__scrim" aria-label="Close" (click)="toggleAlign()"></button>
+          <div class="asp-layers__alignmenu" role="menu">
+            <button type="button" role="menuitem" (click)="emitAlign('left')">Left</button>
+            <button type="button" role="menuitem" (click)="emitAlign('center-h')">Center</button>
+            <button type="button" role="menuitem" (click)="emitAlign('right')">Right</button>
+            <button type="button" role="menuitem" (click)="emitAlign('top')">Top</button>
+            <button type="button" role="menuitem" (click)="emitAlign('center-v')">Middle</button>
+            <button type="button" role="menuitem" (click)="emitAlign('bottom')">Bottom</button>
+          </div>
         }
       </div>
+      <button
+        type="button"
+        class="asp-layers__op"
+        title="Duplicate"
+        aria-label="Duplicate"
+        [disabled]="!hasSelection()"
+        (click)="duplicateSelection.emit()"
+      >
+        <asp-icon name="copy" [size]="15" />
+      </button>
+      <button
+        type="button"
+        class="asp-layers__op asp-layers__op--danger"
+        title="Delete"
+        aria-label="Delete"
+        [disabled]="!hasSelection()"
+        (click)="deleteSelection.emit()"
+      >
+        <asp-icon name="trash-2" [size]="15" />
+      </button>
     </div>
-  }
-</div>
+
+    <div class="asp-layers__opacity">
+      <span class="asp-layers__opacity-label">Opacity</span>
+      <input
+        type="range"
+        class="asp-range"
+        min="0"
+        max="100"
+        [value]="opacityPct()"
+        [disabled]="!hasSelection()"
+        (input)="onOpacityInput($event)"
+        (change)="onOpacityCommit($event)"
+        aria-label="Layer opacity"
+      />
+      <span class="asp-layers__opacity-value">{{ opacityPct() }}</span>
+    </div>
+  </div>
+
+  <div class="asp-layers__scroll">
+    @for (layer of layers(); track layer.id) {
+      <div class="asp-layers__row" [class.asp-layers__row--selected]="layer.selected">
+        <button
+          type="button"
+          class="asp-layers__name"
+          [disabled]="layer.locked"
+          (click)="selectLayer.emit(layer.id)"
+          [attr.aria-pressed]="layer.selected"
+        >
+          {{ layer.label }}
+        </button>
+        <div class="asp-layers__actions">
+          <button
+            type="button"
+            class="asp-layers__btn"
+            [attr.title]="layer.visible ? 'Hide' : 'Show'"
+            [attr.aria-label]="layer.visible ? 'Hide layer' : 'Show layer'"
+            (click)="toggleVisible.emit(layer.id)"
+          >
+            <asp-icon [name]="layer.visible ? 'eye' : 'eye-off'" [size]="15" />
+          </button>
+          <button
+            type="button"
+            class="asp-layers__btn"
+            [class.asp-layers__btn--on]="layer.locked"
+            [attr.title]="layer.locked ? 'Unlock' : 'Lock'"
+            [attr.aria-label]="layer.locked ? 'Unlock layer' : 'Lock layer'"
+            (click)="toggleLock.emit(layer.id)"
+          >
+            <asp-icon [name]="layer.locked ? 'lock' : 'lock-open'" [size]="15" />
+          </button>
+          <button
+            type="button"
+            class="asp-layers__btn"
+            title="Bring forward"
+            aria-label="Bring forward"
+            (click)="moveUp.emit(layer.id)"
+          >
+            <asp-icon name="chevron-up" [size]="15" />
+          </button>
+          <button
+            type="button"
+            class="asp-layers__btn"
+            title="Send backward"
+            aria-label="Send backward"
+            (click)="moveDown.emit(layer.id)"
+          >
+            <asp-icon name="chevron-down" [size]="15" />
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+}

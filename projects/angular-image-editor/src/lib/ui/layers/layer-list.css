@@ -1,19 +1,140 @@
 :host {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  flex: none;
+  border-top: 1px solid var(--asp-line);
   min-height: 0;
+  max-height: 42%;
 }
 
 .asp-layers__head {
   flex: none;
-  padding: 13px 15px;
-  border-bottom: 1px solid var(--asp-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 11px 14px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--asp-ink);
+}
+.asp-layers__head:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--asp-ring);
 }
 .asp-layers__title {
-  font-size: 13.5px;
+  font-size: 12px;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--asp-ink-muted);
+}
+
+/* object-ops */
+.asp-layers__ops {
+  flex: none;
+  padding: 0 12px 10px;
+  border-bottom: 1px solid var(--asp-line);
+}
+.asp-layers__opsrow {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.asp-layers__op {
+  flex: 1;
+  height: 30px;
+  border: 1px solid var(--asp-line-strong);
+  background: var(--asp-surface);
+  border-radius: var(--asp-radius-sm);
+  color: var(--asp-ink-700);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.asp-layers__op:hover:not(:disabled) {
+  background: var(--asp-surface-sunk);
+}
+.asp-layers__op:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.asp-layers__op--danger:hover:not(:disabled) {
+  color: var(--asp-error);
+}
+.asp-layers__op:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--asp-ring);
+}
+
+.asp-layers__align {
+  position: relative;
+  flex: 1;
+  display: flex;
+}
+.asp-layers__align .asp-layers__op {
+  width: 100%;
+}
+.asp-layers__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 18;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+.asp-layers__alignmenu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  z-index: 19;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 2px;
+  background: var(--asp-surface);
+  border: 1px solid var(--asp-line);
+  border-radius: var(--asp-radius-md);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.2);
+  padding: 6px;
+  width: 180px;
+}
+.asp-layers__alignmenu button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--asp-ink-700);
+  padding: 7px 4px;
+  border-radius: var(--asp-radius-sm);
+}
+.asp-layers__alignmenu button:hover {
+  background: var(--asp-surface-sunk);
+}
+
+.asp-layers__opacity {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.asp-layers__opacity-label {
+  font-size: 12px;
+  font-weight: 600;
   color: var(--asp-ink);
+}
+.asp-layers__opacity .asp-range {
+  flex: 1;
+  accent-color: var(--asp-accent);
+}
+.asp-layers__opacity-value {
+  font-family: var(--asp-font-mono);
+  font-size: 11px;
+  color: var(--asp-ink-muted);
+  min-width: 22px;
+  text-align: right;
 }
 
 .asp-layers__scroll {
@@ -24,7 +145,6 @@
   flex-direction: column;
   gap: 2px;
 }
-
 .asp-layers__row {
   display: flex;
   align-items: center;
@@ -37,7 +157,6 @@
   background: var(--asp-accent-soft);
   border-color: var(--asp-accent);
 }
-
 .asp-layers__name {
   flex: 1;
   min-width: 0;
@@ -61,7 +180,6 @@
   color: var(--asp-ink-faint);
   cursor: not-allowed;
 }
-
 .asp-layers__actions {
   display: flex;
   align-items: center;
@@ -86,9 +204,6 @@
 }
 .asp-layers__btn--on {
   color: var(--asp-accent);
-}
-.asp-layers__btn--danger:hover {
-  color: var(--asp-error);
 }
 .asp-layers__btn:focus-visible {
   outline: none;

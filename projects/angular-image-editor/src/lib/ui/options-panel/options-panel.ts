@@ -121,9 +121,6 @@ export class AspOptionsPanel {
   readonly addShape = output<ShapeKind>();
   readonly addText = output<string>();
   readonly fontChange = output<string>();
-  readonly groupSelection = output<void>();
-  readonly ungroupSelection = output<void>();
-  readonly alignSelection = output<'left' | 'center-h' | 'right' | 'top' | 'center-v' | 'bottom'>();
   readonly addRedaction = output<RedactMode>();
   readonly annotationColorChange = output<string>();
   /** Live size change (slider drag) — apply without committing history. */
@@ -137,8 +134,6 @@ export class AspOptionsPanel {
   readonly fillChange = output<string>();
   readonly setBackgroundColor = output<string>();
   readonly setBackgroundGradient = output<string[]>();
-  readonly deleteSelection = output<void>();
-  readonly duplicateSelection = output<void>();
 
   protected readonly colors = ANNOTATION_COLORS;
   /** Shape-fill swatches — includes transparent (no fill). */

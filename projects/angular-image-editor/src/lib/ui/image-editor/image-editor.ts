@@ -179,7 +179,6 @@ export class AspImageEditor implements OnDestroy {
   protected readonly activeFrame = signal('none');
 
   protected readonly layers = signal<LayerInfo[]>([]);
-  protected readonly showLayers = computed(() => this.activeTool() === 'layers');
 
   protected readonly pickerOpen = signal(false);
   protected readonly exportOpen = signal(false);
@@ -478,6 +477,13 @@ export class AspImageEditor implements OnDestroy {
   }
   protected onDeleteLayer(id: string): void {
     this.engine?.deleteLayer(id);
+    this.sync();
+  }
+  protected onLayerOpacityInput(change: { id: string; value: number }): void {
+    this.engine?.setLayerOpacity(change.id, change.value, false);
+  }
+  protected onLayerOpacityCommit(change: { id: string; value: number }): void {
+    this.engine?.setLayerOpacity(change.id, change.value, true);
     this.sync();
   }
 
