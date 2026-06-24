@@ -252,6 +252,16 @@
   background: var(--asp-accent-hover);
 }
 
+.asp-select {
+  width: 100%;
+  margin-top: 6px;
+  cursor: pointer;
+}
+.asp-select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--asp-ring);
+}
+
 /* colors */
 .asp-color-row {
   display: flex;

@@ -205,7 +205,10 @@ export class EditorEngine {
    * recursing into groups such as arrows). Returns false if nothing is selected.
    * Pass `commit: false` for live slider drags; commit once on release.
    */
-  styleActiveObject(style: { color?: string; size?: number }, commit = true): boolean {
+  styleActiveObject(
+    style: { color?: string; size?: number; fontFamily?: string },
+    commit = true,
+  ): boolean {
     const active = this.canvas.getActiveObject();
     if (!active) {
       return false;
@@ -219,7 +222,10 @@ export class EditorEngine {
     return true;
   }
 
-  private styleOne(object: Fabric.FabricObject, style: { color?: string; size?: number }): void {
+  private styleOne(
+    object: Fabric.FabricObject,
+    style: { color?: string; size?: number; fontFamily?: string },
+  ): void {
     if (object.isType('group', 'activeselection')) {
       for (const child of (object as Fabric.Group).getObjects()) {
         this.styleOne(child, style);
@@ -240,6 +246,9 @@ export class EditorEngine {
       } else {
         object.set('strokeWidth', style.size);
       }
+    }
+    if (style.fontFamily !== undefined && isText) {
+      object.set('fontFamily', style.fontFamily);
     }
     object.setCoords();
   }
@@ -761,6 +770,83 @@ export class EditorEngine {
     } else if (objects.length > 1) {
       this.canvas.setActiveObject(new this.fabric.ActiveSelection(objects, { canvas: this.canvas }));
     }
+  }
+
+  /** Group the current multi-selection into a single object. */
+  groupActive(): void {
+    const active = this.canvas.getActiveObject();
+    if (!active || !active.isType('activeselection')) {
+      return;
+    }
+    const objects = (active as Fabric.ActiveSelection).getObjects();
+    this.canvas.discardActiveObject();
+    this.canvas.remove(...objects);
+    const group = new this.fabric.Group(objects);
+    group.set('aspId', this.nextId());
+    this.canvas.add(group);
+    this.canvas.setActiveObject(group);
+    this.canvas.requestRenderAll();
+    this.commit('Group');
+    this.notifySelection();
+  }
+
+  /** Ungroup the selected group back into individual objects. */
+  ungroupActive(): void {
+    const active = this.canvas.getActiveObject();
+    if (!active || !active.isType('group')) {
+      return;
+    }
+    const group = active as Fabric.Group;
+    const objects = group.removeAll();
+    this.canvas.remove(group);
+    for (const object of objects) {
+      object.set('aspId', this.nextId());
+      this.canvas.add(object);
+    }
+    this.canvas.discardActiveObject();
+    this.setActive(objects);
+    this.canvas.requestRenderAll();
+    this.commit('Ungroup');
+    this.notifySelection();
+  }
+
+  /** Align the active object/selection to an edge or center of the canvas. */
+  alignActive(mode: 'left' | 'center-h' | 'right' | 'top' | 'center-v' | 'bottom'): void {
+    const active = this.canvas.getActiveObject();
+    if (!active) {
+      return;
+    }
+    const cw = this.canvas.getWidth();
+    const ch = this.canvas.getHeight();
+    const box = active.getBoundingRect();
+    let dx = 0;
+    let dy = 0;
+    switch (mode) {
+      case 'left':
+        dx = -box.left;
+        break;
+      case 'center-h':
+        dx = (cw - box.width) / 2 - box.left;
+        break;
+      case 'right':
+        dx = cw - box.width - box.left;
+        break;
+      case 'top':
+        dy = -box.top;
+        break;
+      case 'center-v':
+        dy = (ch - box.height) / 2 - box.top;
+        break;
+      case 'bottom':
+        dy = ch - box.height - box.top;
+        break;
+      default:
+        break;
+    }
+    active.set({ left: (active.left ?? 0) + dx, top: (active.top ?? 0) + dy });
+    active.setCoords();
+    this.canvas.requestRenderAll();
+    this.commit('Align');
   }
 
   /** Enable/disable space-drag panning (disables selection while active). */

@@ -144,6 +144,7 @@ export const FILTER_REGISTRY: Record<AspFilter, FilterMeta> = {
  * rail; `full` exposes the entire catalog.
  */
 const ADVANCED_TOOLS: readonly AspTool[] = [
+  'select',
   'adjust',
   'filters',
   'crop',

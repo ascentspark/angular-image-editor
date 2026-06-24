@@ -135,6 +135,21 @@
               <button type="button" class="asp-btn-accent" (click)="onAddText()">Add</button>
             </div>
           </div>
+          @if (fonts().length) {
+            <div>
+              <label class="asp-field-label" for="asp-font-select">Font</label>
+              <select
+                id="asp-font-select"
+                class="asp-input asp-select"
+                [value]="activeFont()"
+                (change)="onFontChange($event)"
+              >
+                @for (font of fonts(); track font.value) {
+                  <option [value]="font.value" [style.font-family]="font.value">{{ font.label }}</option>
+                }
+              </select>
+            </div>
+          }
         }
 
         <div class="asp-color-row">
@@ -277,9 +292,24 @@
             <asp-icon name="trash-2" [size]="15" /> Delete
           </button>
         </div>
+        <div class="asp-btn-row">
+          <button type="button" class="asp-btn-line" (click)="groupSelection.emit()">
+            <asp-icon name="group" [size]="15" /> Group
+          </button>
+          <button type="button" class="asp-btn-line" (click)="ungroupSelection.emit()">Ungroup</button>
+        </div>
+        <div class="asp-section-label">Align to canvas</div>
+        <div class="asp-chip-row">
+          <button type="button" class="asp-chip" (click)="alignSelection.emit('left')">Left</button>
+          <button type="button" class="asp-chip" (click)="alignSelection.emit('center-h')">Center</button>
+          <button type="button" class="asp-chip" (click)="alignSelection.emit('right')">Right</button>
+          <button type="button" class="asp-chip" (click)="alignSelection.emit('top')">Top</button>
+          <button type="button" class="asp-chip" (click)="alignSelection.emit('center-v')">Middle</button>
+          <button type="button" class="asp-chip" (click)="alignSelection.emit('bottom')">Bottom</button>
+        </div>
         <p class="asp-hint">
           <asp-icon name="info" [size]="13" />
-          Select an object on the canvas to edit it. Tip: Ctrl/Cmd+C/V/D, Delete, Space to pan.
+          Shift-click to multi-select. Tip: Ctrl/Cmd+C/V/D, Delete, Space to pan.
         </p>
       </div>
     }

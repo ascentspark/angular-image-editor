@@ -57,6 +57,9 @@ export { EditHistory, type HistoryEntry } from './lib/engine/history';
 // Theming — derive and apply the editor's --asp-* palette from 3 inputs.
 export { deriveTheme, type AspThemeMode } from './lib/theme/derive-theme';
 export { applyTheme } from './lib/theme/apply-theme';
+
+// Text fonts — default set + type for customizing the font picker.
+export { DEFAULT_FONTS, type FontOption } from './lib/ui/image-editor/fonts';
 export {
   THEME_TOKEN_NAMES,
   COLOR_TOKEN_NAMES,

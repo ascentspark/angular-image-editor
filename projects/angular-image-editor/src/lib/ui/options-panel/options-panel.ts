@@ -4,6 +4,7 @@ import { AspIcon } from '../../icons/asp-icon';
 import type { RedactMode, ShapeKind } from '../../engine/editor-engine';
 import type { FilterMeta } from '../../registry/tool-registry';
 import type { AspAspectOption, AspAspectPreset, AspFilter, AspTool } from '../../types/editor.types';
+import type { FontOption } from '../image-editor/fonts';
 
 export type { RedactMode } from '../../engine/editor-engine';
 
@@ -102,6 +103,8 @@ export class AspOptionsPanel {
   readonly annotationColor = input<string>(ANNOTATION_COLORS[0]);
   readonly annotationWidth = input<number>(4);
   readonly fontSize = input<number>(28);
+  readonly fonts = input<readonly FontOption[]>([]);
+  readonly activeFont = input<string>('');
 
   readonly frameOptions = input<readonly FrameOption[]>(FRAME_OPTIONS);
   readonly activeFrame = input<string>('none');
@@ -118,6 +121,10 @@ export class AspOptionsPanel {
   readonly straightenCommit = output<number>();
   readonly addShape = output<ShapeKind>();
   readonly addText = output<string>();
+  readonly fontChange = output<string>();
+  readonly groupSelection = output<void>();
+  readonly ungroupSelection = output<void>();
+  readonly alignSelection = output<'left' | 'center-h' | 'right' | 'top' | 'center-v' | 'bottom'>();
   readonly addRedaction = output<RedactMode>();
   readonly annotationColorChange = output<string>();
   /** Live size change (slider drag) — apply without committing history. */
@@ -216,6 +223,10 @@ export class AspOptionsPanel {
 
   protected onStraightenCommit(event: Event): void {
     this.straightenCommit.emit(Number((event.target as HTMLInputElement).value));
+  }
+
+  protected onFontChange(event: Event): void {
+    this.fontChange.emit((event.target as HTMLSelectElement).value);
   }
 
   protected onSizeInput(event: Event): void {

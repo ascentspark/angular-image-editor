@@ -46,7 +46,10 @@ import {
 } from '../options-panel/options-panel';
 import { AspLayerList } from '../layers/layer-list';
 import { AspToolRail } from '../rail/tool-rail';
+import { DEFAULT_FONTS, ensureFontLoaded, type FontOption } from './fonts';
 import { buildSampleImages, type SampleImage } from './sample-images';
+
+type AlignMode = 'left' | 'center-h' | 'right' | 'top' | 'center-v' | 'bottom';
 
 const FALLBACK_BASE = '#f4f6f9';
 const FALLBACK_ACCENT = '#1f6feb';
@@ -157,9 +160,13 @@ export class AspImageEditor implements OnDestroy {
   protected readonly activeCrop = signal<AspAspectPreset>('free');
   protected readonly activeAspectLabel = signal('');
   protected readonly straighten = signal(0);
+  /** Available text fonts (host-overridable). */
+  readonly fonts = input<FontOption[]>([...DEFAULT_FONTS]);
+
   protected readonly annotationColor = signal(ANNOTATION_COLORS[0]);
   protected readonly annotationWidth = signal(4);
   protected readonly fontSize = signal(28);
+  protected readonly fontFamily = signal(DEFAULT_FONTS[0].value);
   protected readonly hasSelection = signal(false);
   protected readonly activeFrame = signal('none');
 
@@ -664,7 +671,34 @@ export class AspImageEditor implements OnDestroy {
   }
 
   protected addText(text: string): void {
-    this.engine?.addText(text, { color: this.annotationColor(), fontSize: this.fontSize() });
+    this.engine?.addText(text, {
+      color: this.annotationColor(),
+      fontSize: this.fontSize(),
+      fontFamily: this.fontFamily(),
+    });
+    this.sync();
+  }
+
+  protected onFontChange(value: string): void {
+    this.fontFamily.set(value);
+    void ensureFontLoaded(value).then(() => {
+      this.engine?.styleActiveObject({ fontFamily: value });
+      this.sync();
+    });
+  }
+
+  protected groupSelection(): void {
+    this.engine?.groupActive();
+    this.sync();
+  }
+
+  protected ungroupSelection(): void {
+    this.engine?.ungroupActive();
+    this.sync();
+  }
+
+  protected alignSelection(mode: AlignMode): void {
+    this.engine?.alignActive(mode);
     this.sync();
   }
 
