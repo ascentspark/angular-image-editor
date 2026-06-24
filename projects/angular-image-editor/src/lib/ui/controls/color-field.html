@@ -1,0 +1,19 @@
+<div class="asp-cf">
+  @for (color of colors(); track color) {
+    <button
+      type="button"
+      class="asp-cf__swatch"
+      [class.asp-cf__swatch--active]="value() === color"
+      [class.asp-cf__swatch--white]="color === '#ffffff'"
+      [class.asp-cf__swatch--transparent]="color === 'transparent'"
+      [style.background]="color === 'transparent' ? null : color"
+      [attr.aria-label]="color === 'transparent' ? 'Transparent' : 'Color ' + color"
+      [attr.title]="color === 'transparent' ? 'Transparent' : color"
+      [attr.aria-pressed]="value() === color"
+      (click)="colorChange.emit(color)"
+    ></button>
+  }
+  <label class="asp-cf__custom" title="Custom color">
+    <input type="color" [value]="pickerValue()" (input)="onPick($event)" aria-label="Custom color" />
+  </label>
+</div>

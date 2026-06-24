@@ -1,0 +1,60 @@
+:host {
+  display: block;
+}
+
+.asp-cf {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.asp-cf__swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.asp-cf__swatch--white {
+  border: 1px solid var(--asp-line-strong);
+}
+.asp-cf__swatch--transparent {
+  background: repeating-conic-gradient(var(--asp-surface-sunk) 0% 25%, var(--asp-surface-2) 0% 50%) 50% /
+    10px 10px;
+  border: 1px solid var(--asp-line-strong);
+}
+.asp-cf__swatch--active {
+  box-shadow: 0 0 0 2px var(--asp-surface), 0 0 0 3px var(--asp-accent);
+}
+.asp-cf__swatch:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--asp-ring);
+}
+
+/* Custom-color control: a rainbow ring with the native picker layered on top. */
+.asp-cf__custom {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red);
+  border: 1px solid var(--asp-line-strong);
+  display: inline-block;
+}
+.asp-cf__custom input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+}
+.asp-cf__custom:focus-within {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--asp-ring);
+}
