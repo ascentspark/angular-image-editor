@@ -25,6 +25,7 @@ export {
   type AspExportFormat,
   type AspAspectPreset,
   type AspAspectOption,
+  type AspEditorError,
 } from './lib/types/editor.types';
 
 // Tool/filter catalog + resolution (mode → tools allowlist → minus disabledTools; filters).

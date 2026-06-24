@@ -69,6 +69,13 @@ export type AspFilter = (typeof ALL_FILTERS)[number];
 /** Export formats. `json` serializes the re-editable Fabric scene. */
 export type AspExportFormat = 'png' | 'jpeg' | 'webp' | 'svg' | 'json';
 
+/** A structured error surfaced via the `errorOccurred` output. */
+export interface AspEditorError {
+  /** Stable machine code, e.g. `'load-failed'`, `'export-failed'`, `'engine-init-failed'`. */
+  readonly code: string;
+  readonly message: string;
+}
+
 /** Crop aspect-ratio presets. */
 export type AspAspectPreset = 'free' | '1:1' | '4:3' | '16:9' | '3:2' | 'original';
 

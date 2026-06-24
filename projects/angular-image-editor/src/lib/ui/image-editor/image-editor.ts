@@ -30,6 +30,7 @@ import { deriveTheme, type AspThemeMode } from '../../theme/derive-theme';
 import type {
   AspAspectOption,
   AspAspectPreset,
+  AspEditorError,
   AspExportFormat,
   AspFilter,
   AspMode,
@@ -104,6 +105,12 @@ export class AspImageEditor implements OnDestroy {
 
   readonly saved = output<Blob>();
   readonly canceled = output<void>();
+  /** Fired after an image successfully loads (initial, picker, or upload). */
+  readonly imageLoaded = output<void>();
+  /** Fired with the exported Blob when the user downloads from the Export menu. */
+  readonly exported = output<Blob>();
+  /** Fired on a recoverable error (load/export/engine init) instead of throwing. */
+  readonly errorOccurred = output<AspEditorError>();
 
   // ---- view refs -----------------------------------------------------------
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -375,6 +382,7 @@ export class AspImageEditor implements OnDestroy {
       } catch (error) {
         // No 2D/WebGL context (SSR/headless) — chrome still renders; actions inert.
         console.warn('[asp-image-editor] could not initialize the canvas engine:', error);
+        this.emitError('engine-init-failed', error);
         return;
       }
     }
@@ -384,9 +392,24 @@ export class AspImageEditor implements OnDestroy {
       return;
     }
     this.lastSource = source;
-    await this.engine.loadImage(source);
-    this.resetUiState();
-    this.sync();
+    await this.loadSource(source);
+  }
+
+  /** Load a source into the engine, emitting imageLoaded / errorOccurred. */
+  private async loadSource(source: string | Blob): Promise<void> {
+    try {
+      await this.engine?.loadImage(source);
+      this.resetUiState();
+      this.sync();
+      this.imageLoaded.emit();
+    } catch (error) {
+      this.emitError('load-failed', error);
+    }
+  }
+
+  private emitError(code: string, error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    this.errorOccurred.emit({ code, message });
   }
 
   private observeResize(stage: HTMLElement): void {
@@ -496,9 +519,8 @@ export class AspImageEditor implements OnDestroy {
 
   protected async pickSample(sample: SampleImage): Promise<void> {
     this.pickerOpen.set(false);
-    await this.engine?.loadImage(sample.dataUrl);
-    this.resetUiState();
-    this.sync();
+    this.lastSource = sample.dataUrl;
+    await this.loadSource(sample.dataUrl);
   }
 
   protected async onUpload(event: Event): Promise<void> {
@@ -506,9 +528,8 @@ export class AspImageEditor implements OnDestroy {
     const file = input.files?.[0];
     if (file) {
       this.pickerOpen.set(false);
-      await this.engine?.loadImage(file);
-      this.resetUiState();
-      this.sync();
+      this.lastSource = file;
+      await this.loadSource(file);
     }
     input.value = '';
   }
@@ -526,10 +547,15 @@ export class AspImageEditor implements OnDestroy {
     if (!engine) {
       return;
     }
-    const blob = await engine.exportImage(this.exportFormat(), this.exportQ(), this.exportFormats());
     this.exportOpen.set(false);
-    this.saved.emit(blob);
-    triggerDownload(blob, `image.${extensionFor(this.exportFormat())}`);
+    try {
+      const blob = await engine.exportImage(this.exportFormat(), this.exportQ(), this.exportFormats());
+      this.exported.emit(blob);
+      this.saved.emit(blob);
+      triggerDownload(blob, `image.${extensionFor(this.exportFormat())}`);
+    } catch (error) {
+      this.emitError('export-failed', error);
+    }
   }
 
   // ---- basic / viewer layouts ----------------------------------------------
@@ -540,8 +566,12 @@ export class AspImageEditor implements OnDestroy {
       return;
     }
     const format = this.exportFormats()[0] ?? 'png';
-    const blob = await engine.exportImage(format, this.exportQ(), this.exportFormats());
-    this.saved.emit(blob);
+    try {
+      const blob = await engine.exportImage(format, this.exportQ(), this.exportFormats());
+      this.saved.emit(blob);
+    } catch (error) {
+      this.emitError('export-failed', error);
+    }
   }
 
   protected cancel(): void {

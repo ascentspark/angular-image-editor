@@ -73,6 +73,8 @@ interface EditorSnapshot {
 const ZOOM_MIN = 25;
 const ZOOM_MAX = 400;
 const FIT_PADDING = 0.92;
+/** Imported images larger than this (longest edge, px) are downscaled to cap memory. */
+const MAX_IMPORT_DIM = 4096;
 
 const clamp = (v: number, min: number, max: number): number => (v < min ? min : v > max ? max : v);
 
@@ -264,7 +266,10 @@ export class EditorEngine {
    * in history snapshots (a transient object URL would be revoked and break undo).
    */
   async loadImage(src: string | Blob): Promise<void> {
-    const url = typeof src === 'string' ? src : await blobToDataUrl(src);
+    const raw = typeof src === 'string' ? src : await blobToDataUrl(src);
+    // Downscale large same-origin (data URL) imports; remote URLs are left to
+    // Fabric (canvas-resampling a cross-origin image would taint it).
+    const url = raw.startsWith('data:') ? await downscaleDataUrl(raw, MAX_IMPORT_DIM) : raw;
     const loadOptions = typeof src === 'string' ? { crossOrigin: 'anonymous' as const } : {};
     const image = await this.fabric.FabricImage.fromURL(url, loadOptions, {});
     this.canvas.remove(...this.canvas.getObjects());
@@ -1081,6 +1086,42 @@ function layerLabel(object: Fabric.FabricObject): string {
     return 'Drawing';
   }
   return 'Object';
+}
+
+/** Load a data URL into an HTMLImageElement. */
+function loadHtmlImage(src: string): Promise<HTMLImageElement> {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Failed to decode image'));
+    img.src = src;
+  });
+}
+
+/**
+ * Downscale a data-URL image so its longest edge is at most `maxDim`, preserving
+ * aspect ratio. Returns the original URL when already within bounds or if no 2D
+ * context is available. Safe (same-origin data URL never taints the canvas).
+ */
+async function downscaleDataUrl(dataUrl: string, maxDim: number): Promise<string> {
+  const img = await loadHtmlImage(dataUrl);
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  const longest = Math.max(w, h);
+  if (longest <= maxDim || longest === 0) {
+    return dataUrl;
+  }
+  const scale = maxDim / longest;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(w * scale);
+  canvas.height = Math.round(h * scale);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    return dataUrl;
+  }
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/png');
 }
 
 /** Read a Blob into a data URL (so it persists in serialized history). */
