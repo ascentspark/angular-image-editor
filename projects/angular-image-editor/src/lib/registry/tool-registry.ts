@@ -153,6 +153,7 @@ const ADVANCED_TOOLS: readonly AspTool[] = [
   'text',
   'redact',
   'frame',
+  'layers',
 ];
 
 export const DEFAULT_TOOLS: Record<AspMode, readonly AspTool[]> = {

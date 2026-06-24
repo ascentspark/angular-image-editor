@@ -18,11 +18,13 @@ export {
 export {
   ALL_TOOLS,
   ALL_FILTERS,
+  aspectOption,
   type AspMode,
   type AspTool,
   type AspFilter,
   type AspExportFormat,
   type AspAspectPreset,
+  type AspAspectOption,
 } from './lib/types/editor.types';
 
 // Tool/filter catalog + resolution (mode → tools allowlist → minus disabledTools; filters).
@@ -43,8 +45,11 @@ export {
   EditorEngine,
   type EngineOptions,
   type ShapeKind,
+  type RedactMode,
   type AnnotationStyle,
   type TextStyle,
+  type SelectionStyleInfo,
+  type LayerInfo,
 } from './lib/engine/editor-engine';
 export { EditHistory, type HistoryEntry } from './lib/engine/history';
 

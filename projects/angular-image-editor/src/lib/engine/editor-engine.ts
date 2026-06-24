@@ -49,6 +49,17 @@ export interface SelectionStyleInfo {
   readonly size: number;
 }
 
+/** One entry in the layers panel (top of the z-stack first). */
+export interface LayerInfo {
+  readonly id: string;
+  readonly label: string;
+  readonly locked: boolean;
+  readonly visible: boolean;
+  readonly selected: boolean;
+  /** False for the base image, which should not be deletable. */
+  readonly removable: boolean;
+}
+
 /** Full serialized editor state stored in each history entry. */
 interface EditorSnapshot {
   json: Record<string, unknown>;
@@ -87,21 +98,50 @@ export class EditorEngine {
   private adjustments: Record<AspFilter, number> = defaultAdjustments();
   private looks = new Set<AspFilter>();
   private frame = 'none';
+  private idCounter = 0;
   private selectionListener: ((info: SelectionStyleInfo | null) => void) | null = null;
+  private layersListener: (() => void) | null = null;
 
   private constructor(fabric: FabricModule, canvas: Fabric.Canvas) {
     this.fabric = fabric;
     this.canvas = canvas;
     this.history = new EditHistory<string>('Opened editor', this.snapshot());
-    const notify = (): void => this.notifySelection();
+    const notify = (): void => {
+      this.notifySelection();
+      this.notifyLayers();
+    };
     this.canvas.on('selection:created', notify);
     this.canvas.on('selection:updated', notify);
     this.canvas.on('selection:cleared', notify);
+    // A freehand stroke becomes a Path on mouse-up — tag it, record it, and
+    // surface it as a layer (otherwise drawings would not be undoable).
+    this.canvas.on('path:created', (event) => {
+      const path = (event as { path?: Fabric.FabricObject }).path;
+      if (path) {
+        path.set('aspId', this.nextId());
+      }
+      this.commit('Draw');
+      this.notifyLayers();
+    });
+  }
+
+  private nextId(): string {
+    this.idCounter += 1;
+    return `o${this.idCounter}`;
   }
 
   /** Register a callback fired when the active selection (and its style) changes. */
   setSelectionListener(cb: (info: SelectionStyleInfo | null) => void): void {
     this.selectionListener = cb;
+  }
+
+  /** Register a callback fired when the layer set or its state changes. */
+  setLayersListener(cb: () => void): void {
+    this.layersListener = cb;
+  }
+
+  private notifyLayers(): void {
+    this.layersListener?.();
   }
 
   private notifySelection(): void {
@@ -213,6 +253,7 @@ export class EditorEngine {
     this.looks.clear();
     this.frame = 'none';
     image.set({ selectable: false, evented: false, hasControls: false });
+    image.set('aspId', 'base');
     this.fitBaseImage();
     this.canvas.add(image);
     this.canvas.setZoom(1);
@@ -319,7 +360,20 @@ export class EditorEngine {
     }
     const naturalW = (image.width ?? 0) + (image.cropX ?? 0);
     const naturalH = (image.height ?? 0) + (image.cropY ?? 0);
-    const ratio = aspectRatioValue(preset, naturalW, naturalH);
+    this.applyCropRatio(aspectRatioValue(preset, naturalW, naturalH));
+  }
+
+  /**
+   * Crop the base image to a centered rectangle of an arbitrary width/height
+   * ratio (`null` = full image). Use this for host-defined / CMS aspect targets.
+   */
+  applyCropRatio(ratio: number | null): void {
+    const image = this.baseImage;
+    if (!image) {
+      return;
+    }
+    const naturalW = (image.width ?? 0) + (image.cropX ?? 0);
+    const naturalH = (image.height ?? 0) + (image.cropY ?? 0);
     const rect = centeredCropRect(naturalW, naturalH, ratio);
     image.set({ cropX: rect.left, cropY: rect.top, width: rect.width, height: rect.height });
     this.fitBaseImage();
@@ -407,6 +461,7 @@ export class EditorEngine {
       default:
         return;
     }
+    object.set('aspId', this.nextId());
     this.canvas.add(object);
     this.canvas.setActiveObject(object);
     this.canvas.requestRenderAll();
@@ -450,6 +505,7 @@ export class EditorEngine {
       width: 220,
       textAlign: 'center',
     });
+    textbox.set('aspId', this.nextId());
     this.canvas.add(textbox);
     this.canvas.setActiveObject(textbox);
     this.canvas.requestRenderAll();
@@ -478,6 +534,7 @@ export class EditorEngine {
         height,
         fill: '#0b0f1a',
       });
+      rect.set('aspId', this.nextId());
       this.canvas.add(rect);
       this.canvas.setActiveObject(rect);
       this.canvas.requestRenderAll();
@@ -488,6 +545,7 @@ export class EditorEngine {
     const overlay = await this.baseImage.clone();
     overlay.set({ selectable: false, evented: false });
     overlay.set('aspRole', 'redaction');
+    overlay.set('aspId', this.nextId());
     overlay.filters = [
       mode === 'blur'
         ? new this.fabric.filters.Blur({ blur: 0.35 })
@@ -545,6 +603,7 @@ export class EditorEngine {
         strokeUniform: true,
       });
       rect.set('aspRole', 'frame');
+      rect.set('aspId', this.nextId());
       this.canvas.add(rect);
     }
     this.canvas.requestRenderAll();
@@ -622,7 +681,7 @@ export class EditorEngine {
    */
   private snapshot(): string {
     const composite: EditorSnapshot = {
-      json: this.canvas.toObject(['aspRole']),
+      json: this.canvas.toObject(['aspRole', 'aspId', 'aspLocked']),
       rotation: this.rotation,
       straighten: this.straighten,
       adjustments: { ...this.adjustments },
@@ -634,6 +693,7 @@ export class EditorEngine {
 
   private commit(label: string): void {
     this.history.push(label, this.snapshot());
+    this.notifyLayers();
   }
 
   private async restore(state: string): Promise<void> {
@@ -645,7 +705,14 @@ export class EditorEngine {
     this.adjustments = { ...defaultAdjustments(), ...composite.adjustments };
     this.looks = new Set(composite.looks);
     this.frame = composite.frame;
+    // Re-apply per-object lock state (serialized via aspLocked).
+    for (const object of this.canvas.getObjects()) {
+      if (object.get('aspLocked') === true) {
+        this.setLocked(object, true);
+      }
+    }
     this.canvas.requestRenderAll();
+    this.notifyLayers();
   }
 
   private findBaseImage(): Fabric.FabricImage | null {
@@ -687,6 +754,109 @@ export class EditorEngine {
 
   get activeFrame(): string {
     return this.frame;
+  }
+
+  // ---- layers --------------------------------------------------------------
+
+  /** The layer stack, top of the z-order first (matching visual stacking). */
+  getLayers(): LayerInfo[] {
+    const active = this.canvas.getActiveObjects();
+    const layers = this.canvas.getObjects().map((object): LayerInfo => {
+      const id = typeof object.get('aspId') === 'string' ? (object.get('aspId') as string) : '';
+      const isBase = id === 'base';
+      return {
+        id,
+        label: layerLabel(object),
+        locked: object.get('aspLocked') === true,
+        visible: object.visible !== false,
+        selected: active.includes(object),
+        removable: !isBase,
+      };
+    });
+    return layers.filter((l) => l.id !== '').reverse();
+  }
+
+  private findById(id: string): Fabric.FabricObject | null {
+    return this.canvas.getObjects().find((o) => o.get('aspId') === id) ?? null;
+  }
+
+  /** Select a layer by id (no-op if it is locked or missing). */
+  selectLayer(id: string): void {
+    const object = this.findById(id);
+    if (!object || object.get('aspLocked') === true || object.selectable === false) {
+      return;
+    }
+    this.canvas.setActiveObject(object);
+    this.canvas.requestRenderAll();
+    this.notifySelection();
+    this.notifyLayers();
+  }
+
+  /** Lock/unlock a layer. Locked layers are not selectable, so clicks pass through. */
+  toggleLayerLock(id: string): void {
+    const object = this.findById(id);
+    if (!object) {
+      return;
+    }
+    const locked = object.get('aspLocked') !== true;
+    this.setLocked(object, locked);
+    if (locked && this.canvas.getActiveObjects().includes(object)) {
+      this.canvas.discardActiveObject();
+    }
+    this.canvas.requestRenderAll();
+    this.commit(locked ? 'Lock layer' : 'Unlock layer');
+    this.notifySelection();
+  }
+
+  private setLocked(object: Fabric.FabricObject, locked: boolean): void {
+    object.set('aspLocked', locked);
+    object.set({
+      selectable: !locked,
+      evented: !locked,
+      lockMovementX: locked,
+      lockMovementY: locked,
+      lockScalingX: locked,
+      lockScalingY: locked,
+      lockRotation: locked,
+    });
+  }
+
+  /** Show/hide a layer. */
+  toggleLayerVisible(id: string): void {
+    const object = this.findById(id);
+    if (!object) {
+      return;
+    }
+    object.visible = object.visible === false;
+    this.canvas.requestRenderAll();
+    this.commit('Toggle visibility');
+  }
+
+  /** Move a layer up (forward) or down (backward) in the z-order. */
+  moveLayer(id: string, direction: 'up' | 'down'): void {
+    const object = this.findById(id);
+    if (!object) {
+      return;
+    }
+    if (direction === 'up') {
+      this.canvas.bringObjectForward(object);
+    } else {
+      this.canvas.sendObjectBackwards(object);
+    }
+    this.canvas.requestRenderAll();
+    this.commit('Reorder layer');
+  }
+
+  /** Delete a layer (the base image is protected). */
+  deleteLayer(id: string): void {
+    const object = this.findById(id);
+    if (!object || id === 'base') {
+      return;
+    }
+    this.canvas.remove(object);
+    this.canvas.requestRenderAll();
+    this.commit('Delete layer');
+    this.notifySelection();
   }
 
   // ---- export --------------------------------------------------------------
@@ -749,6 +919,39 @@ const FRAME_STYLES: Record<string, FrameSpec> = {
   hook: { strokeWidth: 12, radius: 0, useColor: true, stroke: '#000000' },
   bead: { strokeWidth: 7, radius: 0, useColor: true, stroke: '#000000', dash: [2, 7] },
 };
+
+/** A human label for a layer row, derived from its role/type. */
+function layerLabel(object: Fabric.FabricObject): string {
+  const role = object.get('aspRole');
+  if (role === 'frame') {
+    return 'Frame';
+  }
+  if (role === 'redaction') {
+    return 'Redaction';
+  }
+  if (object.isType('image')) {
+    return object.get('aspId') === 'base' ? 'Background' : 'Image';
+  }
+  if (object.isType('textbox', 'i-text', 'text')) {
+    return 'Text';
+  }
+  if (object.isType('rect')) {
+    return 'Rectangle';
+  }
+  if (object.isType('ellipse', 'circle')) {
+    return 'Ellipse';
+  }
+  if (object.isType('line')) {
+    return 'Line';
+  }
+  if (object.isType('group', 'activeselection')) {
+    return 'Arrow';
+  }
+  if (object.isType('path')) {
+    return 'Drawing';
+  }
+  return 'Object';
+}
 
 /** Read a Blob into a data URL (so it persists in serialized history). */
 function blobToDataUrl(blob: Blob): Promise<string> {

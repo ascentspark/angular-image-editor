@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import {
   AspImageEditor,
   AspImageEditorDialog,
+  aspectOption,
+  type AspAspectOption,
   type AspMode,
   type AspThemeMode,
   type AspTool,
@@ -33,6 +35,13 @@ export class App {
   ];
 
   protected readonly editorModes: readonly AspMode[] = ['viewer', 'basic', 'advanced', 'full'];
+
+  // CMS-style custom crop targets, built from exact pixel dimensions.
+  protected readonly cmsAspects: AspAspectOption[] = [
+    aspectOption(1200, 630, 'OG 1200×630'),
+    aspectOption(1080, 1080, 'Square 1080'),
+    aspectOption(1920, 1080, 'HD 16:9'),
+  ];
 
   private readonly dialog = inject(AspImageEditorDialog);
 

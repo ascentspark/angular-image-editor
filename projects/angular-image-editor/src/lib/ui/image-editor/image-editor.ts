@@ -14,7 +14,12 @@ import {
   type OnDestroy,
 } from '@angular/core';
 
-import { EditorEngine, type SelectionStyleInfo, type ShapeKind } from '../../engine/editor-engine';
+import {
+  EditorEngine,
+  type LayerInfo,
+  type SelectionStyleInfo,
+  type ShapeKind,
+} from '../../engine/editor-engine';
 import type { HistoryEntry } from '../../engine/history';
 import { AspIcon } from '../../icons/asp-icon';
 import { FILTER_REGISTRY, TOOL_REGISTRY, type FilterMeta, type ToolMeta } from '../../registry/tool-registry';
@@ -22,6 +27,7 @@ import { resolveFilters, resolveTools } from '../../registry/resolve-tools';
 import { applyTheme } from '../../theme/apply-theme';
 import { deriveTheme, type AspThemeMode } from '../../theme/derive-theme';
 import type {
+  AspAspectOption,
   AspAspectPreset,
   AspExportFormat,
   AspFilter,
@@ -36,6 +42,7 @@ import {
   type AdjustChange,
   type RedactMode,
 } from '../options-panel/options-panel';
+import { AspLayerList } from '../layers/layer-list';
 import { AspToolRail } from '../rail/tool-rail';
 import { buildSampleImages, type SampleImage } from './sample-images';
 
@@ -56,7 +63,15 @@ const ZOOM_STEP = 25;
 @Component({
   selector: 'asp-image-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgTemplateOutlet, UpperCasePipe, AspIcon, AspToolRail, AspOptionsPanel, AspHistoryList],
+  imports: [
+    NgTemplateOutlet,
+    UpperCasePipe,
+    AspIcon,
+    AspToolRail,
+    AspOptionsPanel,
+    AspHistoryList,
+    AspLayerList,
+  ],
   templateUrl: './image-editor.html',
   styleUrl: './image-editor.css',
 })
@@ -68,6 +83,8 @@ export class AspImageEditor implements OnDestroy {
   readonly disabledTools = input<AspTool[]>([]);
   readonly filters = input<AspFilter[] | 'all' | null>(null);
   readonly aspectPresets = input<AspAspectPreset[]>(['free', '1:1', '4:3', '16:9']);
+  /** Host-defined crop aspect targets (e.g. CMS sizes); shown after the presets. */
+  readonly aspectRatios = input<AspAspectOption[]>([]);
   readonly exportFormats = input<AspExportFormat[]>(['png', 'jpeg', 'webp']);
   readonly exportQuality = input<number>(90);
 
@@ -77,6 +94,9 @@ export class AspImageEditor implements OnDestroy {
 
   /** Heading shown by the `basic` modal layout. */
   readonly heading = input<string>('Edit image');
+
+  /** Show the edit-history panel in the workspace (hosts that don't want it set false). */
+  readonly showHistory = input<boolean>(true);
 
   readonly saved = output<Blob>();
   readonly canceled = output<void>();
@@ -124,12 +144,16 @@ export class AspImageEditor implements OnDestroy {
   protected readonly adjustments = signal<Record<string, number>>(defaultAdjustmentValues());
   protected readonly activeLook = signal<AspFilter | null>(null);
   protected readonly activeCrop = signal<AspAspectPreset>('free');
+  protected readonly activeAspectLabel = signal('');
   protected readonly straighten = signal(0);
   protected readonly annotationColor = signal(ANNOTATION_COLORS[0]);
   protected readonly annotationWidth = signal(4);
   protected readonly fontSize = signal(28);
   protected readonly hasSelection = signal(false);
   protected readonly activeFrame = signal('none');
+
+  protected readonly layers = signal<LayerInfo[]>([]);
+  protected readonly showLayers = computed(() => this.activeTool() === 'layers');
 
   protected readonly pickerOpen = signal(false);
   protected readonly exportOpen = signal(false);
@@ -249,6 +273,7 @@ export class AspImageEditor implements OnDestroy {
         const { width, height } = stageSize(stage);
         this.engine = await EditorEngine.create(canvas, { width, height });
         this.engine.setSelectionListener((info) => this.onSelectionChange(info));
+        this.engine.setLayersListener(() => this.refreshLayers());
         this.boundCanvas = canvas;
         this.lastSource = undefined;
         this.engineReady.set(true);
@@ -296,6 +321,31 @@ export class AspImageEditor implements OnDestroy {
     this.historyEntries.set(engine.historyEntries);
     this.historyIndex.set(engine.historyIndex);
     this.zoomPct.set(engine.zoom);
+    this.refreshLayers();
+  }
+
+  private refreshLayers(): void {
+    this.layers.set(this.engine?.getLayers() ?? []);
+  }
+
+  protected onSelectLayer(id: string): void {
+    this.engine?.selectLayer(id);
+  }
+  protected onToggleLayerLock(id: string): void {
+    this.engine?.toggleLayerLock(id);
+    this.sync();
+  }
+  protected onToggleLayerVisible(id: string): void {
+    this.engine?.toggleLayerVisible(id);
+    this.sync();
+  }
+  protected onMoveLayer(id: string, direction: 'up' | 'down'): void {
+    this.engine?.moveLayer(id, direction);
+    this.sync();
+  }
+  protected onDeleteLayer(id: string): void {
+    this.engine?.deleteLayer(id);
+    this.sync();
   }
 
   // ---- top bar -------------------------------------------------------------
@@ -327,6 +377,7 @@ export class AspImageEditor implements OnDestroy {
     this.activeFrame.set(engine.activeFrame);
     // A crop's source aspect is not recoverable from the flattened scene.
     this.activeCrop.set('free');
+    this.activeAspectLabel.set('');
   }
 
   protected zoomIn(): void {
@@ -451,7 +502,14 @@ export class AspImageEditor implements OnDestroy {
 
   protected selectCrop(preset: AspAspectPreset): void {
     this.activeCrop.set(preset);
+    this.activeAspectLabel.set('');
     this.engine?.applyCrop(preset);
+    this.sync();
+  }
+
+  protected selectCustomCrop(option: AspAspectOption): void {
+    this.activeAspectLabel.set(option.label);
+    this.engine?.applyCropRatio(option.ratio);
     this.sync();
   }
 

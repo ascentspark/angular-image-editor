@@ -71,3 +71,18 @@ export type AspExportFormat = 'png' | 'jpeg' | 'webp' | 'svg' | 'json';
 
 /** Crop aspect-ratio presets. */
 export type AspAspectPreset = 'free' | '1:1' | '4:3' | '16:9' | '3:2' | 'original';
+
+/**
+ * A host-defined crop aspect option — e.g. a CMS target like a 1200×630 social
+ * image. `ratio` is width / height; build it from explicit dimensions with
+ * {@link aspectOption}.
+ */
+export interface AspAspectOption {
+  readonly label: string;
+  readonly ratio: number;
+}
+
+/** Build an {@link AspAspectOption} from explicit pixel dimensions. */
+export function aspectOption(width: number, height: number, label?: string): AspAspectOption {
+  return { label: label ?? `${width}×${height}`, ratio: width / height };
+}

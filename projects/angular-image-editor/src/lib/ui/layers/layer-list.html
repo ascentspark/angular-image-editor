@@ -1,0 +1,70 @@
+<div class="asp-layers__head">
+  <span class="asp-layers__title">Layers</span>
+</div>
+
+<div class="asp-layers__scroll">
+  @for (layer of layers(); track layer.id) {
+    <div class="asp-layers__row" [class.asp-layers__row--selected]="layer.selected">
+      <button
+        type="button"
+        class="asp-layers__name"
+        [disabled]="layer.locked"
+        (click)="selectLayer.emit(layer.id)"
+        [attr.aria-pressed]="layer.selected"
+      >
+        {{ layer.label }}
+      </button>
+
+      <div class="asp-layers__actions">
+        <button
+          type="button"
+          class="asp-layers__btn"
+          [attr.title]="layer.visible ? 'Hide' : 'Show'"
+          [attr.aria-label]="layer.visible ? 'Hide layer' : 'Show layer'"
+          (click)="toggleVisible.emit(layer.id)"
+        >
+          <asp-icon [name]="layer.visible ? 'eye' : 'eye-off'" [size]="15" />
+        </button>
+        <button
+          type="button"
+          class="asp-layers__btn"
+          [class.asp-layers__btn--on]="layer.locked"
+          [attr.title]="layer.locked ? 'Unlock' : 'Lock'"
+          [attr.aria-label]="layer.locked ? 'Unlock layer' : 'Lock layer'"
+          (click)="toggleLock.emit(layer.id)"
+        >
+          <asp-icon [name]="layer.locked ? 'lock' : 'lock-open'" [size]="15" />
+        </button>
+        <button
+          type="button"
+          class="asp-layers__btn"
+          title="Bring forward"
+          aria-label="Bring layer forward"
+          (click)="moveUp.emit(layer.id)"
+        >
+          <asp-icon name="chevron-up" [size]="15" />
+        </button>
+        <button
+          type="button"
+          class="asp-layers__btn"
+          title="Send backward"
+          aria-label="Send layer backward"
+          (click)="moveDown.emit(layer.id)"
+        >
+          <asp-icon name="chevron-down" [size]="15" />
+        </button>
+        @if (layer.removable) {
+          <button
+            type="button"
+            class="asp-layers__btn asp-layers__btn--danger"
+            title="Delete"
+            aria-label="Delete layer"
+            (click)="removeLayer.emit(layer.id)"
+          >
+            <asp-icon name="trash-2" [size]="15" />
+          </button>
+        }
+      </div>
+    </div>
+  }
+</div>

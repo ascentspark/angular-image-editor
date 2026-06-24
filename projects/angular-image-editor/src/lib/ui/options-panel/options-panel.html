@@ -63,14 +63,24 @@
           <button
             type="button"
             class="asp-chip"
-            [class.asp-chip--active]="activeCrop() === preset"
+            [class.asp-chip--active]="activeCrop() === preset && !activeAspectLabel()"
             (click)="selectCrop.emit(preset)"
           >
             {{ preset === 'free' ? 'Free' : preset === 'original' ? 'Original' : preset }}
           </button>
         }
+        @for (option of aspectRatios(); track option.label) {
+          <button
+            type="button"
+            class="asp-chip"
+            [class.asp-chip--active]="activeAspectLabel() === option.label"
+            (click)="selectCustomCrop.emit(option)"
+          >
+            {{ option.label }}
+          </button>
+        }
       </div>
-      <p class="asp-hint">Choose a ratio to crop to a centered region. Apply commits the crop.</p>
+      <p class="asp-hint">Choose a ratio to crop to a centered region of that proportion.</p>
     }
 
     @case ('transform') {

@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
 import { AspIcon } from '../../icons/asp-icon';
 import type { RedactMode, ShapeKind } from '../../engine/editor-engine';
 import type { FilterMeta } from '../../registry/tool-registry';
-import type { AspAspectPreset, AspFilter, AspTool } from '../../types/editor.types';
+import type { AspAspectOption, AspAspectPreset, AspFilter, AspTool } from '../../types/editor.types';
 
 export type { RedactMode } from '../../engine/editor-engine';
 
@@ -74,6 +74,8 @@ export class AspOptionsPanel {
   // crop
   readonly aspectPresets = input<readonly AspAspectPreset[]>([]);
   readonly activeCrop = input<AspAspectPreset>('free');
+  readonly aspectRatios = input<readonly AspAspectOption[]>([]);
+  readonly activeAspectLabel = input<string>('');
 
   // transform
   readonly straighten = input<number>(0);
@@ -91,6 +93,7 @@ export class AspOptionsPanel {
   readonly adjustCommit = output<AdjustChange>();
   readonly selectLook = output<AspFilter | null>();
   readonly selectCrop = output<AspAspectPreset>();
+  readonly selectCustomCrop = output<AspAspectOption>();
   readonly rotate = output<number>();
   readonly flip = output<'h' | 'v'>();
   readonly straightenInput = output<number>();

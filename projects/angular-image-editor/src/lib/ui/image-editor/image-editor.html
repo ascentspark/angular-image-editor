@@ -51,6 +51,18 @@
       </div>
 
       <div class="asp-workspace__panel asp-card">
+        @if (showLayers()) {
+          <asp-layer-list
+            class="asp-workspace__options"
+            [layers]="layers()"
+            (selectLayer)="onSelectLayer($event)"
+            (toggleLock)="onToggleLayerLock($event)"
+            (toggleVisible)="onToggleLayerVisible($event)"
+            (moveUp)="onMoveLayer($event, 'up')"
+            (moveDown)="onMoveLayer($event, 'down')"
+            (removeLayer)="onDeleteLayer($event)"
+          />
+        } @else {
         <asp-options-panel
           class="asp-workspace__options"
           [activeTool]="activeTool()"
@@ -61,6 +73,8 @@
           [activeLook]="activeLook()"
           [aspectPresets]="aspectPresets()"
           [activeCrop]="activeCrop()"
+          [aspectRatios]="aspectRatios()"
+          [activeAspectLabel]="activeAspectLabel()"
           [straighten]="straighten()"
           [annotationColor]="annotationColor()"
           [annotationWidth]="annotationWidth()"
@@ -72,6 +86,7 @@
           (adjustCommit)="onAdjustCommit($event)"
           (selectLook)="selectLook($event)"
           (selectCrop)="selectCrop($event)"
+          (selectCustomCrop)="selectCustomCrop($event)"
           (rotate)="rotate($event)"
           (flip)="flip($event)"
           (straightenInput)="onStraightenInput($event)"
@@ -85,7 +100,10 @@
           (selectFrame)="selectFrame($event)"
           (deleteSelection)="deleteSelection()"
         />
-        <asp-history-list [entries]="historyEntries()" [currentIndex]="historyIndex()" />
+        }
+        @if (showHistory()) {
+          <asp-history-list [entries]="historyEntries()" [currentIndex]="historyIndex()" />
+        }
       </div>
     </div>
   }

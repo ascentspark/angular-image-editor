@@ -1,13 +1,23 @@
-<div class="asp-history__title">History</div>
-<div class="asp-history__scroll">
-  @for (entry of entries(); track $index) {
-    <div
-      class="asp-history__row"
-      [class.asp-history__row--current]="$index === currentIndex()"
-      [class.asp-history__row--future]="$index > currentIndex()"
-    >
-      <asp-icon name="dot" [size]="16" />
-      <span class="asp-history__label">{{ entry.label }}</span>
-    </div>
-  }
-</div>
+<button
+  type="button"
+  class="asp-history__head"
+  [attr.aria-expanded]="!collapsed()"
+  (click)="toggle()"
+>
+  <span class="asp-history__title">History</span>
+  <asp-icon [name]="collapsed() ? 'plus' : 'minus'" [size]="14" />
+</button>
+@if (!collapsed()) {
+  <div class="asp-history__scroll">
+    @for (entry of entries(); track $index) {
+      <div
+        class="asp-history__row"
+        [class.asp-history__row--current]="$index === currentIndex()"
+        [class.asp-history__row--future]="$index > currentIndex()"
+      >
+        <asp-icon name="dot" [size]="16" />
+        <span class="asp-history__label">{{ entry.label }}</span>
+      </div>
+    }
+  </div>
+}
