@@ -5,13 +5,22 @@ A standalone, themeable **Angular 22** image editor built from scratch on
 commercial editors (Syncfusion / Pintura / Filerobot). No license keys, no telemetry.
 
 - **Four modes** — `viewer` · `basic` · `advanced` · `full`
-- **Editing** — crop (aspect presets), rotate / straighten, flip, zoom / pan, fine-tune
-  adjustments (brightness/contrast/saturation/vibrance/hue/blur/…), filter looks
-  (B&W/sepia/invert/sharpen), draw / pen, shapes, arrows, text, freehand redaction
-  (solid / blur / pixelate), frames, undo / redo history, image picker + upload, and
-  export to PNG / JPEG / WEBP / SVG / JSON
+- **Editing** — crop (preset + custom CMS aspect ratios), rotate / straighten, flip,
+  zoom / **pan**, fine-tune adjustments (brightness/contrast/saturation/vibrance/hue/blur/…),
+  filter looks (B&W/sepia/invert/sharpen/tint), draw / pen, shapes, arrows, **text with
+  web fonts**, freehand redaction (solid / blur / pixelate), frames, **background
+  color/gradient**, undo / redo history, image picker + upload, and export to
+  PNG / JPEG / WEBP / SVG / JSON
+- **Layers panel** — z-order reorder, per-layer **lock** (clicks pass through, fixing
+  overlap mis-selection), show/hide, delete; **group/ungroup**, **align**, multi-select,
+  copy/paste/**duplicate**
+- **Keyboard shortcuts** — undo/redo, delete, Ctrl/Cmd+C/V/D, select-all, Esc, Space-to-pan
+  (scoped to the editor, suppressed while typing; toggle with `keyboardEnabled`)
 - **3-input runtime theming** — `baseColor` + `accentColor` + `themeMode` derive the whole
   palette as scoped `--asp-*` CSS variables, with guaranteed WCAG **AA** contrast
+- **Robust** — oversized imports auto-downscaled; recoverable failures surface via an
+  `errorOccurred` event rather than throwing; large images lazy-load Fabric off the
+  initial bundle
 - **Standalone, signals, OnPush, zoneless-compatible.** No `any`. WCAG AA, keyboard
   operable, focus-visible, reduced-motion, Trusted-Types safe.
 
@@ -189,18 +198,33 @@ class AspImageEditor {
   disabledTools = input<AspTool[]>([]);              // subtracted from the resolved set
   filters     = input<AspFilter[] | 'all' | null>(null);
   aspectPresets = input<AspAspectPreset[]>(['free', '1:1', '4:3', '16:9']);
+  aspectRatios  = input<AspAspectOption[]>([]);      // custom CMS targets, e.g. aspectOption(1200,630)
   exportFormats = input<AspExportFormat[]>(['png', 'jpeg', 'webp']);
   exportQuality = input<number>(90);                 // 10–100
   heading     = input<string>('Edit image');         // basic-mode title
+  showHistory = input<boolean>(true);                // show the history panel
+  keyboardEnabled = input<boolean>(true);            // editor keyboard shortcuts
+  fonts       = input<FontOption[]>(DEFAULT_FONTS);  // text font choices
 
   baseColor   = input<string>('#f4f6f9');
   accentColor = input<string>('#1f6feb');
   themeMode   = input<'light' | 'dark'>('light');
 
-  saved    = output<Blob>();    // export / Save
-  canceled = output<void>();    // basic Cancel
+  saved        = output<Blob>();           // export / Save
+  canceled     = output<void>();           // basic Cancel
+  imageLoaded  = output<void>();           // an image finished loading
+  exported     = output<Blob>();           // Export download produced a Blob
+  errorOccurred = output<AspEditorError>(); // recoverable load/export/init error
 }
 ```
+
+### Keyboard shortcuts
+
+While the pointer is over the editor (and not typing in a field): **Ctrl/Cmd+Z** undo,
+**Ctrl/Cmd+Shift+Z / Ctrl+Y** redo, **Delete/Backspace** remove selection,
+**Ctrl/Cmd+C / V / D** copy / paste / duplicate, **Ctrl/Cmd+A** select all, **Esc**
+deselect (or cancel the basic modal), **Space** (hold) to pan. Disable with
+`[keyboardEnabled]="false"`.
 
 For headless use, `EditorEngine` (the Fabric wrapper) and the pure helpers
 (`resolveTools`, `resolveFilters`, `deriveTheme`, `EditHistory`) are exported too.
