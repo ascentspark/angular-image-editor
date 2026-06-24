@@ -610,6 +610,32 @@ export class EditorEngine {
     this.commit('Frame');
   }
 
+  /**
+   * Set the canvas background to a solid color (`'transparent'` clears it, showing
+   * the checkerboard). Fabric serializes `backgroundColor`, so it survives undo.
+   */
+  setBackground(color: string): void {
+    this.canvas.backgroundColor = color === 'transparent' ? '' : color;
+    this.canvas.requestRenderAll();
+    this.commit('Background');
+  }
+
+  /** Set the canvas background to a linear gradient of the given color stops. */
+  setBackgroundGradient(colors: readonly string[]): void {
+    const stops = colors.map((color, index) => ({
+      offset: colors.length === 1 ? 0 : index / (colors.length - 1),
+      color,
+    }));
+    this.canvas.backgroundColor = new this.fabric.Gradient({
+      type: 'linear',
+      gradientUnits: 'pixels',
+      coords: { x1: 0, y1: 0, x2: this.canvas.getWidth(), y2: this.canvas.getHeight() },
+      colorStops: stops,
+    });
+    this.canvas.requestRenderAll();
+    this.commit('Background');
+  }
+
   /** Remove every canvas object tagged with the given `aspRole`. */
   private removeTagged(role: string): void {
     const tagged = this.canvas.getObjects().filter((o) => o.get('aspRole') === role);

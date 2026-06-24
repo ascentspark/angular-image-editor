@@ -153,6 +153,7 @@ const ADVANCED_TOOLS: readonly AspTool[] = [
   'text',
   'redact',
   'frame',
+  'background',
   'layers',
 ];
 

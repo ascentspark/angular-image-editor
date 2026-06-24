@@ -279,6 +279,23 @@
 .asp-swatch--active {
   box-shadow: 0 0 0 2px var(--asp-surface), 0 0 0 3px var(--asp-accent);
 }
+.asp-swatches--wrap {
+  flex-wrap: wrap;
+}
+.asp-swatch--lg {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--asp-radius-sm);
+}
+.asp-swatch--transparent {
+  background: repeating-conic-gradient(var(--asp-surface-sunk) 0% 25%, var(--asp-surface-2) 0% 50%) 50% /
+    10px 10px;
+  border: 1px solid var(--asp-line-strong);
+}
+.asp-swatch:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--asp-ring);
+}
 
 /* frame */
 .asp-frame-grid {

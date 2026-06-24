@@ -230,6 +230,38 @@
       </div>
     }
 
+    @case ('background') {
+      <div class="asp-stack">
+        <div>
+          <div class="asp-section-label">Color</div>
+          <div class="asp-swatches asp-swatches--wrap">
+            @for (color of backgroundColors; track color) {
+              <button
+                type="button"
+                class="asp-swatch asp-swatch--lg"
+                [class.asp-swatch--white]="color === '#ffffff'"
+                [class.asp-swatch--transparent]="color === 'transparent'"
+                [style.background]="color === 'transparent' ? null : color"
+                [attr.aria-label]="color === 'transparent' ? 'Transparent' : 'Background ' + color"
+                [attr.title]="color === 'transparent' ? 'Transparent' : color"
+                (click)="setBackgroundColor.emit(color)"
+              ></button>
+            }
+          </div>
+        </div>
+        <div>
+          <div class="asp-section-label">Gradient</div>
+          <div class="asp-chip-row">
+            @for (gradient of backgroundGradients; track gradient.label) {
+              <button type="button" class="asp-chip" (click)="setBackgroundGradient.emit(gradient.colors)">
+                {{ gradient.label }}
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
     @case ('object') {
       <div class="asp-stack">
         <button type="button" class="asp-btn-line asp-btn-danger" (click)="deleteSelection.emit()">

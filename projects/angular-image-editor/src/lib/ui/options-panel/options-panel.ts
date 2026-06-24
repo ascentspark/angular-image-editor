@@ -29,8 +29,26 @@ export type PanelKind =
   | 'transform'
   | 'annotate'
   | 'frame'
+  | 'background'
   | 'object'
   | 'none';
+
+/** Background color swatches (`transparent` clears to the checkerboard). */
+export const BACKGROUND_COLORS: readonly string[] = [
+  'transparent',
+  '#ffffff',
+  '#000000',
+  '#f4f6f9',
+  '#1f6feb',
+  '#0b0f1a',
+];
+
+/** Named linear-gradient background presets. */
+export const BACKGROUND_GRADIENTS: readonly { label: string; colors: string[] }[] = [
+  { label: 'Sunset', colors: ['#f59e0b', '#ec4899', '#7c3aed'] },
+  { label: 'Ocean', colors: ['#0ea5e9', '#2563eb', '#1e3a8a'] },
+  { label: 'Forest', colors: ['#84cc16', '#15803d', '#064e3b'] },
+];
 
 export interface AdjustChange {
   readonly key: AspFilter;
@@ -107,9 +125,13 @@ export class AspOptionsPanel {
   /** Final size change (slider release) — commit to history. */
   readonly sizeCommit = output<number>();
   readonly selectFrame = output<string>();
+  readonly setBackgroundColor = output<string>();
+  readonly setBackgroundGradient = output<string[]>();
   readonly deleteSelection = output<void>();
 
   protected readonly colors = ANNOTATION_COLORS;
+  protected readonly backgroundColors = BACKGROUND_COLORS;
+  protected readonly backgroundGradients = BACKGROUND_GRADIENTS;
   protected readonly textValue = signal('Add a label');
 
   protected onTextInput(event: Event): void {
@@ -138,8 +160,9 @@ export class AspOptionsPanel {
       case 'flip':
         return 'transform';
       case 'frame':
-      case 'background':
         return 'frame';
+      case 'background':
+        return 'background';
       case 'pen':
       case 'highlighter':
       case 'eraser':

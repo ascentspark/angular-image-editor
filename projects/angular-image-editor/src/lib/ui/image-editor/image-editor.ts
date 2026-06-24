@@ -598,6 +598,16 @@ export class AspImageEditor implements OnDestroy {
     this.sync();
   }
 
+  protected setBackgroundColor(color: string): void {
+    this.engine?.setBackground(color);
+    this.sync();
+  }
+
+  protected setBackgroundGradient(colors: string[]): void {
+    this.engine?.setBackgroundGradient(colors);
+    this.sync();
+  }
+
   protected deleteSelection(): void {
     this.engine?.deleteActive();
     this.sync();
