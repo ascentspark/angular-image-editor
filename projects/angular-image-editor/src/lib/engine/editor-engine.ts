@@ -13,6 +13,7 @@
 
 import type * as Fabric from 'fabric';
 
+import { parseHex, withAlpha } from '../theme/color';
 import { centeredCropRect, aspectRatioValue } from './crop';
 import { buildFabricFilters, LOOK_FILTERS } from './fabric-filters';
 import { loadFabric, type FabricModule } from './fabric-loader';
@@ -56,6 +57,8 @@ export interface LayerInfo {
   readonly locked: boolean;
   readonly visible: boolean;
   readonly selected: boolean;
+  /** Object opacity, 0–1. */
+  readonly opacity: number;
   /** False for the base image, which should not be deletable. */
   readonly removable: boolean;
 }
@@ -609,6 +612,112 @@ export class EditorEngine {
   }
 
   /**
+   * Add a movable/resizable redaction marquee the user positions over the area
+   * to conceal. Transient (not committed) until {@link applyRedaction} bakes it.
+   */
+  addRedactionMarquee(): void {
+    this.cancelRedaction();
+    const w = 220;
+    const h = 120;
+    const rect = new this.fabric.Rect({
+      left: this.canvas.getWidth() / 2 - w / 2,
+      top: this.canvas.getHeight() / 2 - h / 2,
+      originX: 'left',
+      originY: 'top',
+      width: w,
+      height: h,
+      fill: 'rgba(15, 23, 42, 0.18)',
+      stroke: '#ffffff',
+      strokeWidth: 1.5,
+      strokeDashArray: [6, 4],
+      strokeUniform: true,
+    });
+    rect.set('aspRole', 'redact-marquee');
+    this.canvas.add(rect);
+    this.canvas.setActiveObject(rect);
+    this.canvas.requestRenderAll();
+  }
+
+  /** Remove the redaction marquee without applying it. */
+  cancelRedaction(): void {
+    this.removeTagged('redact-marquee');
+    this.canvas.requestRenderAll();
+  }
+
+  /**
+   * Bake the redaction: conceal the COMPOSITED content under the marquee. `solid`
+   * lays an opaque box; `blur`/`pixelate` sample the rendered pixels in the region
+   * (so all underlying layers are hidden) and place a filtered, opaque patch.
+   */
+  async applyRedaction(mode: RedactMode): Promise<void> {
+    const marquee = this.findByRole('redact-marquee');
+    if (!marquee) {
+      return;
+    }
+    const region = {
+      left: marquee.left ?? 0,
+      top: marquee.top ?? 0,
+      width: (marquee.width ?? 0) * (marquee.scaleX ?? 1),
+      height: (marquee.height ?? 0) * (marquee.scaleY ?? 1),
+    };
+    this.canvas.remove(marquee);
+
+    if (mode === 'solid') {
+      const rect = new this.fabric.Rect({
+        left: region.left,
+        top: region.top,
+        originX: 'left',
+        originY: 'top',
+        width: region.width,
+        height: region.height,
+        fill: '#0b0f1a',
+      });
+      rect.set('aspRole', 'redaction');
+      rect.set('aspId', this.nextId());
+      this.canvas.add(rect);
+      this.canvas.setActiveObject(rect);
+      this.canvas.requestRenderAll();
+      this.commit('Redact');
+      this.notifySelection();
+      return;
+    }
+
+    // Sample the composited region at identity viewport (so region == pixels).
+    const vpt = [...this.canvas.viewportTransform] as Fabric.TMat2D;
+    this.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    const dataUrl = this.canvas.toDataURL({
+      format: 'png',
+      left: region.left,
+      top: region.top,
+      width: region.width,
+      height: region.height,
+      multiplier: 1,
+    });
+    this.canvas.setViewportTransform(vpt);
+    this.canvas.requestRenderAll();
+
+    const patch = await this.fabric.FabricImage.fromURL(dataUrl, {}, {});
+    patch.set({ left: region.left, top: region.top, originX: 'left', originY: 'top' });
+    patch.filters = [
+      mode === 'blur'
+        ? new this.fabric.filters.Blur({ blur: 0.5 })
+        : new this.fabric.filters.Pixelate({ blocksize: 16 }),
+    ];
+    patch.applyFilters();
+    patch.set('aspRole', 'redaction');
+    patch.set('aspId', this.nextId());
+    this.canvas.add(patch);
+    this.canvas.setActiveObject(patch);
+    this.canvas.requestRenderAll();
+    this.commit('Redact');
+    this.notifySelection();
+  }
+
+  private findByRole(role: string): Fabric.FabricObject | null {
+    return this.canvas.getObjects().find((o) => o.get('aspRole') === role) ?? null;
+  }
+
+  /**
    * Apply a decorative frame around the image. Each style maps to a distinct,
    * real border rendering (`none` clears it). The frame is a non-interactive
    * rectangle tagged with `aspRole: 'frame'` so it can be re-found and replaced
@@ -681,15 +790,58 @@ export class EditorEngine {
     }
   }
 
-  /** Enable or disable freehand drawing. */
-  setFreeDraw(enabled: boolean, style: AnnotationStyle): void {
+  /**
+   * Enable or disable freehand drawing. When `highlighter` is set, the brush is
+   * translucent and wider so strokes read as a highlight over the underlying
+   * content rather than an opaque line.
+   */
+  setFreeDraw(enabled: boolean, style: AnnotationStyle, highlighter = false): void {
     this.canvas.isDrawingMode = enabled;
-    if (enabled) {
-      const brush = new this.fabric.PencilBrush(this.canvas);
+    if (!enabled) {
+      return;
+    }
+    const brush = new this.fabric.PencilBrush(this.canvas);
+    if (highlighter) {
+      brush.color = translucent(style.color, 0.35);
+      brush.width = style.strokeWidth * 2;
+    } else {
       brush.color = style.color;
       brush.width = style.strokeWidth;
-      this.canvas.freeDrawingBrush = brush;
     }
+    this.canvas.freeDrawingBrush = brush;
+  }
+
+  /** Set opacity (0–1) on the active object(s). Returns false if nothing selected. */
+  setOpacity(value: number, commit = true): boolean {
+    const active = this.canvas.getActiveObjects();
+    if (active.length === 0) {
+      return false;
+    }
+    const opacity = Math.max(0, Math.min(1, value));
+    for (const object of active) {
+      object.set('opacity', opacity);
+    }
+    this.canvas.requestRenderAll();
+    if (commit) {
+      this.commit('Opacity');
+    }
+    this.notifySelection();
+    this.notifyLayers();
+    return true;
+  }
+
+  /** Set opacity (0–1) on a specific layer. */
+  setLayerOpacity(id: string, value: number, commit = false): void {
+    const object = this.findById(id);
+    if (!object) {
+      return;
+    }
+    object.set('opacity', Math.max(0, Math.min(1, value)));
+    this.canvas.requestRenderAll();
+    if (commit) {
+      this.commit('Opacity');
+    }
+    this.notifyLayers();
   }
 
   /** Delete the currently selected object(s). */
@@ -991,6 +1143,7 @@ export class EditorEngine {
         locked: object.get('aspLocked') === true,
         visible: object.visible !== false,
         selected: active.includes(object),
+        opacity: typeof object.opacity === 'number' ? object.opacity : 1,
         removable: !isBase,
       };
     });
@@ -1140,6 +1293,15 @@ const FRAME_STYLES: Record<string, FrameSpec> = {
   hook: { strokeWidth: 12, radius: 0, useColor: true, stroke: '#000000' },
   bead: { strokeWidth: 7, radius: 0, useColor: true, stroke: '#000000', dash: [2, 7] },
 };
+
+/** Convert a hex color to an `rgba()` string at the given alpha; passes other values through. */
+function translucent(color: string, alpha: number): string {
+  try {
+    return withAlpha(parseHex(color), alpha);
+  } catch {
+    return color;
+  }
+}
 
 /** A human label for a layer row, derived from its role/type. */
 function layerLabel(object: Fabric.FabricObject): string {
