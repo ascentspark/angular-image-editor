@@ -1159,6 +1159,10 @@ export class AspImageEditor implements OnDestroy {
         this.textUnderline.set(info.textStyle.underline);
         this.textStrike.set(info.textStyle.strike);
         this.textAlign.set(info.textStyle.align);
+        // Reflect the selected text's font in the panel dropdown.
+        if (info.textStyle.fontFamily) {
+          this.fontFamily.set(info.textStyle.fontFamily);
+        }
       }
     } else {
       this.annotationWidth.set(Math.round(info.size));

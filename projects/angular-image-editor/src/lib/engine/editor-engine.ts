@@ -58,6 +58,8 @@ export interface TextStyleInfo {
   readonly underline: boolean;
   readonly strike: boolean;
   readonly align: string;
+  /** The text's current font family, so the panel can reflect it on selection. */
+  readonly fontFamily: string;
 }
 
 /** Editable style of the current selection, surfaced to the host UI. */
@@ -361,11 +363,12 @@ export class EditorEngine {
     // updates from its fallback to the real glyphs (font load is async).
     if (typeof document !== 'undefined' && document.fonts) {
       this.onFontsLoaded = (): void => {
+        // Drop Fabric's global char-width cache: any metrics measured while the
+        // font was still loading were the fallback's and are now wrong. Then
+        // recompute each text's bounds so the cursor/selection match the glyphs.
+        this.fabric.cache?.clearFontCache?.();
         this.canvas.getObjects().forEach((o) => {
           if (o.isType('textbox', 'i-text', 'text')) {
-            // Recompute character bounds with the now-loaded font, so the cursor
-            // and selection align with the rendered glyphs (not the fallback's
-            // metrics), then invalidate the render cache.
             (o as Fabric.Textbox).initDimensions?.();
             o.set('dirty', true);
           }
@@ -406,6 +409,7 @@ export class EditorEngine {
       const fontSize = object.get('fontSize');
       const weight = object.get('fontWeight');
       const align = object.get('textAlign');
+      const family = object.get('fontFamily');
       return {
         kind: 'text',
         color: typeof fill === 'string' ? fill : '#000000',
@@ -416,6 +420,7 @@ export class EditorEngine {
           underline: object.get('underline') === true,
           strike: object.get('linethrough') === true,
           align: typeof align === 'string' ? align : 'left',
+          fontFamily: typeof family === 'string' ? family : '',
         },
       };
     }
@@ -484,8 +489,9 @@ export class EditorEngine {
     }
     if (style.fontFamily !== undefined && isText) {
       object.set('fontFamily', style.fontFamily);
-      // Force Fabric to re-measure with the new family and invalidate its cache,
-      // so the change shows even if the family was set before the web font loaded.
+      // Drop any cached char widths for this family and re-measure, so the
+      // change shows even if the family was set before the web font loaded.
+      this.fabric.cache?.clearFontCache?.(style.fontFamily);
       const textbox = object as Fabric.Textbox;
       textbox.initDimensions?.();
       object.set('dirty', true);

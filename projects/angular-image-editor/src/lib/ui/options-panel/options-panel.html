@@ -173,11 +173,12 @@
               <select
                 id="asp-font-select"
                 class="asp-input asp-select"
-                [value]="activeFont()"
                 (change)="onFontChange($event)"
               >
                 @for (font of fonts(); track font.value) {
-                  <option [value]="font.value">{{ font.label }}</option>
+                  <option [value]="font.value" [selected]="font.value === activeFont()">
+                    {{ font.label }}
+                  </option>
                 }
               </select>
               <div class="asp-text-add asp-mt">
