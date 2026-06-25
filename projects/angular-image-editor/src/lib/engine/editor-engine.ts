@@ -218,6 +218,7 @@ export class EditorEngine {
   private guidesListener: (() => void) | null = null;
   private textMode = false;
   private textPlacementListener: ((point: { x: number; y: number }) => void) | null = null;
+  private redactPlacement = false;
   private lastViewportKey = '';
 
   /** Snap distance in *screen* pixels; divided by zoom to get a scene threshold. */
@@ -246,6 +247,12 @@ export class EditorEngine {
       // Text tool: click empty canvas to drop a new text box at that point.
       if (this.textMode && !opt.target) {
         this.textPlacementListener?.(opt.scenePoint);
+        return;
+      }
+      // Redact tool: click empty canvas to place a marquee (unless one exists,
+      // in which case the click just repositions/selects it).
+      if (this.redactPlacement && !opt.target && !this.findByRole('redact-marquee')) {
+        this.addRedactionMarqueeAt(opt.scenePoint.x, opt.scenePoint.y);
         return;
       }
       // Grab an existing manual guide when clicking empty canvas near its line.
@@ -1190,16 +1197,22 @@ export class EditorEngine {
   }
 
   /**
-   * Add a movable/resizable redaction marquee the user positions over the area
-   * to conceal. Transient (not committed) until {@link applyRedaction} bakes it.
+   * Add a movable/resizable redaction marquee centered on the canvas. The user
+   * positions it over the area to conceal; transient until {@link applyRedaction}
+   * bakes it.
    */
   addRedactionMarquee(): void {
+    this.addRedactionMarqueeAt(this.canvas.getWidth() / 2, this.canvas.getHeight() / 2);
+  }
+
+  /** Add a redaction marquee centered at a scene point (used by click-to-place). */
+  addRedactionMarqueeAt(cx: number, cy: number): void {
     this.cancelRedaction();
     const w = 220;
     const h = 120;
     const rect = new this.fabric.Rect({
-      left: this.canvas.getWidth() / 2 - w / 2,
-      top: this.canvas.getHeight() / 2 - h / 2,
+      left: cx - w / 2,
+      top: cy - h / 2,
       originX: 'left',
       originY: 'top',
       width: w,
@@ -1214,6 +1227,15 @@ export class EditorEngine {
     this.canvas.add(rect);
     this.canvas.setActiveObject(rect);
     this.canvas.requestRenderAll();
+  }
+
+  /**
+   * Enable/disable click-to-place for redaction: while on, clicking empty canvas
+   * drops a new marquee there (but only when one isn't already present, so you
+   * reposition the existing box rather than spawning duplicates).
+   */
+  setRedactPlacement(enabled: boolean): void {
+    this.redactPlacement = enabled;
   }
 
   /** Remove the redaction marquee without applying it. */
@@ -1253,7 +1275,7 @@ export class EditorEngine {
       rect.set('aspRole', 'redaction');
       rect.set('aspId', this.nextId());
       this.canvas.add(rect);
-      this.canvas.setActiveObject(rect);
+      this.canvas.discardActiveObject();
       this.canvas.requestRenderAll();
       this.commit('Redact');
       this.notifySelection();
@@ -1285,7 +1307,7 @@ export class EditorEngine {
     patch.set('aspRole', 'redaction');
     patch.set('aspId', this.nextId());
     this.canvas.add(patch);
-    this.canvas.setActiveObject(patch);
+    this.canvas.discardActiveObject();
     this.canvas.requestRenderAll();
     this.commit('Redact');
     this.notifySelection();

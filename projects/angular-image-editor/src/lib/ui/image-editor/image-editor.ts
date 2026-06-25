@@ -379,10 +379,12 @@ export class AspImageEditor implements OnDestroy {
       }
     });
 
-    // Redact tool shows a positioning marquee; leaving it discards an unapplied one.
+    // Redact tool shows a positioning marquee; leaving it discards an unapplied
+    // one. While active, clicking the canvas places a fresh box (click-to-place).
     effect(() => {
       const isRedact = this.activeTool() === 'redact' && this.engineReady();
       untracked(() => {
+        this.engine?.setRedactPlacement(isRedact);
         if (isRedact && !this.redactActive) {
           this.engine?.addRedactionMarquee();
           this.redactActive = true;
@@ -1159,8 +1161,9 @@ export class AspImageEditor implements OnDestroy {
 
   protected applyRedaction(): void {
     void this.engine?.applyRedaction(this.redactMode()).then(() => {
-      // The marquee is consumed; place a fresh one for the next redaction.
-      this.engine?.addRedactionMarquee();
+      // The marquee is consumed. We deliberately do NOT spawn a new one — that
+      // made a box "jump" onto the canvas. To redact again, click the canvas to
+      // place a fresh box where you want it.
       this.sync();
     });
   }
