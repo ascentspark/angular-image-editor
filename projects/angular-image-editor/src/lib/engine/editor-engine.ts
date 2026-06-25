@@ -1651,14 +1651,15 @@ export class EditorEngine {
 
   /** Add an image (e.g. pasted from the OS clipboard) as a movable object. */
   async addImageObject(src: string | Blob): Promise<void> {
-    // SVGs become real vector objects (crisp + correctly sized) instead of a
-    // raster image, which misreads an SVG's intrinsic size and renders clipped.
+    // SVGs are rasterized with the browser's native renderer (faithful to
+    // gradients/clip-paths/masks) at high resolution — Fabric's vector parser
+    // mangles complex SVGs, and a raw <img> misreads their intrinsic size.
     const svgText = await svgTextFrom(src);
-    if (svgText) {
-      await this.addSvgVector(svgText);
-      return;
-    }
-    const raw = typeof src === 'string' ? src : await blobToDataUrl(src);
+    const raw = svgText
+      ? await rasterizeSvg(svgText, MAX_IMPORT_DIM)
+      : typeof src === 'string'
+        ? src
+        : await blobToDataUrl(src);
     const url = raw.startsWith('data:') ? await downscaleDataUrl(raw, MAX_IMPORT_DIM) : raw;
     const image = await this.fabric.FabricImage.fromURL(url, {}, {});
     const cw = this.canvas.getWidth();
@@ -1678,36 +1679,6 @@ export class EditorEngine {
     this.canvas.requestRenderAll();
     this.commit('Paste image');
     this.notifySelection();
-  }
-
-  /** Parse an SVG into vector objects and add them as one movable layer. */
-  private async addSvgVector(svgText: string): Promise<void> {
-    const result = await this.fabric.loadSVGFromString(svgText);
-    const objects = result.objects.filter((o): o is Fabric.FabricObject => o != null);
-    if (objects.length === 0) {
-      return;
-    }
-    const obj = this.fabric.util.groupSVGElements(objects, result.options);
-    const cw = this.canvas.getWidth();
-    const ch = this.canvas.getHeight();
-    const w = (obj.width ?? 1) * (obj.scaleX ?? 1);
-    const h = (obj.height ?? 1) * (obj.scaleY ?? 1);
-    const fit = Math.min(1, (cw * 0.6) / w, (ch * 0.6) / h);
-    obj.set({
-      left: cw / 2,
-      top: ch / 2,
-      originX: 'center',
-      originY: 'center',
-      scaleX: (obj.scaleX ?? 1) * fit,
-      scaleY: (obj.scaleY ?? 1) * fit,
-    });
-    obj.set('aspId', this.nextId());
-    this.canvas.add(obj);
-    this.canvas.setActiveObject(obj);
-    this.canvas.requestRenderAll();
-    this.commit('Add image');
-    this.notifySelection();
-    this.notifyLayers();
   }
 
   /**
@@ -2561,7 +2532,11 @@ async function rasterizeSvg(svgText: string, maxDim: number): Promise<string> {
   );
   try {
     const img = await loadHtmlImage(url);
-    const scale = Math.min(maxDim / Math.max(width, height), 2);
+    // Render at high resolution for crispness when scaled on the canvas: aim for
+    // a ≥1536px long edge (vector source upscales cleanly), capped at maxDim.
+    const longest = Math.max(width, height);
+    const targetLong = Math.min(maxDim, Math.max(longest * 2, 1536));
+    const scale = targetLong / longest;
     const cw = Math.max(1, Math.round(width * scale));
     const ch = Math.max(1, Math.round(height * scale));
     const canvas = document.createElement('canvas');
