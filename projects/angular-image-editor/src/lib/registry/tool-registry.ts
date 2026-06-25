@@ -151,6 +151,7 @@ const ADVANCED_TOOLS: readonly AspTool[] = [
   'rotate',
   'pen',
   'highlighter',
+  'eraser',
   'shapes',
   'text',
   'redact',

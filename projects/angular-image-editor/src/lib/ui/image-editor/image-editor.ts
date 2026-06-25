@@ -921,6 +921,23 @@ export class AspImageEditor implements OnDestroy {
     input.value = '';
   }
 
+  /** Add an uploaded image as a new movable layer (composite, not replace). */
+  protected async onAddImageLayer(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) {
+      return;
+    }
+    this.pickerOpen.set(false);
+    try {
+      await this.engine?.addImageObject(file);
+      this.sync();
+    } catch (error) {
+      this.emitError('image-add-failed', error);
+    }
+  }
+
   /** Download the current scene as a reusable template (JSON). */
   protected saveTemplate(): void {
     const engine = this.engine;

@@ -17,7 +17,7 @@ describe('resolveGroups', () => {
     expect(resolveGroups(tools)).toEqual([]);
   });
 
-  it('maps a full set to the eight slots', () => {
+  it('maps a full set to the nine slots', () => {
     const groups = resolveGroups([
       'select',
       'crop',
@@ -26,6 +26,7 @@ describe('resolveGroups', () => {
       'filters',
       'pen',
       'highlighter',
+      'eraser',
       'shapes',
       'text',
       'redact',
@@ -37,6 +38,7 @@ describe('resolveGroups', () => {
       'transform',
       'color',
       'draw',
+      'eraser',
       'shapes',
       'text',
       'redact',

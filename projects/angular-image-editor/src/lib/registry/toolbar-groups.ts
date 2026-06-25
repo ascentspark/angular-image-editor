@@ -46,7 +46,8 @@ export const TOOLBAR_GROUPS: readonly ToolGroup[] = [
     members: ['adjust', 'filters'],
     flyout: false,
   },
-  { id: 'draw', label: 'Draw', icon: 'pencil', members: ['pen', 'highlighter', 'eraser'], flyout: true },
+  { id: 'draw', label: 'Draw', icon: 'pencil', members: ['pen', 'highlighter'], flyout: true },
+  { id: 'eraser', label: 'Eraser', icon: 'eraser', members: ['eraser'], flyout: false },
   { id: 'shapes', label: 'Shapes', icon: 'square', members: ['shapes'], flyout: false },
   { id: 'text', label: 'Text', icon: 'type', members: ['text'], flyout: false },
   {

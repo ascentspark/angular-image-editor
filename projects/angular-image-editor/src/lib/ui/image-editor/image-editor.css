@@ -298,6 +298,9 @@
   background: var(--asp-line);
   margin: 12px 0;
 }
+.asp-mt-sm {
+  margin-top: 8px;
+}
 .asp-upload--btn {
   width: 100%;
   margin-bottom: 8px;

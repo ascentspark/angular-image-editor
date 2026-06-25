@@ -325,8 +325,12 @@
           }
         </div>
         <label class="asp-upload">
-          <asp-icon name="upload" [size]="15" /> Upload your own
+          <asp-icon name="upload" [size]="15" /> Replace canvas image
           <input type="file" accept="image/*" (change)="onUpload($event)" />
+        </label>
+        <label class="asp-upload asp-mt-sm">
+          <asp-icon name="image-plus" [size]="15" /> Add image as a layer
+          <input type="file" accept="image/*" (change)="onAddImageLayer($event)" />
         </label>
         <div class="asp-menu__divider"></div>
         <div class="asp-menu__title">Template</div>
