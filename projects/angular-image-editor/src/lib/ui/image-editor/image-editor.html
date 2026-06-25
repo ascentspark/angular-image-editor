@@ -137,6 +137,8 @@
           [googleFonts]="googleFonts"
           [selectionKind]="selectionKind()"
           [fontLoading]="fontLoading()"
+          [magicTolerance]="magicTolerance()"
+          (magicToleranceChange)="onMagicTolerance($event)"
           [textBold]="textBold()"
           [textItalic]="textItalic()"
           [textUnderline]="textUnderline()"

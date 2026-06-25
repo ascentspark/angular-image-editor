@@ -36,6 +36,7 @@ export const ALL_TOOLS = [
   'text',
   'sticker',
   'redact',
+  'magicwand',
   // adjust / color
   'adjust',
   'filters',

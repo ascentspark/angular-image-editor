@@ -243,7 +243,12 @@ export class AspImageEditor implements OnDestroy {
   protected readonly fontLoading = signal(false);
   protected readonly activeFrame = signal('none');
   protected readonly redactMode = signal<RedactMode>('pixelate');
+  protected readonly magicTolerance = signal(32);
   private redactActive = false;
+
+  protected onMagicTolerance(value: number): void {
+    this.magicTolerance.set(value);
+  }
 
   protected readonly layers = signal<LayerInfo[]>([]);
 
@@ -384,6 +389,8 @@ export class AspImageEditor implements OnDestroy {
       this.engine.setFreeDraw(drawing, { color, strokeWidth: width }, tool === 'highlighter');
       // Text tool: click the canvas to drop an editable text box.
       this.engine.setTextMode(tool === 'text');
+      // Magic wand: click a region of the image to flood-fill erase it.
+      this.engine.setMagicMode(tool === 'magicwand');
     });
 
     // Re-render the rulers whenever they are toggled on, their canvases appear,
@@ -731,6 +738,12 @@ export class AspImageEditor implements OnDestroy {
         this.engine.setTextFinishListener(() => {
           this.activeTool.set('select');
           this.sync();
+        });
+        this.engine.setMagicListener((point) => {
+          void this.engine
+            ?.magicErase(point, this.magicTolerance())
+            .then(() => this.sync())
+            .catch((error) => this.emitError('magic-erase-failed', error));
         });
         this.engine.setSnapping(this.snapEnabled());
         this.engine.setArtboard(this.artboard());

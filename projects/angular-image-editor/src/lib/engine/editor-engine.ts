@@ -223,6 +223,8 @@ export class EditorEngine {
   private textFinishListener: (() => void) | null = null;
   private pendingFinishText: Fabric.FabricObject | null = null;
   private redactPlacement = false;
+  private magicMode = false;
+  private magicListener: ((point: { x: number; y: number }) => void) | null = null;
   private onFontsLoaded: (() => void) | null = null;
   private lastViewportKey = '';
 
@@ -258,6 +260,11 @@ export class EditorEngine {
       if (this.panMode) {
         this.panLast = { x: opt.viewportPoint.x, y: opt.viewportPoint.y };
         this.canvas.setCursor('grabbing');
+        return;
+      }
+      // Magic wand: a click anywhere reports the scene point to flood-fill erase.
+      if (this.magicMode) {
+        this.magicListener?.(opt.scenePoint);
         return;
       }
       // Text tool: click empty canvas. If a text box was already placed/active,
@@ -1211,6 +1218,17 @@ export class EditorEngine {
     this.textPlacementListener = cb;
   }
 
+  /** Enable/disable magic-wand mode (a canvas click flood-fill erases a region). */
+  setMagicMode(enabled: boolean): void {
+    this.magicMode = enabled;
+    this.canvas.defaultCursor = enabled ? 'crosshair' : 'default';
+  }
+
+  /** Register the callback fired with a scene point when magic mode is clicked. */
+  setMagicListener(cb: (point: { x: number; y: number }) => void): void {
+    this.magicListener = cb;
+  }
+
   /**
    * Register the callback fired when an empty-canvas click in text mode finishes
    * an already-placed text (so the host can switch back to the Select tool).
@@ -1636,6 +1654,88 @@ export class EditorEngine {
     this.canvas.requestRenderAll();
     this.commit('Paste image');
     this.notifySelection();
+  }
+
+  /**
+   * Magic-wand erase: from a scene point, flood-fill the image under the pointer
+   * and clear (make transparent) every contiguous pixel within `tolerance`
+   * (0–100) of the clicked color. Great for knocking out a solid background.
+   * Operates on the base image, or a selected image layer if one is active.
+   */
+  async magicErase(scenePoint: { x: number; y: number }, tolerance: number): Promise<boolean> {
+    const active = this.canvas.getActiveObject();
+    const target =
+      active && active.isType('image') ? (active as Fabric.FabricImage) : this.baseImage;
+    if (!target) {
+      return false;
+    }
+    const el = target.getElement() as CanvasImageSource & { width: number; height: number };
+    const srcW = (el as HTMLImageElement).naturalWidth || el.width;
+    const srcH = (el as HTMLImageElement).naturalHeight || el.height;
+    if (!srcW || !srcH) {
+      return false;
+    }
+    const off = document.createElement('canvas');
+    off.width = srcW;
+    off.height = srcH;
+    const ctx = off.getContext('2d', { willReadFrequently: true });
+    if (!ctx) {
+      return false;
+    }
+    ctx.drawImage(el, 0, 0, srcW, srcH);
+    const image = ctx.getImageData(0, 0, srcW, srcH);
+
+    // Map the scene click into source-pixel coordinates (undo the object's
+    // transform, then offset by the cropped region's origin).
+    const inv = this.fabric.util.invertTransform(target.calcTransformMatrix());
+    const local = this.fabric.util.transformPoint(
+      new this.fabric.Point(scenePoint.x, scenePoint.y),
+      inv,
+    );
+    const px = Math.round(local.x + (target.width ?? srcW) / 2 + (target.cropX ?? 0));
+    const py = Math.round(local.y + (target.height ?? srcH) / 2 + (target.cropY ?? 0));
+    if (px < 0 || py < 0 || px >= srcW || py >= srcH) {
+      return false;
+    }
+
+    const cleared = floodFillClear(image, px, py, Math.round((tolerance / 100) * 255));
+    if (cleared === 0) {
+      return false;
+    }
+    ctx.putImageData(image, 0, 0);
+
+    // Rebuild the image element in place so the cleared pixels show through.
+    const replacement = await this.fabric.FabricImage.fromURL(off.toDataURL('image/png'), {}, {});
+    replacement.set({
+      left: target.left,
+      top: target.top,
+      originX: target.originX,
+      originY: target.originY,
+      scaleX: target.scaleX,
+      scaleY: target.scaleY,
+      angle: target.angle,
+      cropX: target.cropX,
+      cropY: target.cropY,
+      width: target.width,
+      height: target.height,
+      flipX: target.flipX,
+      flipY: target.flipY,
+    });
+    replacement.set('aspId', target.get('aspId') ?? this.nextId());
+    replacement.filters = target.filters;
+    replacement.applyFilters();
+    const wasBase = target === this.baseImage;
+    this.canvas.remove(target);
+    this.canvas.add(replacement);
+    if (wasBase) {
+      this.baseImage = replacement;
+    }
+    this.canvas.setActiveObject(replacement);
+    this.canvas.requestRenderAll();
+    this.commit('Magic erase');
+    this.notifySelection();
+    this.notifyLayers();
+    return true;
   }
 
   /** Duplicate the current selection in place (offset). */
@@ -2259,6 +2359,53 @@ function blobToDataUrl(blob: Blob): Promise<string> {
     reader.onerror = () => reject(reader.error ?? new Error('Failed to read image blob'));
     reader.readAsDataURL(blob);
   });
+}
+
+/**
+ * Flood-fill the alpha channel to 0 starting at (sx, sy), spreading to 4-connected
+ * neighbours whose RGB is within `tol` (per channel) of the seed color. Mutates
+ * `image` in place and returns the number of pixels cleared. Pure + unit-testable.
+ */
+export function floodFillClear(image: ImageData, sx: number, sy: number, tol: number): number {
+  const { width: w, height: h, data } = image;
+  const idx = (x: number, y: number): number => (y * w + x) * 4;
+  const seed = idx(sx, sy);
+  if (data[seed + 3] === 0) {
+    return 0; // already transparent
+  }
+  const sr = data[seed];
+  const sg = data[seed + 1];
+  const sb = data[seed + 2];
+  const visited = new Uint8Array(w * h);
+  const stack: number[] = [sx, sy];
+  let cleared = 0;
+  while (stack.length > 0) {
+    const y = stack.pop() as number;
+    const x = stack.pop() as number;
+    if (x < 0 || y < 0 || x >= w || y >= h) {
+      continue;
+    }
+    const flat = y * w + x;
+    if (visited[flat]) {
+      continue;
+    }
+    visited[flat] = 1;
+    const p = flat * 4;
+    if (data[p + 3] === 0) {
+      continue;
+    }
+    if (
+      Math.abs(data[p] - sr) > tol ||
+      Math.abs(data[p + 1] - sg) > tol ||
+      Math.abs(data[p + 2] - sb) > tol
+    ) {
+      continue;
+    }
+    data[p + 3] = 0;
+    cleared += 1;
+    stack.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1);
+  }
+  return cleared;
 }
 
 /** Convert a data URL to a Blob without a network round-trip. */

@@ -63,6 +63,7 @@ export const TOOL_REGISTRY: Record<AspTool, ToolMeta> = {
     icon: 'lucide:square-dashed-mouse-pointer',
     group: 'annotate',
   },
+  magicwand: { key: 'magicwand', label: 'Magic wand', icon: 'lucide:wand-2', group: 'annotate' },
   adjust: { key: 'adjust', label: 'Adjust', icon: 'lucide:sliders-horizontal', group: 'color' },
   filters: { key: 'filters', label: 'Filters', icon: 'lucide:contrast', group: 'color' },
   select: { key: 'select', label: 'Select', icon: 'lucide:mouse-pointer-2', group: 'object' },
@@ -155,6 +156,7 @@ const ADVANCED_TOOLS: readonly AspTool[] = [
   'shapes',
   'text',
   'redact',
+  'magicwand',
   'frame',
   'background',
 ];

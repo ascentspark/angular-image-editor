@@ -30,6 +30,7 @@ export type PanelKind =
   | 'annotate'
   | 'frame'
   | 'background'
+  | 'magic'
   | 'select'
   | 'none';
 
@@ -137,6 +138,7 @@ export class AspOptionsPanel {
   readonly lineHeight = input<number>(1.16);
   readonly letterSpacing = input<number>(0);
   readonly redactMode = input<RedactMode>('pixelate');
+  readonly magicTolerance = input<number>(32);
 
   readonly frameOptions = input<readonly FrameOption[]>(FRAME_OPTIONS);
   readonly activeFrame = input<string>('none');
@@ -166,6 +168,7 @@ export class AspOptionsPanel {
   readonly textBgChange = output<string>();
   readonly redactModeChange = output<RedactMode>();
   readonly applyRedaction = output<void>();
+  readonly magicToleranceChange = output<number>();
   readonly annotationColorChange = output<string>();
   /** Live size change (slider drag) — apply without committing history. */
   readonly sizeInput = output<number>();
@@ -263,6 +266,8 @@ export class AspOptionsPanel {
         return 'frame';
       case 'background':
         return 'background';
+      case 'magicwand':
+        return 'magic';
       case 'pen':
       case 'highlighter':
       case 'eraser':
@@ -329,6 +334,10 @@ export class AspOptionsPanel {
 
   protected onStraightenCommit(event: Event): void {
     this.straightenCommit.emit(Number((event.target as HTMLInputElement).value));
+  }
+
+  protected onMagicTolerance(event: Event): void {
+    this.magicToleranceChange.emit(Number((event.target as HTMLInputElement).value));
   }
 
   protected onFontChange(event: Event): void {
