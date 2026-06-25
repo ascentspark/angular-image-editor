@@ -939,7 +939,15 @@ export class EditorEngine {
    * in history snapshots (a transient object URL would be revoked and break undo).
    */
   async loadImage(src: string | Blob): Promise<void> {
-    const raw = typeof src === 'string' ? src : await blobToDataUrl(src);
+    // The base image must be a raster (crop/filters/AI operate on pixels), so an
+    // SVG is rasterized at its true size first rather than loaded as an <img>
+    // (which misreads the SVG's intrinsic size and renders it clipped).
+    const svgText = await svgTextFrom(src);
+    const raw = svgText
+      ? await rasterizeSvg(svgText, MAX_IMPORT_DIM)
+      : typeof src === 'string'
+        ? src
+        : await blobToDataUrl(src);
     // Downscale large same-origin (data URL) imports; remote URLs are left to
     // Fabric (canvas-resampling a cross-origin image would taint it).
     const url = raw.startsWith('data:') ? await downscaleDataUrl(raw, MAX_IMPORT_DIM) : raw;
@@ -1643,6 +1651,13 @@ export class EditorEngine {
 
   /** Add an image (e.g. pasted from the OS clipboard) as a movable object. */
   async addImageObject(src: string | Blob): Promise<void> {
+    // SVGs become real vector objects (crisp + correctly sized) instead of a
+    // raster image, which misreads an SVG's intrinsic size and renders clipped.
+    const svgText = await svgTextFrom(src);
+    if (svgText) {
+      await this.addSvgVector(svgText);
+      return;
+    }
     const raw = typeof src === 'string' ? src : await blobToDataUrl(src);
     const url = raw.startsWith('data:') ? await downscaleDataUrl(raw, MAX_IMPORT_DIM) : raw;
     const image = await this.fabric.FabricImage.fromURL(url, {}, {});
@@ -1663,6 +1678,36 @@ export class EditorEngine {
     this.canvas.requestRenderAll();
     this.commit('Paste image');
     this.notifySelection();
+  }
+
+  /** Parse an SVG into vector objects and add them as one movable layer. */
+  private async addSvgVector(svgText: string): Promise<void> {
+    const result = await this.fabric.loadSVGFromString(svgText);
+    const objects = result.objects.filter((o): o is Fabric.FabricObject => o != null);
+    if (objects.length === 0) {
+      return;
+    }
+    const obj = this.fabric.util.groupSVGElements(objects, result.options);
+    const cw = this.canvas.getWidth();
+    const ch = this.canvas.getHeight();
+    const w = (obj.width ?? 1) * (obj.scaleX ?? 1);
+    const h = (obj.height ?? 1) * (obj.scaleY ?? 1);
+    const fit = Math.min(1, (cw * 0.6) / w, (ch * 0.6) / h);
+    obj.set({
+      left: cw / 2,
+      top: ch / 2,
+      originX: 'center',
+      originY: 'center',
+      scaleX: (obj.scaleX ?? 1) * fit,
+      scaleY: (obj.scaleY ?? 1) * fit,
+    });
+    obj.set('aspId', this.nextId());
+    this.canvas.add(obj);
+    this.canvas.setActiveObject(obj);
+    this.canvas.requestRenderAll();
+    this.commit('Add image');
+    this.notifySelection();
+    this.notifyLayers();
   }
 
   /**
@@ -2463,6 +2508,70 @@ function blobToDataUrl(blob: Blob): Promise<string> {
     reader.onerror = () => reject(reader.error ?? new Error('Failed to read image blob'));
     reader.readAsDataURL(blob);
   });
+}
+
+/** Return the SVG markup if the source is an SVG (by MIME, name, or data-URL), else null. */
+async function svgTextFrom(src: string | Blob): Promise<string | null> {
+  if (typeof src !== 'string') {
+    const name = (src as File).name ?? '';
+    const isSvg = src.type === 'image/svg+xml' || /\.svg$/i.test(name);
+    if (!isSvg) {
+      return null;
+    }
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error ?? new Error('Failed to read SVG'));
+      reader.readAsText(src);
+    });
+  }
+  if (/^data:image\/svg\+xml/i.test(src)) {
+    return (await fetch(src)).text();
+  }
+  return null;
+}
+
+/** Intrinsic pixel size of an SVG: its width/height attrs, else its viewBox, else 512². */
+function svgIntrinsicSize(svgText: string): { width: number; height: number } {
+  const svg = new DOMParser().parseFromString(svgText, 'image/svg+xml').documentElement;
+  let w = parseFloat(svg.getAttribute('width') ?? '');
+  let h = parseFloat(svg.getAttribute('height') ?? '');
+  if (!Number.isFinite(w) || !Number.isFinite(h)) {
+    const vb = (svg.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
+    if (vb.length === 4 && vb[2] > 0 && vb[3] > 0) {
+      w = vb[2];
+      h = vb[3];
+    }
+  }
+  return {
+    width: Number.isFinite(w) && w > 0 ? w : 512,
+    height: Number.isFinite(h) && h > 0 ? h : 512,
+  };
+}
+
+/** Rasterize SVG markup to a PNG data URL, sized from its real dimensions (≤2× for crispness). */
+async function rasterizeSvg(svgText: string, maxDim: number): Promise<string> {
+  const { width, height } = svgIntrinsicSize(svgText);
+  // Pin explicit width/height so the <img> renders the full content, not a default box.
+  const svg = new DOMParser().parseFromString(svgText, 'image/svg+xml').documentElement;
+  svg.setAttribute('width', String(width));
+  svg.setAttribute('height', String(height));
+  const url = URL.createObjectURL(
+    new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' }),
+  );
+  try {
+    const img = await loadHtmlImage(url);
+    const scale = Math.min(maxDim / Math.max(width, height), 2);
+    const cw = Math.max(1, Math.round(width * scale));
+    const ch = Math.max(1, Math.round(height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = cw;
+    canvas.height = ch;
+    canvas.getContext('2d')?.drawImage(img, 0, 0, cw, ch);
+    return canvas.toDataURL('image/png');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 /**
