@@ -1568,6 +1568,9 @@ export class EditorEngine {
     if (active.length === 0) {
       return;
     }
+    if (active.some((o) => o.get('aspId') === 'base')) {
+      this.baseImage = null;
+    }
     this.canvas.remove(...active);
     this.canvas.discardActiveObject();
     this.canvas.requestRenderAll();
@@ -1867,12 +1870,13 @@ export class EditorEngine {
   }
 
   private findBaseImage(): Fabric.FabricImage | null {
-    for (const object of this.canvas.getObjects()) {
-      if (object.isType('image') && object.get('aspRole') !== 'redaction') {
-        return object as Fabric.FabricImage;
-      }
-    }
-    return null;
+    // The background is the image tagged `aspId: 'base'`; matching by id (not
+    // "first image") keeps a pasted image from being mistaken for it, and
+    // returns null once the background has been deleted.
+    const base = this.canvas
+      .getObjects()
+      .find((o) => o.isType('image') && o.get('aspId') === 'base');
+    return (base as Fabric.FabricImage) ?? null;
   }
 
   /** Reset all edits back to the freshly-loaded image. */
@@ -1914,7 +1918,6 @@ export class EditorEngine {
     const active = this.canvas.getActiveObjects();
     const layers = this.canvas.getObjects().map((object): LayerInfo => {
       const id = typeof object.get('aspId') === 'string' ? (object.get('aspId') as string) : '';
-      const isBase = id === 'base';
       return {
         id,
         label: layerLabel(object),
@@ -1922,7 +1925,7 @@ export class EditorEngine {
         visible: object.visible !== false,
         selected: active.includes(object),
         opacity: typeof object.opacity === 'number' ? object.opacity : 1,
-        removable: !isBase,
+        removable: true,
       };
     });
     return layers.filter((l) => l.id !== '').reverse();
@@ -1939,7 +1942,9 @@ export class EditorEngine {
    */
   selectLayer(id: string, additive = false): void {
     const object = this.findById(id);
-    if (!object || object.get('aspLocked') === true || object.selectable === false) {
+    // Locked layers can't be selected; the background is selectable from the
+    // panel (so it can be deleted/adjusted) even though it ignores canvas clicks.
+    if (!object || object.get('aspLocked') === true) {
       return;
     }
     if (additive) {
@@ -2053,8 +2058,11 @@ export class EditorEngine {
   /** Delete a layer (the base image is protected). */
   deleteLayer(id: string): void {
     const object = this.findById(id);
-    if (!object || id === 'base') {
+    if (!object) {
       return;
+    }
+    if (id === 'base') {
+      this.baseImage = null;
     }
     this.canvas.remove(object);
     this.canvas.requestRenderAll();
