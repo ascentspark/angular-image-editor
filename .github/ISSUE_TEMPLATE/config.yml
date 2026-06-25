@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation & demo
+    url: https://github.com/ascentspark/angular-image-editor#readme
+    about: Browse the README and run the demo before filing.
+  - name: 🔒 Report a security vulnerability
+    url: https://github.com/ascentspark/angular-image-editor/blob/main/SECURITY.md
+    about: Report security issues privately — do not open a public issue.

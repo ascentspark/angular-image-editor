@@ -1,0 +1,74 @@
+name: 🐞 Bug report
+description: Report a reproducible problem in the library.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. A **minimal reproduction is required** — issues
+        without one are likely to be closed. For security problems, see `SECURITY.md` instead.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect to happen instead?
+    validations:
+      required: true
+  - type: input
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: A StackBlitz / small repo / exact steps that reproduce the issue.
+      placeholder: https://stackblitz.com/edit/...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Library version
+      description: Which version of "@ascentsparksoftware/angular-image-editor"?
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: angular
+    attributes:
+      label: Angular major
+      options:
+        - "22"
+        - "other (note in environment)"
+    validations:
+      required: true
+  - type: dropdown
+    id: change-detection
+    attributes:
+      label: Change detection
+      options:
+        - Zoneless
+        - Zone.js
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser + OS, and relevant peer-dep versions (fabric, etc.).
+      placeholder: |
+        - Browser: Chrome 138
+        - OS: macOS 15
+        - fabric: 7.4.0
+    validations:
+      required: true
+  - type: textarea
+    id: console
+    attributes:
+      label: Console / error output
+      render: shell
+  - type: checkboxes
+    id: not-security
+    attributes:
+      label: Confirmation
+      options:
+        - label: This is not a security vulnerability (those go through SECURITY.md, privately).
+          required: true
