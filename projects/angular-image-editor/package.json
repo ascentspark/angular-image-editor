@@ -34,5 +34,9 @@
     "jspdf": "^4.2.1",
     "tslib": "^2.3.0"
   },
+  "optionalDependencies": {
+    "@imgly/background-removal": "^1.7.0",
+    "onnxruntime-web": "1.21.0"
+  },
   "sideEffects": false
 }

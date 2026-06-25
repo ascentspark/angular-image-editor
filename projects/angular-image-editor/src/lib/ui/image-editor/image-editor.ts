@@ -244,10 +244,35 @@ export class AspImageEditor implements OnDestroy {
   protected readonly activeFrame = signal('none');
   protected readonly redactMode = signal<RedactMode>('pixelate');
   protected readonly magicTolerance = signal(32);
+  protected readonly aiBusy = signal(false);
+  protected readonly aiStage = signal('');
+  protected readonly aiProgress = signal(0);
   private redactActive = false;
 
   protected onMagicTolerance(value: number): void {
     this.magicTolerance.set(value);
+  }
+
+  /** Run the active AI tool (background removal / subject cut-out) on the image. */
+  protected runAi(): void {
+    const engine = this.engine;
+    if (!engine || this.aiBusy()) {
+      return;
+    }
+    const mode = this.activeTool() === 'selectsubject' ? 'subject' : 'replace';
+    this.aiBusy.set(true);
+    this.aiProgress.set(0);
+    this.aiStage.set('loading');
+    void engine
+      .removeImageBackground(mode)
+      .then((ok) => {
+        if (!ok) {
+          this.emitError('ai-no-image', new Error('No image to process'));
+        }
+        this.sync();
+      })
+      .catch((error) => this.emitError('ai-failed', error))
+      .finally(() => this.aiBusy.set(false));
   }
 
   protected readonly layers = signal<LayerInfo[]>([]);
@@ -738,6 +763,10 @@ export class AspImageEditor implements OnDestroy {
         this.engine.setTextFinishListener(() => {
           this.activeTool.set('select');
           this.sync();
+        });
+        this.engine.setAiProgressListener((info) => {
+          this.aiStage.set(info.stage);
+          this.aiProgress.set(info.progress);
         });
         this.engine.setMagicListener((point) => {
           void this.engine

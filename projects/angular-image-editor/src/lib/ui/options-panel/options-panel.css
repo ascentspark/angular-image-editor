@@ -486,3 +486,17 @@
     animation-duration: 1.6s;
   }
 }
+
+/* AI operation progress bar. */
+.asp-ai-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--asp-surface-sunk);
+  overflow: hidden;
+}
+.asp-ai-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--asp-accent);
+  transition: width 0.2s ease;
+}

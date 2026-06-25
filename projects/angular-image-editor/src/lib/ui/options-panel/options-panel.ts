@@ -31,6 +31,7 @@ export type PanelKind =
   | 'frame'
   | 'background'
   | 'magic'
+  | 'ai'
   | 'select'
   | 'none';
 
@@ -139,6 +140,11 @@ export class AspOptionsPanel {
   readonly letterSpacing = input<number>(0);
   readonly redactMode = input<RedactMode>('pixelate');
   readonly magicTolerance = input<number>(32);
+  /** True while an in-browser AI op is running (disables the button, shows progress). */
+  readonly aiBusy = input<boolean>(false);
+  /** AI stage label + 0–1 progress for the status line. */
+  readonly aiStage = input<string>('');
+  readonly aiProgress = input<number>(0);
 
   readonly frameOptions = input<readonly FrameOption[]>(FRAME_OPTIONS);
   readonly activeFrame = input<string>('none');
@@ -169,6 +175,7 @@ export class AspOptionsPanel {
   readonly redactModeChange = output<RedactMode>();
   readonly applyRedaction = output<void>();
   readonly magicToleranceChange = output<number>();
+  readonly runAi = output<void>();
   readonly annotationColorChange = output<string>();
   /** Live size change (slider drag) — apply without committing history. */
   readonly sizeInput = output<number>();
@@ -268,6 +275,9 @@ export class AspOptionsPanel {
         return 'background';
       case 'magicwand':
         return 'magic';
+      case 'removebg':
+      case 'selectsubject':
+        return 'ai';
       case 'pen':
       case 'highlighter':
       case 'eraser':
@@ -298,6 +308,11 @@ export class AspOptionsPanel {
       (this.activeTool() === 'select' && this.selectionKind() === 'stroke'),
   );
   protected readonly isRedact = computed(() => this.activeTool() === 'redact');
+  /** Label for the AI action button, by which AI tool is active. */
+  protected readonly aiActionLabel = computed(() =>
+    this.activeTool() === 'selectsubject' ? 'Cut out subject' : 'Remove background',
+  );
+  protected readonly aiPercent = computed(() => Math.round(this.aiProgress() * 100));
   /** Whether the panel is reflecting a selection rather than an active tool. */
   protected readonly fromSelection = computed(() => this.activeTool() === 'select');
 

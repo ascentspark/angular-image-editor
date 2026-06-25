@@ -55,6 +55,7 @@ export {
   type ArtboardSize,
   type ManualGuide,
   type Viewport,
+  type AiProgress,
 } from './lib/engine/editor-engine';
 export { EditHistory, type HistoryEntry } from './lib/engine/history';
 export { DeltaHistory, type HistoryStep } from './lib/engine/delta-history';

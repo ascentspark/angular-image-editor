@@ -57,7 +57,13 @@ export const TOOLBAR_GROUPS: readonly ToolGroup[] = [
     members: ['redact'],
     flyout: false,
   },
-  { id: 'magic', label: 'Magic', icon: 'wand-2', members: ['magicwand'], flyout: false },
+  {
+    id: 'magic',
+    label: 'Magic',
+    icon: 'wand-2',
+    members: ['magicwand', 'removebg', 'selectsubject'],
+    flyout: true,
+  },
   { id: 'canvas', label: 'Canvas', icon: 'image', members: ['frame', 'background'], flyout: true },
 ];
 

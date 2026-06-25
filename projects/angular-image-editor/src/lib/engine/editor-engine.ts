@@ -153,6 +153,14 @@ export interface ArtboardSize {
   readonly height: number;
 }
 
+/** Progress of an in-browser AI operation (model fetch + inference). */
+export interface AiProgress {
+  /** `'loading'` while fetching the model, `'processing'` during inference, `'done'`. */
+  readonly stage: 'loading' | 'processing' | 'done';
+  /** 0–1 within the current stage (best-effort; some stages report no total). */
+  readonly progress: number;
+}
+
 /** A user-placed guide line at a fixed scene coordinate. */
 export interface ManualGuide {
   readonly id: string;
@@ -225,6 +233,7 @@ export class EditorEngine {
   private redactPlacement = false;
   private magicMode = false;
   private magicListener: ((point: { x: number; y: number }) => void) | null = null;
+  private aiProgressListener: ((info: AiProgress) => void) | null = null;
   private onFontsLoaded: (() => void) | null = null;
   private lastViewportKey = '';
 
@@ -1736,6 +1745,101 @@ export class EditorEngine {
     this.notifySelection();
     this.notifyLayers();
     return true;
+  }
+
+  /** Register a callback for AI-operation progress (model fetch + inference). */
+  setAiProgressListener(cb: (info: AiProgress) => void): void {
+    this.aiProgressListener = cb;
+  }
+
+  /**
+   * In-browser AI background removal. Segments the target image (the base image,
+   * or a selected image layer) and either replaces it with the cut-out subject
+   * (`mode: 'replace'`) or adds the cut-out as a new layer (`mode: 'subject'`).
+   * The model is fetched and cached on first use; progress is reported via the AI
+   * progress listener. Returns false if there's no image to process.
+   */
+  async removeImageBackground(mode: 'replace' | 'subject'): Promise<boolean> {
+    const active = this.canvas.getActiveObject();
+    const target =
+      active && active.isType('image') ? (active as Fabric.FabricImage) : this.baseImage;
+    if (!target) {
+      return false;
+    }
+    const source = this.imageToBlob(target);
+    if (!source) {
+      return false;
+    }
+    this.aiProgressListener?.({ stage: 'loading', progress: 0 });
+    const { removeBackground } = await import('@imgly/background-removal');
+    const cutoutBlob = await removeBackground(source, {
+      progress: (key: string, current: number, total: number) => {
+        const stage = key.startsWith('fetch') ? 'loading' : 'processing';
+        this.aiProgressListener?.({ stage, progress: total > 0 ? current / total : 0 });
+      },
+    });
+    const cutout = await this.fabric.FabricImage.fromURL(await blobToDataUrl(cutoutBlob), {}, {});
+
+    if (mode === 'replace') {
+      cutout.set({
+        left: target.left,
+        top: target.top,
+        originX: target.originX,
+        originY: target.originY,
+        scaleX: target.scaleX,
+        scaleY: target.scaleY,
+        angle: target.angle,
+        flipX: target.flipX,
+        flipY: target.flipY,
+      });
+      cutout.set('aspId', target.get('aspId') ?? this.nextId());
+      const wasBase = target === this.baseImage;
+      this.canvas.remove(target);
+      this.canvas.add(cutout);
+      if (wasBase) {
+        this.baseImage = cutout;
+      }
+      this.canvas.setActiveObject(cutout);
+    } else {
+      // Subject as a new movable layer, aligned over the source.
+      cutout.set({
+        left: target.left,
+        top: target.top,
+        originX: target.originX,
+        originY: target.originY,
+        scaleX: target.scaleX,
+        scaleY: target.scaleY,
+        angle: target.angle,
+      });
+      cutout.set('aspId', this.nextId());
+      this.canvas.add(cutout);
+      this.canvas.setActiveObject(cutout);
+    }
+    this.canvas.requestRenderAll();
+    this.aiProgressListener?.({ stage: 'done', progress: 1 });
+    this.commit(mode === 'replace' ? 'Remove background' : 'Cut out subject');
+    this.notifySelection();
+    this.notifyLayers();
+    return true;
+  }
+
+  /** Draw an image object's source bitmap to a fresh canvas and return a PNG blob. */
+  private imageToBlob(image: Fabric.FabricImage): Blob | null {
+    const el = image.getElement() as CanvasImageSource & { width: number; height: number };
+    const w = (el as HTMLImageElement).naturalWidth || el.width;
+    const h = (el as HTMLImageElement).naturalHeight || el.height;
+    if (!w || !h) {
+      return null;
+    }
+    const off = document.createElement('canvas');
+    off.width = w;
+    off.height = h;
+    const ctx = off.getContext('2d');
+    if (!ctx) {
+      return null;
+    }
+    ctx.drawImage(el, 0, 0, w, h);
+    return dataUrlToBlob(off.toDataURL('image/png'));
   }
 
   /** Duplicate the current selection in place (offset). */
