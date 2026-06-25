@@ -47,6 +47,17 @@
   padding: 16px;
 }
 
+/* Narrow editor: the whole workspace scrolls as one column, so the options
+   panel flows at its natural height instead of being an internal scroll pane. */
+@container aspeditor (max-width: 600px) {
+  :host {
+    overflow: visible;
+  }
+  .asp-panel__body {
+    overflow-y: visible;
+  }
+}
+
 .asp-stack {
   display: flex;
   flex-direction: column;

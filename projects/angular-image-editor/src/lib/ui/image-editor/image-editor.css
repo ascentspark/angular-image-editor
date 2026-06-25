@@ -1,5 +1,9 @@
 :host {
   display: block;
+  /* Establish a query container so the editor's own width — not the viewport —
+     drives the responsive layout (correct even when embedded in a sidebar). */
+  container-type: inline-size;
+  container-name: aspeditor;
   background: var(--asp-bg);
   color: var(--asp-ink);
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -583,21 +587,42 @@
   height: 38px;
 }
 
-/* ---- responsive: rail + panel become stacked sheets ---- */
-@media (max-width: 760px) {
+/* ---- responsive (driven by the editor's own width) ---- */
+
+/* Tablet-ish: tighten the rail and options column so the canvas keeps room. */
+@container aspeditor (max-width: 880px) {
   .asp-workspace {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-columns: 68px minmax(0, 1fr) 232px;
+    gap: 10px;
+  }
+}
+
+/* Narrow / mobile: stack the rail, canvas, and panel into one scrolling column.
+   The host scrolls; children keep their natural height (the canvas a comfortable
+   fixed height) so nothing gets squished. The rail is a sticky tool strip. */
+@container aspeditor (max-width: 600px) {
+  :host {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .asp-workspace {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 100%;
+    gap: 10px;
   }
   .asp-workspace__rail {
-    order: 1;
+    position: sticky;
+    top: 0;
+    z-index: 6;
   }
   .asp-workspace__canvas {
-    order: 2;
-    height: 56vh;
+    flex: none;
+    height: clamp(300px, 52cqh, 460px);
   }
   .asp-workspace__panel {
-    order: 3;
-    max-height: 50vh;
+    flex: none;
+    overflow: visible;
   }
 }

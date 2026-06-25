@@ -299,7 +299,9 @@ export class AspImageEditor implements OnDestroy {
       const min = MODE_MIN[this.mode()];
       el.style.width = toCssSize(this.width(), '100%');
       el.style.height = toCssSize(this.height(), '100%');
-      el.style.minWidth = min.width;
+      // Cap the min-width to the available space so the editor never forces
+      // horizontal overflow on a narrow screen; the layout reflows instead.
+      el.style.minWidth = `min(${min.width}, 100%)`;
       el.style.minHeight = min.height;
     });
 

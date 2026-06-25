@@ -7,6 +7,15 @@
   max-height: 42%;
 }
 
+/* When the editor is narrow the whole workspace scrolls as one column, so the
+   layer list flows at its natural height (a capped, internally-scrolling list)
+   rather than fighting for a 42% share of an auto-height panel. */
+@container aspeditor (max-width: 600px) {
+  :host {
+    max-height: 320px;
+  }
+}
+
 .asp-layers__head {
   flex: none;
   display: flex;
