@@ -700,6 +700,11 @@ export class AspImageEditor implements OnDestroy {
           });
           this.sync();
         });
+        // Clicking off a placed text finishes it and returns to the Select tool.
+        this.engine.setTextFinishListener(() => {
+          this.activeTool.set('select');
+          this.sync();
+        });
         this.engine.setSnapping(this.snapEnabled());
         this.engine.setArtboard(this.artboard());
         this.engine.setRulersEnabled(this.rulersEnabled());
@@ -1070,6 +1075,11 @@ export class AspImageEditor implements OnDestroy {
     this.engine?.styleActiveObject({ fontFamily: value });
     this.sync();
     void ensureFontLoaded(value).then(() => {
+      // Only re-apply if this is still the chosen font — otherwise a slow-loading
+      // earlier choice would clobber a newer one (the "2nd change doesn't stick").
+      if (this.fontFamily() !== value) {
+        return;
+      }
       this.engine?.styleActiveObject({ fontFamily: value });
       this.sync();
     });

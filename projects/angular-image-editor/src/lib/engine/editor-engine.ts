@@ -218,6 +218,8 @@ export class EditorEngine {
   private guidesListener: (() => void) | null = null;
   private textMode = false;
   private textPlacementListener: ((point: { x: number; y: number }) => void) | null = null;
+  private textFinishListener: (() => void) | null = null;
+  private pendingFinishText: Fabric.FabricObject | null = null;
   private redactPlacement = false;
   private onFontsLoaded: (() => void) | null = null;
   private lastViewportKey = '';
@@ -238,6 +240,17 @@ export class EditorEngine {
     this.canvas.on('selection:created', notify);
     this.canvas.on('selection:updated', notify);
     this.canvas.on('selection:cleared', notify);
+    // Capture whether an empty-canvas text-mode click lands on an already-active
+    // text BEFORE Fabric clears the selection in its own mouse:down handling.
+    this.canvas.on('mouse:down:before', (opt) => {
+      if (this.textMode && !opt.target) {
+        const active = this.canvas.getActiveObject();
+        this.pendingFinishText =
+          active && active.isType('textbox', 'i-text', 'text') ? active : null;
+      } else {
+        this.pendingFinishText = null;
+      }
+    });
     // Space-drag panning (only touches the viewport transform).
     this.canvas.on('mouse:down', (opt) => {
       if (this.panMode) {
@@ -245,8 +258,23 @@ export class EditorEngine {
         this.canvas.setCursor('grabbing');
         return;
       }
-      // Text tool: click empty canvas to drop a new text box at that point.
+      // Text tool: click empty canvas. If a text box was already placed/active,
+      // this click finishes it and hands control back to Select (intuitive — no
+      // surprise second box). Otherwise it drops a new text box at that point.
+      // `pendingFinishText` is captured in `mouse:down:before` because Fabric has
+      // already cleared the active object by the time this `mouse:down` fires.
       if (this.textMode && !opt.target) {
+        if (this.pendingFinishText) {
+          const itext = this.pendingFinishText as Fabric.IText;
+          if (itext.isEditing) {
+            itext.exitEditing();
+          }
+          this.pendingFinishText = null;
+          this.canvas.discardActiveObject();
+          this.canvas.requestRenderAll();
+          this.textFinishListener?.();
+          return;
+        }
         this.textPlacementListener?.(opt.scenePoint);
         return;
       }
@@ -335,6 +363,10 @@ export class EditorEngine {
       this.onFontsLoaded = (): void => {
         this.canvas.getObjects().forEach((o) => {
           if (o.isType('textbox', 'i-text', 'text')) {
+            // Recompute character bounds with the now-loaded font, so the cursor
+            // and selection align with the rendered glyphs (not the fallback's
+            // metrics), then invalidate the render cache.
+            (o as Fabric.Textbox).initDimensions?.();
             o.set('dirty', true);
           }
         });
@@ -1171,6 +1203,14 @@ export class EditorEngine {
   /** Register the callback fired with a scene point when text mode is clicked. */
   setTextPlacementListener(cb: (point: { x: number; y: number }) => void): void {
     this.textPlacementListener = cb;
+  }
+
+  /**
+   * Register the callback fired when an empty-canvas click in text mode finishes
+   * an already-placed text (so the host can switch back to the Select tool).
+   */
+  setTextFinishListener(cb: () => void): void {
+    this.textFinishListener = cb;
   }
 
   /**
