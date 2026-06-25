@@ -16,6 +16,10 @@
 .asp-workspace {
   display: grid;
   grid-template-columns: 84px minmax(0, 1fr) 268px;
+  /* Bound the row to the container height so a tall options panel (e.g. Text)
+     scrolls inside its column instead of stretching the row — which would grow
+     the stage and trigger a canvas resize/flicker on tool switches. */
+  grid-template-rows: minmax(0, 1fr);
   gap: 14px;
   height: 100%;
   min-height: 540px;
