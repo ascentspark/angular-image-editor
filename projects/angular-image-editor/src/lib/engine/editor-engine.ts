@@ -216,6 +216,8 @@ export class EditorEngine {
   private layersListener: (() => void) | null = null;
   private viewportListener: (() => void) | null = null;
   private guidesListener: (() => void) | null = null;
+  private textMode = false;
+  private textPlacementListener: ((point: { x: number; y: number }) => void) | null = null;
   private lastViewportKey = '';
 
   /** Snap distance in *screen* pixels; divided by zoom to get a scene threshold. */
@@ -241,6 +243,11 @@ export class EditorEngine {
         this.canvas.setCursor('grabbing');
         return;
       }
+      // Text tool: click empty canvas to drop a new text box at that point.
+      if (this.textMode && !opt.target) {
+        this.textPlacementListener?.(opt.scenePoint);
+        return;
+      }
       // Grab an existing manual guide when clicking empty canvas near its line.
       if (this.rulersEnabled && !opt.target) {
         const guide = this.guideAtViewport(opt.viewportPoint.x, opt.viewportPoint.y);
@@ -248,6 +255,20 @@ export class EditorEngine {
           this.draggingGuideId = guide.id;
           this.canvas.selection = false;
         }
+      }
+    });
+    // Drop a text box that was left empty (e.g. placed then dismissed without
+    // typing), so the canvas never accrues invisible empty layers.
+    this.canvas.on('text:editing:exited', (e) => {
+      const target = (e as { target?: Fabric.FabricObject }).target;
+      if (target && typeof target.get('text') === 'string' && target.get('text').trim() === '') {
+        this.canvas.remove(target);
+        this.canvas.discardActiveObject();
+        this.canvas.requestRenderAll();
+        this.notifySelection();
+        this.notifyLayers();
+      } else {
+        this.commit('Text');
       }
     });
     this.canvas.on('mouse:move', (opt) => {
@@ -1109,9 +1130,41 @@ export class EditorEngine {
 
   /** Add an editable text box at the canvas center. */
   addText(text: string, style: TextStyle): void {
+    this.placeText(text, this.canvas.getWidth() / 2, this.canvas.getHeight() / 2, style, false);
+  }
+
+  /**
+   * Enable/disable the "click to place text" mode (the Text tool). While on, the
+   * cursor is a text caret and clicking empty canvas drops an editable box.
+   */
+  setTextMode(enabled: boolean): void {
+    this.textMode = enabled;
+    this.canvas.defaultCursor = enabled ? 'text' : 'default';
+  }
+
+  /** Register the callback fired with a scene point when text mode is clicked. */
+  setTextPlacementListener(cb: (point: { x: number; y: number }) => void): void {
+    this.textPlacementListener = cb;
+  }
+
+  /**
+   * Add a text box at a scene point and immediately enter in-place editing with
+   * the placeholder pre-selected, so the user just starts typing (Photoshop-style).
+   */
+  addTextAt(x: number, y: number, style: TextStyle): void {
+    this.placeText('Your text', x, y, style, true);
+  }
+
+  private placeText(
+    text: string,
+    x: number,
+    y: number,
+    style: TextStyle,
+    edit: boolean,
+  ): void {
     const textbox = new this.fabric.Textbox(text, {
-      left: this.canvas.getWidth() / 2,
-      top: this.canvas.getHeight() / 2,
+      left: x,
+      top: y,
       originX: 'center',
       originY: 'center',
       fontSize: style.fontSize,
@@ -1123,8 +1176,16 @@ export class EditorEngine {
     textbox.set('aspId', this.nextId());
     this.canvas.add(textbox);
     this.canvas.setActiveObject(textbox);
+    if (edit) {
+      // Enter editing with the placeholder selected so the first keystroke
+      // replaces it. History is recorded on editing-exit (and an untouched,
+      // empty box is discarded there), so we don't commit the placement itself.
+      textbox.enterEditing();
+      textbox.selectAll();
+    } else {
+      this.commit('Add text');
+    }
     this.canvas.requestRenderAll();
-    this.commit('Add text');
     this.notifySelection();
   }
 

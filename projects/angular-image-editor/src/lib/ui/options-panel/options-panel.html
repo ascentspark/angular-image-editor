@@ -141,6 +141,10 @@
     @case ('annotate') {
       <div class="asp-stack">
         @if (isText()) {
+          <p class="asp-hint">
+            <asp-icon name="info" [size]="13" />
+            Click anywhere on the canvas to add text, then type. Or add a labelled box below.
+          </p>
           <div>
             <label class="asp-field-label" for="asp-text-input">Text</label>
             <div class="asp-text-add">
@@ -334,7 +338,7 @@
           } @else if (isRedact()) {
             Position the redaction box over the area, then Apply to conceal it.
           } @else if (isText()) {
-            Add text, then drag it on the canvas. Edit color, size, and font here.
+            Click the canvas to add text and edit in place. Double-click later to re-edit.
           } @else {
             Draw directly on the canvas. Manage objects in the Layers panel.
           }

@@ -308,6 +308,8 @@ export class AspImageEditor implements OnDestroy {
       }
       const drawing = tool === 'pen' || tool === 'highlighter' || tool === 'eraser';
       this.engine.setFreeDraw(drawing, { color, strokeWidth: width }, tool === 'highlighter');
+      // Text tool: click the canvas to drop an editable text box.
+      this.engine.setTextMode(tool === 'text');
     });
 
     // Re-render the rulers whenever they are toggled on, their canvases appear,
@@ -639,6 +641,14 @@ export class AspImageEditor implements OnDestroy {
         this.engine.setViewportListener(() => this.rulerVersion.update((v) => v + 1));
         this.engine.setGuidesListener(() => {
           this.guidesVersion.update((v) => v + 1);
+          this.sync();
+        });
+        this.engine.setTextPlacementListener((point) => {
+          this.engine?.addTextAt(point.x, point.y, {
+            color: this.annotationColor(),
+            fontSize: this.fontSize(),
+            fontFamily: this.fontFamily(),
+          });
           this.sync();
         });
         this.engine.setSnapping(this.snapEnabled());
