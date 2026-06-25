@@ -458,3 +458,31 @@
   flex: 0 0 auto;
   padding: 0 12px;
 }
+
+/* Web-font loading indicator next to the Font label. */
+.asp-font-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--asp-ink-muted);
+}
+.asp-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--asp-line-strong);
+  border-top-color: var(--asp-accent);
+  border-radius: 50%;
+  animation: asp-spin 0.7s linear infinite;
+}
+@keyframes asp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .asp-spinner {
+    animation-duration: 1.6s;
+  }
+}

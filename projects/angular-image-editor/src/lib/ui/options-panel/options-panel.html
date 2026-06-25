@@ -161,7 +161,15 @@
           }
           @if (fonts().length) {
             <div>
-              <label class="asp-field-label" for="asp-font-select">Font</label>
+              <div class="asp-field-row">
+                <label class="asp-field-label" for="asp-font-select">Font</label>
+                @if (fontLoading()) {
+                  <span class="asp-font-loading">
+                    <span class="asp-spinner" aria-hidden="true"></span>
+                    Loading…
+                  </span>
+                }
+              </div>
               <select
                 id="asp-font-select"
                 class="asp-input asp-select"

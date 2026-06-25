@@ -121,6 +121,8 @@ export class AspOptionsPanel {
   readonly activeFont = input<string>('');
   /** Google font family names offered as autocomplete in the "add font" box. */
   readonly googleFonts = input<readonly string[]>([]);
+  /** True while the chosen web font is still loading (shows a spinner). */
+  readonly fontLoading = input<boolean>(false);
   /**
    * Kind of the current canvas selection (`null` when nothing is selected). When
    * the neutral Select tool is active, the panel reflects this so a selected text

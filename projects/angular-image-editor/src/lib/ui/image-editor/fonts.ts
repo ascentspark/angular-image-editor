@@ -70,6 +70,11 @@ function isGenericStack(family: string): boolean {
   return /,|system-ui|sans-serif|serif|monospace/i.test(family);
 }
 
+/** A loadable web font (not a generic/system stack that needs no fetching). */
+export function isWebFont(family: string): boolean {
+  return typeof document !== 'undefined' && !isGenericStack(family);
+}
+
 /** Ensure a font family is loaded; resolves immediately for generic/system stacks. */
 export function ensureFontLoaded(family: string): Promise<void> {
   if (typeof document === 'undefined' || isGenericStack(family)) {

@@ -54,7 +54,13 @@ import {
   type LayerSelectEvent,
 } from '../layers/layer-list';
 import { AspToolRail } from '../rail/tool-rail';
-import { DEFAULT_FONTS, GOOGLE_FONTS, ensureFontLoaded, type FontOption } from './fonts';
+import {
+  DEFAULT_FONTS,
+  GOOGLE_FONTS,
+  ensureFontLoaded,
+  isWebFont,
+  type FontOption,
+} from './fonts';
 import { buildSampleImages, type SampleImage } from './sample-images';
 
 type AlignMode = 'left' | 'center-h' | 'right' | 'top' | 'center-v' | 'bottom';
@@ -233,6 +239,8 @@ export class AspImageEditor implements OnDestroy {
   protected readonly hasSelection = signal(false);
   /** Kind of the current selection, so the panel can reflect it under Select. */
   protected readonly selectionKind = signal<'text' | 'stroke' | null>(null);
+  /** True while a web font for the current choice is still loading. */
+  protected readonly fontLoading = signal(false);
   protected readonly activeFrame = signal('none');
   protected readonly redactMode = signal<RedactMode>('pixelate');
   private redactActive = false;
@@ -319,6 +327,11 @@ export class AspImageEditor implements OnDestroy {
       // horizontal overflow on a narrow screen; the layout reflows instead.
       el.style.minWidth = `min(${min.width}, 100%)`;
       el.style.minHeight = min.height;
+    });
+
+    // Show a progress cursor over the editor while a web font is fetching.
+    effect(() => {
+      this.host.nativeElement.style.cursor = this.fontLoading() ? 'progress' : '';
     });
 
     // Default the active tool to Color (adjust) when available, else the first
@@ -1087,14 +1100,23 @@ export class AspImageEditor implements OnDestroy {
     // engine re-renders (fonts 'loadingdone'). Re-apply once loaded so Fabric
     // re-measures with the real metrics.
     this.engine?.styleActiveObject({ fontFamily: value });
+    // Surface a loading state (spinner + progress cursor) for web fonts. Hold it
+    // for a brief minimum so a fast load still registers visually; system stacks
+    // need no fetch and show nothing.
+    const web = isWebFont(value);
+    this.fontLoading.set(web);
     this.sync();
-    void ensureFontLoaded(value).then(() => {
+    const minVisible = web
+      ? new Promise<void>((resolve) => setTimeout(resolve, 300))
+      : Promise.resolve();
+    void Promise.all([ensureFontLoaded(value), minVisible]).then(() => {
       // Only re-apply if this is still the chosen font — otherwise a slow-loading
       // earlier choice would clobber a newer one (the "2nd change doesn't stick").
       if (this.fontFamily() !== value) {
         return;
       }
       this.engine?.styleActiveObject({ fontFamily: value });
+      this.fontLoading.set(false);
       this.sync();
     });
   }
