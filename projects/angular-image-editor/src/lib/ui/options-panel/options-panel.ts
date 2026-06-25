@@ -121,6 +121,12 @@ export class AspOptionsPanel {
   readonly activeFont = input<string>('');
   /** Google font family names offered as autocomplete in the "add font" box. */
   readonly googleFonts = input<readonly string[]>([]);
+  /**
+   * Kind of the current canvas selection (`null` when nothing is selected). When
+   * the neutral Select tool is active, the panel reflects this so a selected text
+   * shows its type controls and a selected shape shows fill/stroke.
+   */
+  readonly selectionKind = input<'text' | 'stroke' | null>(null);
   readonly textBold = input<boolean>(false);
   readonly textItalic = input<boolean>(false);
   readonly textUnderline = input<boolean>(false);
@@ -235,6 +241,12 @@ export class AspOptionsPanel {
     if (tool === null) {
       return 'none';
     }
+    // With the neutral Select tool, reflect the selection: a selected text or
+    // shape shows its editing controls instead of the bare "select" hint.
+    if (tool === 'select') {
+      const sel = this.selectionKind();
+      return sel === 'text' || sel === 'stroke' ? 'annotate' : 'select';
+    }
     switch (tool) {
       case 'adjust':
       case 'filters':
@@ -249,8 +261,6 @@ export class AspOptionsPanel {
         return 'frame';
       case 'background':
         return 'background';
-      case 'select':
-        return 'select';
       case 'pen':
       case 'highlighter':
       case 'eraser':
@@ -268,9 +278,21 @@ export class AspOptionsPanel {
 
   protected readonly isColorFilters = computed(() => this.activeTool() === 'filters');
 
-  protected readonly isText = computed(() => this.activeTool() === 'text');
-  protected readonly isShape = computed(() => this.activeTool() === 'shapes');
+  /** True for the Text tool, or a selected text under the Select tool. */
+  protected readonly isText = computed(
+    () =>
+      this.activeTool() === 'text' ||
+      (this.activeTool() === 'select' && this.selectionKind() === 'text'),
+  );
+  /** True for the Shapes tool, or a selected shape under the Select tool. */
+  protected readonly isShape = computed(
+    () =>
+      this.activeTool() === 'shapes' ||
+      (this.activeTool() === 'select' && this.selectionKind() === 'stroke'),
+  );
   protected readonly isRedact = computed(() => this.activeTool() === 'redact');
+  /** Whether the panel is reflecting a selection rather than an active tool. */
+  protected readonly fromSelection = computed(() => this.activeTool() === 'select');
 
   protected readonly strokeLabel = computed(() => (this.isText() ? 'Font size' : 'Thickness'));
   protected readonly sizeValue = computed(() => (this.isText() ? this.fontSize() : this.annotationWidth()));

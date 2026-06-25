@@ -231,6 +231,8 @@ export class AspImageEditor implements OnDestroy {
   /** Google font names offered as autocomplete suggestions in the add-font box. */
   protected readonly googleFonts = GOOGLE_FONTS;
   protected readonly hasSelection = signal(false);
+  /** Kind of the current selection, so the panel can reflect it under Select. */
+  protected readonly selectionKind = signal<'text' | 'stroke' | null>(null);
   protected readonly activeFrame = signal('none');
   protected readonly redactMode = signal<RedactMode>('pixelate');
   private redactActive = false;
@@ -257,7 +259,19 @@ export class AspImageEditor implements OnDestroy {
     const tool = this.activeTool();
     return tool ? TOOL_REGISTRY[tool] : null;
   });
-  protected readonly toolTitle = computed(() => this.activeToolMeta()?.label ?? '');
+  protected readonly toolTitle = computed(() => {
+    // Under the neutral Select tool, title the panel by what's selected.
+    if (this.activeTool() === 'select') {
+      const kind = this.selectionKind();
+      if (kind === 'text') {
+        return 'Text';
+      }
+      if (kind === 'stroke') {
+        return 'Object';
+      }
+    }
+    return this.activeToolMeta()?.label ?? '';
+  });
   protected readonly zoomLabel = computed(() => `${this.zoomPct()}%`);
   protected readonly layout = computed<'workspace' | 'basic' | 'viewer'>(() => {
     const mode = this.mode();
@@ -1110,6 +1124,7 @@ export class AspImageEditor implements OnDestroy {
   /** Reflect the selected object's editable style into the panel signals. */
   private onSelectionChange(info: SelectionStyleInfo | null): void {
     this.hasSelection.set(info !== null);
+    this.selectionKind.set(info ? info.kind : null);
     if (!info) {
       return;
     }

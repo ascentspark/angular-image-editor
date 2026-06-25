@@ -141,22 +141,24 @@
     @case ('annotate') {
       <div class="asp-stack">
         @if (isText()) {
-          <p class="asp-hint">
-            <asp-icon name="info" [size]="13" />
-            Click anywhere on the canvas to add text, then type. Or add a labelled box below.
-          </p>
-          <div>
-            <label class="asp-field-label" for="asp-text-input">Text</label>
-            <div class="asp-text-add">
-              <input
-                id="asp-text-input"
-                class="asp-input"
-                [value]="textValue()"
-                (input)="onTextInput($event)"
-              />
-              <button type="button" class="asp-btn-accent" (click)="onAddText()">Add</button>
+          @if (!fromSelection()) {
+            <p class="asp-hint">
+              <asp-icon name="info" [size]="13" />
+              Click anywhere on the canvas to add text, then type. Or add a labelled box below.
+            </p>
+            <div>
+              <label class="asp-field-label" for="asp-text-input">Text</label>
+              <div class="asp-text-add">
+                <input
+                  id="asp-text-input"
+                  class="asp-input"
+                  [value]="textValue()"
+                  (input)="onTextInput($event)"
+                />
+                <button type="button" class="asp-btn-accent" (click)="onAddText()">Add</button>
+              </div>
             </div>
-          </div>
+          }
           @if (fonts().length) {
             <div>
               <label class="asp-field-label" for="asp-font-select">Font</label>
@@ -274,7 +276,7 @@
           />
         </div>
 
-        @if (isShape()) {
+        @if (isShape() && !fromSelection()) {
           <div class="asp-shape-grid">
             <button type="button" class="asp-icon-btn" title="Rectangle" (click)="addShape.emit('rect')">
               <asp-icon name="square" [size]="17" />
@@ -340,7 +342,10 @@
 
         <p class="asp-hint">
           <asp-icon name="info" [size]="13" />
-          @if (isShape()) {
+          @if (fromSelection()) {
+            Editing the selected {{ isText() ? 'text' : 'object' }}. Adjust its
+            properties here; use the Layers panel to reorder or delete.
+          } @else if (isShape()) {
             Pick a shape to drop it on the canvas, then drag to position or resize.
           } @else if (isRedact()) {
             Position the box over the area, then Apply to conceal it. After
