@@ -119,6 +119,7 @@
         >
           Disable filters / frame / redact
         </button>
+        <button type="button" class="toggle" (click)="toggleCode()">&lt;/&gt; Show code</button>
         <button type="button" class="btn-brand" (click)="openDialog()">Open dialog</button>
         @if (lastResult()) {
           <span class="result">{{ lastResult() }}</span>
@@ -126,6 +127,27 @@
       </div>
     </div>
   </section>
+
+  @if (codeOpen()) {
+    <div class="code-modal" role="dialog" aria-modal="true" aria-label="Render code">
+      <button type="button" class="code-modal__scrim" aria-label="Close" (click)="toggleCode()"></button>
+      <div class="code-modal__panel">
+        <div class="code-modal__head">
+          <div>
+            <strong>Render with these options</strong>
+            <p>This snippet reflects the controls above — copy it into your app.</p>
+          </div>
+          <div class="code-modal__actions">
+            <button type="button" class="toggle" (click)="copyCode()">
+              {{ codeCopied() ? 'Copied ✓' : 'Copy' }}
+            </button>
+            <button type="button" class="toggle" (click)="toggleCode()">Close</button>
+          </div>
+        </div>
+        <pre class="code-modal__code"><code>{{ codeSnippet() }}</code></pre>
+      </div>
+    </div>
+  }
 
   <main class="stage">
     <asp-image-editor

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import {
   AspImageEditor,
   AspImageEditorDialog,
@@ -82,6 +82,70 @@ export class App {
 
   protected setHeight(value: string): void {
     this.editorHeight.set(value);
+  }
+
+  protected readonly codeOpen = signal(false);
+  protected readonly codeCopied = signal(false);
+
+  protected toggleCode(): void {
+    this.codeOpen.update((v) => !v);
+    this.codeCopied.set(false);
+  }
+
+  /** Live Angular snippet that renders the editor with the current demo options. */
+  protected readonly codeSnippet = computed(() => {
+    const tools = this.customTools();
+    const disabled = this.disabled();
+    const arr = (xs: readonly string[]): string => `[${xs.map((x) => `'${x}'`).join(', ')}]`;
+
+    const attrs: string[] = [
+      `  mode="${this.editorMode()}"`,
+      `  baseColor="${this.base()}"`,
+      `  accentColor="${this.accent()}"`,
+      `  themeMode="${this.themeMode()}"`,
+      `  height="${this.editorHeight()}"`,
+      `  [exportFormats]="${arr(this.allFormats)}"`,
+    ];
+    if (tools) {
+      attrs.push(`  [tools]="${arr(tools)}"`);
+    }
+    if (disabled.length) {
+      attrs.push(`  [disabledTools]="${arr(disabled)}"`);
+    }
+    attrs.push(`  (saved)="onSaved($event)"`);
+
+    return [
+      `# 1 · Install`,
+      `npm i @ascentspark/angular-image-editor fabric`,
+      ``,
+      `// 2 · Use it in a standalone component`,
+      `import { Component } from '@angular/core';`,
+      `import { AspImageEditor } from '@ascentspark/angular-image-editor';`,
+      ``,
+      `@Component({`,
+      `  selector: 'app-editor',`,
+      `  imports: [AspImageEditor],`,
+      `  template: \``,
+      `    <asp-image-editor`,
+      ...attrs.map((a) => `    ${a}`),
+      `    />\`,`,
+      `})`,
+      `export class EditorComponent {`,
+      `  onSaved(blob: Blob) {`,
+      `    // the edited image — upload it, preview it, etc.`,
+      `    console.log('saved', blob.type, blob.size);`,
+      `  }`,
+      `}`,
+    ].join('\n');
+  });
+
+  protected async copyCode(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(this.codeSnippet());
+      this.codeCopied.set(true);
+    } catch {
+      this.codeCopied.set(false);
+    }
   }
 
   protected async openDialog(): Promise<void> {
