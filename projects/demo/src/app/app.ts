@@ -8,7 +8,7 @@ import {
   type AspMode,
   type AspThemeMode,
   type AspTool,
-} from '@ascentspark/angular-image-editor';
+} from '@ascentsparksoftware/angular-image-editor';
 
 const CUSTOM_RAIL: AspTool[] = ['crop', 'rotate', 'text', 'filters'];
 const DISABLED_SET: AspTool[] = ['filters', 'frame', 'redact'];
@@ -116,11 +116,11 @@ export class App {
 
     return [
       `# 1 · Install`,
-      `npm i @ascentspark/angular-image-editor fabric`,
+      `npm i @ascentsparksoftware/angular-image-editor fabric`,
       ``,
       `// 2 · Use it in a standalone component`,
       `import { Component } from '@angular/core';`,
-      `import { AspImageEditor } from '@ascentspark/angular-image-editor';`,
+      `import { AspImageEditor } from '@ascentsparksoftware/angular-image-editor';`,
       ``,
       `@Component({`,
       `  selector: 'app-editor',`,

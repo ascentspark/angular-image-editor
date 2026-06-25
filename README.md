@@ -1,4 +1,4 @@
-# @ascentspark/angular-image-editor
+# @ascentsparksoftware/angular-image-editor
 
 A standalone, themeable **Angular 22** image editor built from scratch on
 **[Fabric.js v7](https://fabricjs.com/) (MIT)** — a free, open-source alternative to
@@ -38,7 +38,7 @@ commercial editors (Syncfusion / Pintura / Filerobot). No license keys, no telem
 ## Install
 
 ```bash
-npm install @ascentspark/angular-image-editor fabric
+npm install @ascentsparksoftware/angular-image-editor fabric
 ```
 
 - **Peer dependencies:** `@angular/core` and `@angular/common` `^22`.
@@ -51,7 +51,7 @@ npm install @ascentspark/angular-image-editor fabric
 
 ```ts
 import { Component } from '@angular/core';
-import { AspImageEditor } from '@ascentspark/angular-image-editor';
+import { AspImageEditor } from '@ascentsparksoftware/angular-image-editor';
 
 @Component({
   selector: 'app-photo',
@@ -179,7 +179,7 @@ For avatar / quick-edit flows, open the `basic` editor as a modal and await the 
 
 ```ts
 import { Component, inject } from '@angular/core';
-import { AspImageEditorDialog } from '@ascentspark/angular-image-editor';
+import { AspImageEditorDialog } from '@ascentsparksoftware/angular-image-editor';
 
 @Component({ /* ... */ })
 export class AvatarComponent {

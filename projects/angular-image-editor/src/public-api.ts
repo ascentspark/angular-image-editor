@@ -1,5 +1,5 @@
 /*
- * Public API surface of @ascentspark/angular-image-editor
+ * Public API surface of @ascentsparksoftware/angular-image-editor
  *
  * Only symbols re-exported here are part of the package's semver contract.
  * Additional components, the dialog service, and the tool types are added by

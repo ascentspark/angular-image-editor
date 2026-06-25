@@ -1,4 +1,4 @@
-# `@ascentspark/angular-image-editor` — Master Implementation Plan
+# `@ascentsparksoftware/angular-image-editor` — Master Implementation Plan
 
 > **For agentic workers:** This is the master/architecture plan. Each phase has its own
 > detailed bite-sized TDD plan in `docs/plans/NN-phase-*.md`, written just-in-time so
@@ -31,7 +31,7 @@ Copied verbatim from `editor_handoff.md`; every task inherits these.
 - Library built with the Angular library builder (`ng-packagr`); a clean publishable artifact.
 - **Folder:** top-level `angular-image-editor/` — its own `package.json`, project config, `src/public-api.ts`,
   `README.md`, semver. Self-contained with its own demo app; not nested inside another project.
-- **Package name:** `@ascentspark/angular-image-editor` (public npm, scope `@ascentspark`).
+- **Package name:** `@ascentsparksoftware/angular-image-editor` (public npm, scope `@ascentsparksoftware`).
   Peer deps: `@angular/core`/`@angular/common` `^22`. Runtime dep: **`fabric` `^7.4.0`** (Fabric.js v7, MIT).
   Everything open-source / permissively licensed; **no commercial SDK, no license key, no telemetry.**
 - **Bundle strategy:** import only the shapes/filters used; lazy-load `advanced` mode + heavier filter set.
@@ -95,7 +95,7 @@ angular-image-editor/
   projects/
     angular-image-editor/           # THE LIBRARY
       ng-package.json
-      package.json                  # name @ascentspark/angular-image-editor, peer/runtime deps
+      package.json                  # name @ascentsparksoftware/angular-image-editor, peer/runtime deps
       src/
         public-api.ts               # exports: component(s), dialog service, all public types
         lib/

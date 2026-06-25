@@ -7,7 +7,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { EditorEngine } from '@ascentspark/angular-image-editor';
+import { EditorEngine } from '@ascentsparksoftware/angular-image-editor';
 
 /**
  * Phase 3 verification harness — exercises the EditorEngine directly so its

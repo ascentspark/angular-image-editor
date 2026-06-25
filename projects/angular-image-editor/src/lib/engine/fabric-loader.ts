@@ -16,7 +16,7 @@ let cached: Promise<FabricModule> | null = null;
 /** Resolve the Fabric module, or reject if not running in a browser. */
 export function loadFabric(): Promise<FabricModule> {
   if (typeof document === 'undefined') {
-    return Promise.reject(new Error('@ascentspark/angular-image-editor: Fabric.js requires a browser environment.'));
+    return Promise.reject(new Error('@ascentsparksoftware/angular-image-editor: Fabric.js requires a browser environment.'));
   }
   if (cached === null) {
     cached = import('fabric');

@@ -1,4 +1,4 @@
-# Publishing `@ascentspark/angular-image-editor`
+# Publishing `@ascentsparksoftware/angular-image-editor`
 
 The library is published from the **built** artifact in `dist/`, never from source.
 
@@ -22,10 +22,10 @@ npm pack --dry-run           # inspect file list + size
 Expected contents: `package.json`, `README.md`, `fesm2022/*.mjs(+map)`, `types/*.d.ts`.
 `fabric` is declared as a runtime dependency (not bundled) and is lazy-loaded by consumers.
 
-## Publish (public npm, scope `@ascentspark`)
+## Publish (public npm, scope `@ascentsparksoftware`)
 
 > **Status:** deferred — the npm org/package is not provisioned yet. Do not run `npm publish`
-> until the `@ascentspark` org exists and you are authenticated with publish rights. Bump the
+> until the `@ascentsparksoftware` org exists and you are authenticated with publish rights. Bump the
 > version in `projects/angular-image-editor/package.json` per semver first.
 
 ```bash
