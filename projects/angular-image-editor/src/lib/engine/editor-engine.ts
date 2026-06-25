@@ -219,6 +219,7 @@ export class EditorEngine {
   private textMode = false;
   private textPlacementListener: ((point: { x: number; y: number }) => void) | null = null;
   private redactPlacement = false;
+  private onFontsLoaded: (() => void) | null = null;
   private lastViewportKey = '';
 
   /** Snap distance in *screen* pixels; divided by zoom to get a scene threshold. */
@@ -328,6 +329,19 @@ export class EditorEngine {
       this.commit('Draw');
       this.notifyLayers();
     });
+    // When a web font finishes loading, re-render so any text already set to it
+    // updates from its fallback to the real glyphs (font load is async).
+    if (typeof document !== 'undefined' && document.fonts) {
+      this.onFontsLoaded = (): void => {
+        this.canvas.getObjects().forEach((o) => {
+          if (o.isType('textbox', 'i-text', 'text')) {
+            o.set('dirty', true);
+          }
+        });
+        this.canvas.requestRenderAll();
+      };
+      document.fonts.addEventListener('loadingdone', this.onFontsLoaded);
+    }
   }
 
   private nextId(): string {
@@ -438,6 +452,11 @@ export class EditorEngine {
     }
     if (style.fontFamily !== undefined && isText) {
       object.set('fontFamily', style.fontFamily);
+      // Force Fabric to re-measure with the new family and invalidate its cache,
+      // so the change shows even if the family was set before the web font loaded.
+      const textbox = object as Fabric.Textbox;
+      textbox.initDimensions?.();
+      object.set('dirty', true);
     }
     object.setCoords();
   }
@@ -2055,6 +2074,9 @@ export class EditorEngine {
 
   /** Tear down the Fabric canvas and release resources. */
   async destroy(): Promise<void> {
+    if (this.onFontsLoaded && typeof document !== 'undefined' && document.fonts) {
+      document.fonts.removeEventListener('loadingdone', this.onFontsLoaded);
+    }
     await this.canvas.dispose();
   }
 }

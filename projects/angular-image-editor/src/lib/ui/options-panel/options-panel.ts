@@ -119,6 +119,8 @@ export class AspOptionsPanel {
   readonly fontSize = input<number>(28);
   readonly fonts = input<readonly FontOption[]>([]);
   readonly activeFont = input<string>('');
+  /** Google font family names offered as autocomplete in the "add font" box. */
+  readonly googleFonts = input<readonly string[]>([]);
   readonly textBold = input<boolean>(false);
   readonly textItalic = input<boolean>(false);
   readonly textUnderline = input<boolean>(false);

@@ -173,11 +173,18 @@
               <div class="asp-text-add asp-mt">
                 <input
                   class="asp-input"
-                  placeholder="Add a Google font…"
+                  list="asp-gfonts"
+                  placeholder="Search Google fonts…"
                   [value]="customFontValue()"
                   (input)="onCustomFontInput($event)"
-                  aria-label="Add a Google font by name"
+                  (keydown.enter)="onAddFont()"
+                  aria-label="Search and add a Google font"
                 />
+                <datalist id="asp-gfonts">
+                  @for (name of googleFonts(); track name) {
+                    <option [value]="name"></option>
+                  }
+                </datalist>
                 <button type="button" class="asp-btn-line" (click)="onAddFont()">Add</button>
               </div>
             </div>

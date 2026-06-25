@@ -38,6 +38,32 @@ export const DEFAULT_FONTS: readonly FontOption[] = [
   { label: 'Roboto Mono', value: 'Roboto Mono' },
 ];
 
+/**
+ * A searchable catalog of popular Google Fonts for the "Add a Google font" box.
+ * Names match Google's exact family names so the CSS API resolves them; the
+ * input offers them as native autocomplete suggestions, so users don't have to
+ * remember the precise full name.
+ */
+export const GOOGLE_FONTS: readonly string[] = [
+  'Abril Fatface', 'Alegreya', 'Anton', 'Archivo', 'Archivo Black', 'Arvo',
+  'Asap', 'Assistant', 'Barlow', 'Barlow Condensed', 'Bebas Neue', 'Bitter',
+  'Bree Serif', 'Cabin', 'Cairo', 'Cardo', 'Caveat', 'Comfortaa', 'Cormorant',
+  'Cormorant Garamond', 'Courier Prime', 'Crimson Text', 'DM Sans', 'DM Serif Display',
+  'Dancing Script', 'Dosis', 'EB Garamond', 'Exo', 'Exo 2', 'Figtree', 'Fira Sans',
+  'Fjalla One', 'Frank Ruhl Libre', 'Fraunces', 'Gelasio', 'Hind', 'IBM Plex Mono',
+  'IBM Plex Sans', 'IBM Plex Serif', 'Inconsolata', 'Inter', 'Josefin Sans',
+  'Jost', 'Kanit', 'Karla', 'Lato', 'Lexend', 'Libre Baskerville', 'Libre Franklin',
+  'Lobster', 'Lobster Two', 'Lora', 'Manrope', 'Marcellus', 'Merriweather',
+  'Merriweather Sans', 'Montserrat', 'Montserrat Alternates', 'Mukta', 'Mulish',
+  'Noto Sans', 'Noto Serif', 'Nunito', 'Nunito Sans', 'Old Standard TT', 'Open Sans',
+  'Oswald', 'Outfit', 'Overpass', 'PT Sans', 'PT Serif', 'Pacifico', 'Permanent Marker',
+  'Playfair Display', 'Poppins', 'Prompt', 'Quicksand', 'Raleway', 'Roboto',
+  'Roboto Condensed', 'Roboto Mono', 'Roboto Slab', 'Rubik', 'Sacramento', 'Sora',
+  'Source Code Pro', 'Source Sans 3', 'Source Serif 4', 'Space Grotesk', 'Space Mono',
+  'Spectral', 'Tajawal', 'Teko', 'Titillium Web', 'Ubuntu', 'Urbanist', 'Varela Round',
+  'Vollkorn', 'Work Sans', 'Yanone Kaffeesatz', 'Zilla Slab',
+];
+
 const requested = new Set<string>();
 
 function isGenericStack(family: string): boolean {

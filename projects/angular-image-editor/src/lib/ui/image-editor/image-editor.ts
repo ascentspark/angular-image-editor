@@ -54,7 +54,7 @@ import {
   type LayerSelectEvent,
 } from '../layers/layer-list';
 import { AspToolRail } from '../rail/tool-rail';
-import { DEFAULT_FONTS, ensureFontLoaded, type FontOption } from './fonts';
+import { DEFAULT_FONTS, GOOGLE_FONTS, ensureFontLoaded, type FontOption } from './fonts';
 import { buildSampleImages, type SampleImage } from './sample-images';
 
 type AlignMode = 'left' | 'center-h' | 'right' | 'top' | 'center-v' | 'bottom';
@@ -228,6 +228,8 @@ export class AspImageEditor implements OnDestroy {
     const extra = this.customFonts().filter((c) => !base.some((b) => b.value === c.value));
     return [...base, ...extra];
   });
+  /** Google font names offered as autocomplete suggestions in the add-font box. */
+  protected readonly googleFonts = GOOGLE_FONTS;
   protected readonly hasSelection = signal(false);
   protected readonly activeFrame = signal('none');
   protected readonly redactMode = signal<RedactMode>('pixelate');
@@ -1061,6 +1063,12 @@ export class AspImageEditor implements OnDestroy {
 
   protected onFontChange(value: string): void {
     this.fontFamily.set(value);
+    // Apply right away so the selection updates immediately; the family may
+    // briefly render in a fallback until the web font loads, at which point the
+    // engine re-renders (fonts 'loadingdone'). Re-apply once loaded so Fabric
+    // re-measures with the real metrics.
+    this.engine?.styleActiveObject({ fontFamily: value });
+    this.sync();
     void ensureFontLoaded(value).then(() => {
       this.engine?.styleActiveObject({ fontFamily: value });
       this.sync();
