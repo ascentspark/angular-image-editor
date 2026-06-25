@@ -38,6 +38,7 @@ import type {
   AspExportFormat,
   AspFilter,
   AspMode,
+  AspSize,
   AspTool,
 } from '../../types/editor.types';
 import { AspHistoryList } from '../history/history-list';
@@ -61,6 +62,27 @@ type AlignMode = 'left' | 'center-h' | 'right' | 'top' | 'center-v' | 'bottom';
 const FALLBACK_BASE = '#f4f6f9';
 const FALLBACK_ACCENT = '#1f6feb';
 const ZOOM_STEP = 25;
+
+/**
+ * Minimum host size per mode, so the chrome (rail, options panel, layers,
+ * top bar) always has room to render no matter what size the host requests.
+ * `advanced`/`full` carry the rail + canvas + options column; the simpler
+ * modes need much less.
+ */
+const MODE_MIN: Record<AspMode, { width: string; height: string }> = {
+  viewer: { width: '240px', height: '200px' },
+  basic: { width: '300px', height: '360px' },
+  advanced: { width: '640px', height: '460px' },
+  full: { width: '640px', height: '460px' },
+};
+
+/** Resolve a host-supplied size to a CSS length (number → px), or a fallback. */
+function toCssSize(value: AspSize | null | undefined, fallback: string): string {
+  if (value === null || value === undefined || value === '') {
+    return fallback;
+  }
+  return typeof value === 'number' ? `${value}px` : value;
+}
 
 /**
  * `<asp-image-editor>` — the editor's root/container component.
@@ -91,6 +113,14 @@ export class AspImageEditor implements OnDestroy {
   // ---- public API ----------------------------------------------------------
   readonly src = input<string | Blob | null>(null);
   readonly mode = input<AspMode>('advanced');
+  /**
+   * Editor width — a number (px) or any CSS length (`'70%'`, `'80vh'`,
+   * `'calc(100vw - 320px)'`). Defaults to filling the host's container. A
+   * per-mode minimum is always enforced so the chrome stays usable.
+   */
+  readonly width = input<AspSize | null>(null);
+  /** Editor height — same shape as {@link width}. */
+  readonly height = input<AspSize | null>(null);
   readonly tools = input<AspTool[] | null>(null);
   readonly disabledTools = input<AspTool[]>([]);
   readonly filters = input<AspFilter[] | 'all' | null>(null);
@@ -259,6 +289,19 @@ export class AspImageEditor implements OnDestroy {
   constructor() {
     // Apply the derived theme to the host element whenever inputs change.
     effect(() => applyTheme(this.host.nativeElement, this.theme()));
+
+    // Apply the host-requested size, with a per-mode minimum so the chrome
+    // always renders. Default fills the container; an explicit width/height
+    // (px / % / vh / calc) overrides it. The stage's ResizeObserver picks up
+    // the change and resizes the canvas.
+    effect(() => {
+      const el = this.host.nativeElement;
+      const min = MODE_MIN[this.mode()];
+      el.style.width = toCssSize(this.width(), '100%');
+      el.style.height = toCssSize(this.height(), '100%');
+      el.style.minWidth = min.width;
+      el.style.minHeight = min.height;
+    });
 
     // Default the active tool to Color (adjust) when available, else the first
     // resolved tool; keep it valid as the resolved set changes.

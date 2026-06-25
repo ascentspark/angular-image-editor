@@ -72,6 +72,22 @@
       </div>
     </div>
 
+    <div class="group">
+      <span class="group__label">Canvas size</span>
+      <div class="chips">
+        @for (preset of sizePresets; track preset.value) {
+          <button
+            type="button"
+            class="chip"
+            [class.chip--active]="editorHeight() === preset.value"
+            (click)="setHeight(preset.value)"
+          >
+            {{ preset.label }}
+          </button>
+        }
+      </div>
+    </div>
+
     <div class="group group--end">
       <span class="group__label">Demo options</span>
       <div class="opts">
@@ -108,6 +124,7 @@
       [disabledTools]="disabled()"
       [aspectRatios]="cmsAspects"
       [exportFormats]="allFormats"
+      [height]="editorHeight()"
       [baseColor]="base()"
       [accentColor]="accent()"
       [themeMode]="themeMode()"

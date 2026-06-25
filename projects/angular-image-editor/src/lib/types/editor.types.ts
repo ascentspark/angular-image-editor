@@ -10,6 +10,14 @@
 /** Layout/baseline preset — sets the chrome and a default tool set. */
 export type AspMode = 'viewer' | 'basic' | 'advanced' | 'full';
 
+/**
+ * A host-controllable size: a number (interpreted as `px`) or any CSS length —
+ * `'600px'`, `'70%'`, `'80vh'`, `'calc(100vh - 120px)'`. Used for the editor's
+ * `width`/`height` inputs. A per-mode minimum is always enforced on top so the
+ * toolbars and panels keep enough room to render.
+ */
+export type AspSize = number | string;
+
 /** Every tool the editor can expose, grouped by capability. Source of truth for {@link AspTool}. */
 export const ALL_TOOLS = [
   // transform

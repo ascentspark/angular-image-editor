@@ -368,11 +368,9 @@
 
 /* ---- editor stage ---- */
 .stage {
-  /* flex-basis 0 (not auto) so the stage height is resolved from available
-     space, never inflated by the editor's content — the editor fills it and
-     scrolls internally. */
-  flex: 1 1 0;
-  min-height: 600px;
+  /* The editor controls its own height via the [height] input, so the shell
+     just wraps it (content-sized) and provides the framing chrome. */
+  flex: none;
   border-radius: var(--r-card);
   overflow: hidden;
   border: 1px solid var(--line);
@@ -381,7 +379,6 @@
 
   asp-image-editor {
     display: block;
-    height: 100%;
   }
 }
 

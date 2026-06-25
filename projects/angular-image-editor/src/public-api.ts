@@ -20,6 +20,7 @@ export {
   ALL_FILTERS,
   aspectOption,
   type AspMode,
+  type AspSize,
   type AspTool,
   type AspFilter,
   type AspExportFormat,

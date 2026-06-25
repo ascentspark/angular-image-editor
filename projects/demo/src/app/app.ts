@@ -38,6 +38,14 @@ export class App {
   protected readonly editorModes: readonly AspMode[] = ['viewer', 'basic', 'advanced', 'full'];
   protected readonly allFormats: AspExportFormat[] = ['png', 'jpeg', 'webp', 'svg', 'pdf', 'json'];
 
+  /** Demo size presets — showing px, vh, and calc() values fed to `[height]`. */
+  protected readonly sizePresets: readonly { label: string; value: string }[] = [
+    { label: 'Fill viewport', value: 'calc(100vh - 250px)' },
+    { label: '70vh', value: '70vh' },
+    { label: '600px', value: '600px' },
+    { label: '460px (min)', value: '460px' },
+  ];
+
   // CMS-style custom crop targets, built from exact pixel dimensions.
   protected readonly cmsAspects: AspAspectOption[] = [
     aspectOption(1200, 630, 'OG 1200×630'),
@@ -54,6 +62,7 @@ export class App {
   protected readonly lastResult = signal('');
   protected readonly customTools = signal<AspTool[] | null>(null);
   protected readonly disabled = signal<AspTool[]>([]);
+  protected readonly editorHeight = signal('calc(100vh - 250px)');
 
   protected toggleCustomRail(): void {
     this.customTools.update((t) => (t ? null : [...CUSTOM_RAIL]));
@@ -61,6 +70,10 @@ export class App {
 
   protected toggleDisabled(): void {
     this.disabled.update((d) => (d.length ? [] : [...DISABLED_SET]));
+  }
+
+  protected setHeight(value: string): void {
+    this.editorHeight.set(value);
   }
 
   protected async openDialog(): Promise<void> {
