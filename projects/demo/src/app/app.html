@@ -38,7 +38,17 @@
     </div>
   </header>
 
-  <section class="toolbar">
+  <button
+    type="button"
+    class="controls-toggle"
+    [attr.aria-expanded]="!controlsCollapsed()"
+    (click)="toggleControls()"
+  >
+    <span>{{ controlsCollapsed() ? 'Show demo controls' : 'Hide demo controls' }}</span>
+    <span class="controls-toggle__chev" [class.controls-toggle__chev--open]="!controlsCollapsed()">▾</span>
+  </button>
+
+  <section class="toolbar" [class.toolbar--collapsed]="controlsCollapsed()">
     <div class="group">
       <span class="group__label">Theme</span>
       <div class="chips">

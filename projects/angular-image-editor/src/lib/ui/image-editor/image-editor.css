@@ -625,4 +625,9 @@
     flex: none;
     overflow: visible;
   }
+  /* The options panel must take its natural height here (not flex:1, whose 0%
+     basis collapses it in a content-height column and clips the sliders). */
+  .asp-workspace__options {
+    flex: none;
+  }
 }

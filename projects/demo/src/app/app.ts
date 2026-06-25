@@ -63,6 +63,14 @@ export class App {
   protected readonly customTools = signal<AspTool[] | null>(null);
   protected readonly disabled = signal<AspTool[]>([]);
   protected readonly editorHeight = signal('calc(100vh - 250px)');
+  /** Demo controls collapse on phones to bring the canvas up; default collapsed there. */
+  protected readonly controlsCollapsed = signal(
+    typeof window !== 'undefined' && window.innerWidth <= 560,
+  );
+
+  protected toggleControls(): void {
+    this.controlsCollapsed.update((v) => !v);
+  }
 
   protected toggleCustomRail(): void {
     this.customTools.update((t) => (t ? null : [...CUSTOM_RAIL]));

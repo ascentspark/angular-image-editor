@@ -417,9 +417,42 @@
   }
 }
 
+/* Collapsible demo controls — the toggle only appears on phones; on larger
+   screens the toolbar is always shown and the toggle is hidden. */
+.controls-toggle {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.controls-toggle__chev {
+  transition: transform 0.15s;
+  color: var(--ink-soft);
+}
+.controls-toggle__chev--open {
+  transform: rotate(180deg);
+}
+
 /* Phone: let the top bar wrap so the theme controls drop to their own row,
    and tighten the page padding. */
 @media (max-width: 560px) {
+  .controls-toggle {
+    display: flex;
+  }
+  .toolbar--collapsed {
+    display: none;
+  }
   .shell {
     padding: 12px 12px 16px;
     gap: 10px;

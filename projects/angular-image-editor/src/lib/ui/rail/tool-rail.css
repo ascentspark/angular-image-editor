@@ -136,20 +136,21 @@
   box-shadow: 0 0 0 3px var(--asp-ring);
 }
 
-/* Narrow editor: the rail becomes a horizontal, scrollable tool strip. */
+/* Narrow editor: the rail becomes a horizontal tool grid that wraps onto two
+   rows, so every tool stays visible (no horizontal scrolling to discover them). */
 @container aspeditor (max-width: 600px) {
   :host {
     flex-direction: row;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 4px;
     padding: 6px 8px;
-    overflow-x: auto;
-    overflow-y: visible;
-    scrollbar-width: thin;
+    overflow: visible;
   }
   .asp-rail__slot {
-    flex: 0 0 auto;
-    width: 58px;
+    flex: 1 1 auto;
+    min-width: 56px;
+    max-width: 96px;
   }
   .asp-rail__tool {
     padding: 7px 4px;
