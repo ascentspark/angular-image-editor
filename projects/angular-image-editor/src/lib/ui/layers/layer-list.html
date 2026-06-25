@@ -97,16 +97,45 @@
 
   <div class="asp-layers__scroll">
     @for (layer of layers(); track layer.id) {
-      <div class="asp-layers__row" [class.asp-layers__row--selected]="layer.selected">
-        <button
-          type="button"
-          class="asp-layers__name"
-          [disabled]="layer.locked"
-          (click)="selectLayer.emit(layer.id)"
-          [attr.aria-pressed]="layer.selected"
-        >
-          {{ layer.label }}
-        </button>
+      <div
+        class="asp-layers__row"
+        [class.asp-layers__row--selected]="layer.selected"
+        [class.asp-layers__row--dragging]="draggingId() === layer.id"
+        [class.asp-layers__row--drop-above]="dropTargetId() === layer.id && dropAbove()"
+        [class.asp-layers__row--drop-below]="dropTargetId() === layer.id && !dropAbove()"
+        [draggable]="editingId() !== layer.id"
+        (dragstart)="onDragStart(layer.id, $event)"
+        (dragover)="onDragOver(layer.id, $event)"
+        (drop)="onDrop(layer.id, $event)"
+        (dragend)="onDragEnd()"
+      >
+        <span class="asp-layers__grip" aria-hidden="true" title="Drag to reorder">
+          <asp-icon name="grip-vertical" [size]="14" />
+        </span>
+        @if (editingId() === layer.id) {
+          <input
+            class="asp-layers__rename-input"
+            type="text"
+            [value]="editValue()"
+            (input)="onRenameInput($event)"
+            (keydown.enter)="commitRename(layer)"
+            (keydown.escape)="cancelRename()"
+            (blur)="commitRename(layer)"
+            aria-label="Layer name"
+          />
+        } @else {
+          <button
+            type="button"
+            class="asp-layers__name"
+            [disabled]="layer.locked"
+            (click)="onSelect(layer.id, $event)"
+            (dblclick)="startRename(layer)"
+            [attr.aria-pressed]="layer.selected"
+            title="Click to select · double-click to rename"
+          >
+            {{ layer.label }}
+          </button>
+        }
         <div class="asp-layers__actions">
           <button
             type="button"

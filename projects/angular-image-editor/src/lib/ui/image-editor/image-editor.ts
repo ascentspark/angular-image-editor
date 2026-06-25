@@ -47,7 +47,11 @@ import {
   FRAME_OPTIONS,
   type AdjustChange,
 } from '../options-panel/options-panel';
-import { AspLayerList } from '../layers/layer-list';
+import {
+  AspLayerList,
+  type LayerRenameEvent,
+  type LayerSelectEvent,
+} from '../layers/layer-list';
 import { AspToolRail } from '../rail/tool-rail';
 import { DEFAULT_FONTS, ensureFontLoaded, type FontOption } from './fonts';
 import { buildSampleImages, type SampleImage } from './sample-images';
@@ -710,8 +714,16 @@ export class AspImageEditor implements OnDestroy {
     this.layers.set(this.engine?.getLayers() ?? []);
   }
 
-  protected onSelectLayer(id: string): void {
-    this.engine?.selectLayer(id);
+  protected onSelectLayer(event: LayerSelectEvent): void {
+    this.engine?.selectLayer(event.id, event.additive);
+  }
+  protected onReorderLayers(orderedIds: readonly string[]): void {
+    this.engine?.reorderLayers(orderedIds);
+    this.sync();
+  }
+  protected onRenameLayer(event: LayerRenameEvent): void {
+    this.engine?.renameLayer(event.id, event.name);
+    this.sync();
   }
   protected onToggleLayerLock(id: string): void {
     this.engine?.toggleLayerLock(id);

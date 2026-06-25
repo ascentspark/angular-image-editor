@@ -1681,7 +1681,7 @@ export class EditorEngine {
    */
   private snapshot(): string {
     const composite: EditorSnapshot = {
-      json: this.canvas.toObject(['aspRole', 'aspId', 'aspLocked']),
+      json: this.canvas.toObject(['aspRole', 'aspId', 'aspLocked', 'aspName']),
       rotation: this.rotation,
       straighten: this.straighten,
       adjustments: { ...this.adjustments },
@@ -1784,15 +1784,66 @@ export class EditorEngine {
     return this.canvas.getObjects().find((o) => o.get('aspId') === id) ?? null;
   }
 
-  /** Select a layer by id (no-op if it is locked or missing). */
-  selectLayer(id: string): void {
+  /**
+   * Select a layer by id (no-op if it is locked or missing). When `additive`
+   * (shift/cmd/ctrl-click in the panel), toggle the layer in/out of a
+   * multi-selection instead of replacing it.
+   */
+  selectLayer(id: string, additive = false): void {
     const object = this.findById(id);
     if (!object || object.get('aspLocked') === true || object.selectable === false) {
       return;
     }
-    this.canvas.setActiveObject(object);
+    if (additive) {
+      const current = this.canvas.getActiveObjects();
+      const next = current.includes(object)
+        ? current.filter((o) => o !== object)
+        : [...current, object];
+      this.canvas.discardActiveObject();
+      if (next.length > 0) {
+        this.setActive(next);
+      }
+    } else {
+      this.canvas.discardActiveObject();
+      this.canvas.setActiveObject(object);
+    }
     this.canvas.requestRenderAll();
     this.notifySelection();
+    this.notifyLayers();
+  }
+
+  /**
+   * Reorder the whole z-stack to match a display order (front-most first, as the
+   * Layers panel shows it). Used by drag-and-drop reordering.
+   */
+  reorderLayers(displayOrderIds: readonly string[]): void {
+    // The panel lists front→back; the canvas stack is back→front.
+    const canvasOrder = [...displayOrderIds].reverse();
+    let changed = false;
+    canvasOrder.forEach((id, index) => {
+      const object = this.findById(id);
+      if (object && this.canvas.getObjects().indexOf(object) !== index) {
+        this.canvas.moveObjectTo(object, index);
+        changed = true;
+      }
+    });
+    if (!changed) {
+      return;
+    }
+    this.canvas.requestRenderAll();
+    this.commit('Reorder layers');
+    this.notifyLayers();
+  }
+
+  /** Rename a layer; an empty/blank name clears back to the auto label. */
+  renameLayer(id: string, name: string): void {
+    const object = this.findById(id);
+    if (!object) {
+      return;
+    }
+    const trimmed = name.trim();
+    object.set('aspName', trimmed === '' ? undefined : trimmed);
+    this.commit('Rename layer');
     this.notifyLayers();
   }
 
@@ -1970,6 +2021,10 @@ function translucent(color: string, alpha: number): string {
 
 /** A human label for a layer row, derived from its role/type. */
 function layerLabel(object: Fabric.FabricObject): string {
+  const custom = object.get('aspName');
+  if (typeof custom === 'string' && custom.trim() !== '') {
+    return custom;
+  }
   const role = object.get('aspRole');
   if (role === 'frame') {
     return 'Frame';
@@ -1993,7 +2048,7 @@ function layerLabel(object: Fabric.FabricObject): string {
     return 'Line';
   }
   if (object.isType('group', 'activeselection')) {
-    return 'Arrow';
+    return 'Group';
   }
   if (object.isType('path')) {
     return 'Drawing';

@@ -146,9 +146,10 @@
   gap: 2px;
 }
 .asp-layers__row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 4px 6px;
   border-radius: var(--asp-radius-sm);
   border: 1px solid transparent;
@@ -156,6 +157,53 @@
 .asp-layers__row--selected {
   background: var(--asp-accent-soft);
   border-color: var(--asp-accent);
+}
+.asp-layers__row--dragging {
+  opacity: 0.45;
+}
+/* Drop indicator: a 2px accent line on the relevant edge of the hovered row. */
+.asp-layers__row--drop-above::before,
+.asp-layers__row--drop-below::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: var(--asp-accent);
+  border-radius: 2px;
+}
+.asp-layers__row--drop-above::before {
+  top: -2px;
+}
+.asp-layers__row--drop-below::after {
+  bottom: -2px;
+}
+
+.asp-layers__grip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  color: var(--asp-ink-faint);
+  cursor: grab;
+}
+.asp-layers__row:hover .asp-layers__grip {
+  color: var(--asp-ink-muted);
+}
+
+.asp-layers__rename-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--asp-ink);
+  padding: 5px 6px;
+  border: 1px solid var(--asp-accent);
+  border-radius: var(--asp-radius-sm);
+  background: var(--asp-surface);
+  outline: none;
 }
 .asp-layers__name {
   flex: 1;
