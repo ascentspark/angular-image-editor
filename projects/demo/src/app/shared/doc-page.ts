@@ -26,7 +26,9 @@ export interface PageSection {
           <span class="dp__toc-label">On this page</span>
           <ul>
             @for (s of sections(); track s.id) {
-              <li><a [href]="'#' + s.id">{{ s.label }}</a></li>
+              <li>
+                <a [href]="'#' + s.id">{{ s.label }}</a>
+              </li>
             }
           </ul>
         </nav>

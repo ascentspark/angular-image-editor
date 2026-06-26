@@ -46,14 +46,38 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
       >
         <table class="api-table">
           <thead>
-            <tr><th>Output</th><th>Payload</th><th>Fires</th></tr>
+            <tr>
+              <th>Output</th>
+              <th>Payload</th>
+              <th>Fires</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td><code>saved</code></td><td><code>Blob</code></td><td>Export / Save</td></tr>
-            <tr><td><code>canceled</code></td><td><code>void</code></td><td>Basic-mode Cancel</td></tr>
-            <tr><td><code>imageLoaded</code></td><td><code>void</code></td><td>An image finished loading</td></tr>
-            <tr><td><code>exported</code></td><td><code>Blob</code></td><td>Export download produced a Blob</td></tr>
-            <tr><td><code>errorOccurred</code></td><td><code>AspEditorError</code></td><td>Recoverable load/export/init error</td></tr>
+            <tr>
+              <td><code>saved</code></td>
+              <td><code>Blob</code></td>
+              <td>Export / Save</td>
+            </tr>
+            <tr>
+              <td><code>canceled</code></td>
+              <td><code>void</code></td>
+              <td>Basic-mode Cancel</td>
+            </tr>
+            <tr>
+              <td><code>imageLoaded</code></td>
+              <td><code>void</code></td>
+              <td>An image finished loading</td>
+            </tr>
+            <tr>
+              <td><code>exported</code></td>
+              <td><code>Blob</code></td>
+              <td>Export download produced a Blob</td>
+            </tr>
+            <tr>
+              <td><code>errorOccurred</code></td>
+              <td><code>AspEditorError</code></td>
+              <td>Recoverable load/export/init error</td>
+            </tr>
           </tbody>
         </table>
       </demo-example>
@@ -65,26 +89,98 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
       >
         <table class="api-table">
           <thead>
-            <tr><th>Input</th><th>Type</th><th>Default</th></tr>
+            <tr>
+              <th>Input</th>
+              <th>Type</th>
+              <th>Default</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td><code>src</code></td><td><code>string | Blob | null</code></td><td><code>null</code></td></tr>
-            <tr><td><code>mode</code></td><td><code>AspMode</code></td><td><code>'advanced'</code></td></tr>
-            <tr><td><code>width</code> / <code>height</code></td><td><code>AspSize | null</code></td><td><code>null</code></td></tr>
-            <tr><td><code>tools</code></td><td><code>AspTool[] | null</code></td><td><code>null</code></td></tr>
-            <tr><td><code>disabledTools</code></td><td><code>AspTool[]</code></td><td><code>[]</code></td></tr>
-            <tr><td><code>filters</code></td><td><code>AspFilter[] | 'all' | null</code></td><td><code>null</code></td></tr>
-            <tr><td><code>aspectPresets</code></td><td><code>AspAspectPreset[]</code></td><td><code>['free','1:1','4:3','16:9']</code></td></tr>
-            <tr><td><code>aspectRatios</code></td><td><code>AspAspectOption[]</code></td><td><code>[]</code></td></tr>
-            <tr><td><code>exportFormats</code></td><td><code>AspExportFormat[]</code></td><td><code>['png','jpeg','webp']</code></td></tr>
-            <tr><td><code>exportQuality</code></td><td><code>number</code></td><td><code>90</code></td></tr>
-            <tr><td><code>heading</code></td><td><code>string</code></td><td><code>'Edit image'</code></td></tr>
-            <tr><td><code>showHistory</code></td><td><code>boolean</code></td><td><code>true</code></td></tr>
-            <tr><td><code>keyboardEnabled</code></td><td><code>boolean</code></td><td><code>true</code></td></tr>
-            <tr><td><code>fonts</code></td><td><code>FontOption[]</code></td><td><code>DEFAULT_FONTS</code></td></tr>
-            <tr><td><code>baseColor</code></td><td><code>string</code></td><td><code>'#f4f6f9'</code></td></tr>
-            <tr><td><code>accentColor</code></td><td><code>string</code></td><td><code>'#1f6feb'</code></td></tr>
-            <tr><td><code>themeMode</code></td><td><code>'light' | 'dark'</code></td><td><code>'light'</code></td></tr>
+            <tr>
+              <td><code>src</code></td>
+              <td><code>string | Blob | null</code></td>
+              <td><code>null</code></td>
+            </tr>
+            <tr>
+              <td><code>mode</code></td>
+              <td><code>AspMode</code></td>
+              <td><code>'advanced'</code></td>
+            </tr>
+            <tr>
+              <td><code>width</code> / <code>height</code></td>
+              <td><code>AspSize | null</code></td>
+              <td><code>null</code></td>
+            </tr>
+            <tr>
+              <td><code>tools</code></td>
+              <td><code>AspTool[] | null</code></td>
+              <td><code>null</code></td>
+            </tr>
+            <tr>
+              <td><code>disabledTools</code></td>
+              <td><code>AspTool[]</code></td>
+              <td><code>[]</code></td>
+            </tr>
+            <tr>
+              <td><code>filters</code></td>
+              <td><code>AspFilter[] | 'all' | null</code></td>
+              <td><code>null</code></td>
+            </tr>
+            <tr>
+              <td><code>aspectPresets</code></td>
+              <td><code>AspAspectPreset[]</code></td>
+              <td><code>['free','1:1','4:3','16:9']</code></td>
+            </tr>
+            <tr>
+              <td><code>aspectRatios</code></td>
+              <td><code>AspAspectOption[]</code></td>
+              <td><code>[]</code></td>
+            </tr>
+            <tr>
+              <td><code>exportFormats</code></td>
+              <td><code>AspExportFormat[]</code></td>
+              <td><code>['png','jpeg','webp']</code></td>
+            </tr>
+            <tr>
+              <td><code>exportQuality</code></td>
+              <td><code>number</code></td>
+              <td><code>90</code></td>
+            </tr>
+            <tr>
+              <td><code>heading</code></td>
+              <td><code>string</code></td>
+              <td><code>'Edit image'</code></td>
+            </tr>
+            <tr>
+              <td><code>showHistory</code></td>
+              <td><code>boolean</code></td>
+              <td><code>true</code></td>
+            </tr>
+            <tr>
+              <td><code>keyboardEnabled</code></td>
+              <td><code>boolean</code></td>
+              <td><code>true</code></td>
+            </tr>
+            <tr>
+              <td><code>fonts</code></td>
+              <td><code>FontOption[]</code></td>
+              <td><code>DEFAULT_FONTS</code></td>
+            </tr>
+            <tr>
+              <td><code>baseColor</code></td>
+              <td><code>string</code></td>
+              <td><code>'#f4f6f9'</code></td>
+            </tr>
+            <tr>
+              <td><code>accentColor</code></td>
+              <td><code>string</code></td>
+              <td><code>'#1f6feb'</code></td>
+            </tr>
+            <tr>
+              <td><code>themeMode</code></td>
+              <td><code>'light' | 'dark'</code></td>
+              <td><code>'light'</code></td>
+            </tr>
           </tbody>
         </table>
       </demo-example>
@@ -102,7 +198,12 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
       >
         <p class="prose">
           Full policy and private reporting:
-          <a href="https://github.com/ascentspark/angular-image-editor/blob/main/SECURITY.md" target="_blank" rel="noopener">SECURITY.md</a>.
+          <a
+            href="https://github.com/ascentspark/angular-image-editor/blob/main/SECURITY.md"
+            target="_blank"
+            rel="noopener"
+            >SECURITY.md</a
+          >.
         </p>
       </demo-example>
     </demo-doc-page>

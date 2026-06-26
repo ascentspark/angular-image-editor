@@ -80,19 +80,47 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
         </p>
       </demo-example>
 
-      <demo-example anchor="keyboard" title="Keyboard shortcuts" description="Active while the pointer is over the editor and you are not typing in a field. Disable with [keyboardEnabled]=&quot;false&quot;.">
+      <demo-example
+        anchor="keyboard"
+        title="Keyboard shortcuts"
+        description='Active while the pointer is over the editor and you are not typing in a field. Disable with [keyboardEnabled]="false".'
+      >
         <table class="api-table">
           <thead>
-            <tr><th>Keys</th><th>Action</th></tr>
+            <tr>
+              <th>Keys</th>
+              <th>Action</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td><code>Ctrl/Cmd + Z</code></td><td>Undo</td></tr>
-            <tr><td><code>Ctrl/Cmd + Shift + Z</code> / <code>Ctrl + Y</code></td><td>Redo</td></tr>
-            <tr><td><code>Delete / Backspace</code></td><td>Remove selection</td></tr>
-            <tr><td><code>Ctrl/Cmd + C / V / D</code></td><td>Copy / paste / duplicate</td></tr>
-            <tr><td><code>Ctrl/Cmd + A</code></td><td>Select all</td></tr>
-            <tr><td><code>Esc</code></td><td>Deselect (or cancel the basic modal)</td></tr>
-            <tr><td><code>Space</code> (hold)</td><td>Pan</td></tr>
+            <tr>
+              <td><code>Ctrl/Cmd + Z</code></td>
+              <td>Undo</td>
+            </tr>
+            <tr>
+              <td><code>Ctrl/Cmd + Shift + Z</code> / <code>Ctrl + Y</code></td>
+              <td>Redo</td>
+            </tr>
+            <tr>
+              <td><code>Delete / Backspace</code></td>
+              <td>Remove selection</td>
+            </tr>
+            <tr>
+              <td><code>Ctrl/Cmd + C / V / D</code></td>
+              <td>Copy / paste / duplicate</td>
+            </tr>
+            <tr>
+              <td><code>Ctrl/Cmd + A</code></td>
+              <td>Select all</td>
+            </tr>
+            <tr>
+              <td><code>Esc</code></td>
+              <td>Deselect (or cancel the basic modal)</td>
+            </tr>
+            <tr>
+              <td><code>Space</code> (hold)</td>
+              <td>Pan</td>
+            </tr>
           </tbody>
         </table>
       </demo-example>

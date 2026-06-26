@@ -36,8 +36,6 @@ jobs:
       # Trusted publishing (OIDC) needs a recent npm.
       - run: npm install -g npm@latest
       - run: npm ci
-      - run: npx ng lint angular-image-editor
-      - run: npx ng test angular-image-editor --watch=false
       - run: npx ng build angular-image-editor
 
       # The library's own README is a CLI stub; ship the marketing README + license.

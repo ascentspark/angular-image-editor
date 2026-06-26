@@ -22,7 +22,12 @@ interface ToolDemo {
       [sections]="sections"
     >
       @for (t of demos; track t.anchor) {
-        <demo-example [anchor]="t.anchor" [title]="t.title" [description]="t.description" [sources]="sourceFor(t)">
+        <demo-example
+          [anchor]="t.anchor"
+          [title]="t.title"
+          [description]="t.description"
+          [sources]="sourceFor(t)"
+        >
           @defer (on viewport) {
             <asp-image-editor mode="advanced" [tools]="t.tools" height="480px" />
           } @placeholder {

@@ -21,7 +21,11 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
         [sources]="toolSources"
       >
         @defer (on viewport) {
-          <asp-image-editor mode="advanced" [tools]="['crop', 'rotate', 'text', 'shapes']" height="480px" />
+          <asp-image-editor
+            mode="advanced"
+            [tools]="['crop', 'rotate', 'text', 'shapes']"
+            height="480px"
+          />
         } @placeholder {
           <div class="ed-skel">Loading editor…</div>
         }
@@ -40,7 +44,9 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
       >
         <div class="ctl">
           <label>Base <input type="color" [value]="base()" (input)="setBase($event)" /></label>
-          <label>Accent <input type="color" [value]="accent()" (input)="setAccent($event)" /></label>
+          <label
+            >Accent <input type="color" [value]="accent()" (input)="setAccent($event)"
+          /></label>
           <button type="button" (click)="toggleMode()">{{ mode() }}</button>
         </div>
         @defer (on viewport) {

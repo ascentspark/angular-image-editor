@@ -53,11 +53,7 @@ import { SeoService } from '../../shared/seo.service';
       >
         <div class="seg">
           @for (m of modes; track m) {
-            <button
-              type="button"
-              [class.seg--on]="mode() === m"
-              (click)="mode.set(m)"
-            >
+            <button type="button" [class.seg--on]="mode() === m" (click)="mode.set(m)">
               {{ m }}
             </button>
           }
