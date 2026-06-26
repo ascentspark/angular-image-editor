@@ -1,174 +1,61 @@
-<div class="shell" [class.shell--dark]="themeMode() === 'dark'">
-  <header class="topbar">
-    <div class="brand">
-      <img class="brand__logo" src="asc-logo-full.svg" alt="Ascentspark" />
-      <span class="brand__sep" aria-hidden="true"></span>
-      <div class="brand__product">
-        <span class="brand__name">Image Editor</span>
-        <span class="brand__tag">Angular 22 · Fabric.js v7</span>
-      </div>
-      <span class="brand__badge">demo</span>
+<header class="hdr">
+  <div class="hdr__brand">
+    <a routerLink="/" class="hdr__logo" aria-label="Angular Image Editor home">
+      <img src="asc-logo-full.svg" alt="Ascentspark" height="26" />
+    </a>
+    <div class="hdr__titles">
+      <a routerLink="/" class="hdr__name">angular-image-editor</a>
+      <span class="hdr__tagline">
+        Themeable Angular image editor on
+        <a href="https://fabricjs.com" target="_blank" rel="noopener">Fabric.js v7</a>
+      </span>
     </div>
+  </div>
 
-    <div class="topbar__spacer"></div>
+  <div class="hdr__meta">
+    <a
+      href="https://github.com/ascentspark/angular-image-editor"
+      target="_blank"
+      rel="noopener"
+      class="hdr__link"
+    >
+      GitHub
+    </a>
+    <a href="https://ascentspark.com" target="_blank" rel="noopener" class="hdr__maintainer">
+      <span>by</span>
+      <demo-glyph class="hdr__glyph" />
+      <span class="hdr__maintainer-name">ascentspark</span>
+    </a>
+    <button type="button" class="hdr__dark" (click)="toggleDark()">
+      {{ dark() ? 'Light' : 'Dark' }}
+    </button>
+  </div>
+</header>
 
-    <div class="theme-cluster">
-      <label class="swatch" title="Base color">
-        <input type="color" [value]="base()" (input)="onBaseInput($event)" aria-label="Base color" />
-        <span class="swatch__txt">Base</span>
-      </label>
-      <label class="swatch" title="Accent color">
-        <input type="color" [value]="accent()" (input)="onAccentInput($event)" aria-label="Accent color" />
-        <span class="swatch__txt">Accent</span>
-      </label>
-      <button
-        type="button"
-        class="mode-toggle"
-        [attr.aria-pressed]="themeMode() === 'dark'"
-        (click)="toggleMode()"
-      >
-        @if (themeMode() === 'dark') {
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /></svg>
-          Dark
-        } @else {
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" /></svg>
-          Light
-        }
-      </button>
-    </div>
-  </header>
+<div class="layout">
+  <aside class="sidebar">
+    @for (group of nav; track group.title) {
+      <nav class="navgroup">
+        <h3 class="navgroup__title">{{ group.title }}</h3>
+        <ul class="navgroup__list">
+          @for (item of group.items; track item.path) {
+            <li>
+              <a
+                class="navlink"
+                [routerLink]="'/' + item.path"
+                routerLinkActive="navlink--active"
+                [routerLinkActiveOptions]="{ exact: item.path === '' }"
+              >
+                {{ item.label }}
+              </a>
+            </li>
+          }
+        </ul>
+      </nav>
+    }
+  </aside>
 
-  <button
-    type="button"
-    class="controls-toggle"
-    [attr.aria-expanded]="!controlsCollapsed()"
-    (click)="toggleControls()"
-  >
-    <span>{{ controlsCollapsed() ? 'Show demo controls' : 'Hide demo controls' }}</span>
-    <span class="controls-toggle__chev" [class.controls-toggle__chev--open]="!controlsCollapsed()">▾</span>
-  </button>
-
-  <section class="toolbar" [class.toolbar--collapsed]="controlsCollapsed()">
-    <div class="group">
-      <span class="group__label">Theme</span>
-      <div class="chips">
-        @for (preset of presets; track preset.label) {
-          <button
-            type="button"
-            class="chip"
-            [class.chip--active]="base() === preset.base && accent() === preset.accent"
-            (click)="applyPreset(preset)"
-          >
-            <span class="chip__dot" [style.background]="preset.accent"></span>
-            {{ preset.label }}
-          </button>
-        }
-      </div>
-    </div>
-
-    <div class="group">
-      <span class="group__label">Mode</span>
-      <div class="segmented" role="group" aria-label="Editor mode">
-        @for (m of editorModes; track m) {
-          <button
-            type="button"
-            class="segmented__item"
-            [class.segmented__item--active]="editorMode() === m"
-            (click)="setEditorMode(m)"
-          >
-            {{ m }}
-          </button>
-        }
-      </div>
-    </div>
-
-    <div class="group">
-      <span class="group__label">Canvas size</span>
-      <div class="chips">
-        @for (preset of sizePresets; track preset.value) {
-          <button
-            type="button"
-            class="chip"
-            [class.chip--active]="editorHeight() === preset.value"
-            (click)="setHeight(preset.value)"
-          >
-            {{ preset.label }}
-          </button>
-        }
-      </div>
-    </div>
-
-    <div class="group group--end">
-      <span class="group__label">Demo options</span>
-      <div class="opts">
-        <button
-          type="button"
-          class="toggle"
-          [class.toggle--on]="customTools()"
-          [attr.aria-pressed]="!!customTools()"
-          (click)="toggleCustomRail()"
-        >
-          Custom tools
-        </button>
-        <button
-          type="button"
-          class="toggle"
-          [class.toggle--on]="disabled().length"
-          [attr.aria-pressed]="disabled().length > 0"
-          (click)="toggleDisabled()"
-        >
-          Disable filters / frame / redact
-        </button>
-        <button type="button" class="toggle" (click)="toggleCode()">&lt;/&gt; Show code</button>
-        <button type="button" class="btn-brand" (click)="openDialog()">Open dialog</button>
-        @if (lastResult()) {
-          <span class="result">{{ lastResult() }}</span>
-        }
-      </div>
-    </div>
-  </section>
-
-  @if (codeOpen()) {
-    <div class="code-modal" role="dialog" aria-modal="true" aria-label="Render code">
-      <button type="button" class="code-modal__scrim" aria-label="Close" (click)="toggleCode()"></button>
-      <div class="code-modal__panel">
-        <div class="code-modal__head">
-          <div>
-            <strong>Render with these options</strong>
-            <p>This snippet reflects the controls above — copy it into your app.</p>
-          </div>
-          <div class="code-modal__actions">
-            <button type="button" class="toggle" (click)="copyCode()">
-              {{ codeCopied() ? 'Copied ✓' : 'Copy' }}
-            </button>
-            <button type="button" class="toggle" (click)="toggleCode()">Close</button>
-          </div>
-        </div>
-        <pre class="code-modal__code"><code>{{ codeSnippet() }}</code></pre>
-      </div>
-    </div>
-  }
-
-  <main class="stage">
-    <asp-image-editor
-      [mode]="editorMode()"
-      [tools]="customTools()"
-      [disabledTools]="disabled()"
-      [aspectRatios]="cmsAspects"
-      [exportFormats]="allFormats"
-      [height]="editorHeight()"
-      [baseColor]="base()"
-      [accentColor]="accent()"
-      [themeMode]="themeMode()"
-      (saved)="onSaved($event)"
-    ></asp-image-editor>
+  <main class="main">
+    <router-outlet />
   </main>
-
-  <footer class="footer">
-    <span class="footer__left">
-      <img class="footer__logo" src="asc-logo-full.svg" alt="Ascentspark" />
-      <span>Free &amp; open source · MIT</span>
-    </span>
-    <span class="footer__right">Built by Ascentspark · Fabric.js v7 · Angular 22</span>
-  </footer>
 </div>

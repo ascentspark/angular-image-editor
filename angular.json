@@ -57,6 +57,8 @@
           "builder": "@angular/build:application",
           "options": {
             "browser": "projects/demo/src/main.ts",
+            "server": "projects/demo/src/main.server.ts",
+            "outputMode": "static",
             "tsConfig": "projects/demo/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
@@ -77,8 +79,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "8kB",
-                  "maximumError": "12kB"
+                  "maximumWarning": "12kB",
+                  "maximumError": "16kB"
                 }
               ],
               "outputHashing": "all"

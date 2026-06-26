@@ -1,23 +1,26 @@
+import { provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
 
-describe('App', () => {
+describe('App (docs shell)', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
+      providers: [provideRouter([])],
     }).compileComponents();
   });
 
-  it('should create the app', () => {
+  it('should create the shell', () => {
     const fixture = TestBed.createComponent(App);
-    const app = fixture.componentInstance;
-    expect(app).toBeTruthy();
+    expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('should render the editor host element', async () => {
+  it('should render the sidebar navigation', () => {
     const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('asp-image-editor')).not.toBeNull();
+    fixture.detectChanges();
+    const links = (fixture.nativeElement as HTMLElement).querySelectorAll('.navlink');
+    const labels = Array.from(links).map((a) => a.textContent?.trim());
+    expect(labels).toContain('Playground');
+    expect(labels).toContain('Getting started');
   });
 });
