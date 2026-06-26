@@ -1,13 +1,75 @@
-/* Global reset for the demo host page. */
+/* Global reset for the demo host page. The shell component owns the theme tokens;
+   here we only keep the page background in sync with light/dark. */
 html,
 body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  background: #eef1f5;
+  background: #f6f7f9;
+}
+html.dark,
+html.dark body {
+  background: #0e1116;
 }
 
 * {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Inline code in page prose. */
+code {
+  font-family: ui-monospace, 'SF Mono', 'JetBrains Mono', monospace;
+  font-size: 0.86em;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  padding: 0.1em 0.35em;
+  border-radius: 5px;
+}
+
+/* Shared @defer placeholder for embedded editors. */
+.ed-skel {
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+  border: 1px dashed color-mix(in srgb, currentColor 22%, transparent);
+  border-radius: 14px;
+  color: color-mix(in srgb, currentColor 55%, transparent);
+  font-size: 0.95rem;
+}
+
+/* Page prose helpers shared by section pages. */
+.prose {
+  max-width: 70ch;
+  line-height: 1.65;
+  color: var(--ink);
+}
+.prose a {
+  color: var(--accent);
+}
+.note {
+  margin: 0.6rem 0 0;
+  padding: 0.7rem 0.9rem;
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  border-radius: 0 8px 8px 0;
+  font-size: 0.9rem;
+}
+.api-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.api-table th,
+.api-table td {
+  text-align: left;
+  padding: 0.5rem 0.7rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.api-table th {
+  color: var(--muted);
+  font-weight: 600;
+}
+.api-table code {
+  white-space: nowrap;
 }
