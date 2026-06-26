@@ -48,23 +48,17 @@
 }
 .hdr__brand {
   display: flex;
-  align-items: center;
-  gap: 0.85rem;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 .hdr__logo {
   line-height: 0;
 }
-.hdr__titles {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-}
-.hdr__name {
-  font-family: var(--font-mono);
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--ink);
-  text-decoration: none;
+.hdr__logo img {
+  height: 34px;
+  width: auto;
+  display: block;
 }
 .hdr__tagline {
   font-size: 0.78rem;
