@@ -1,0 +1,48 @@
+name: Release
+
+# Publishes the library to npm with provenance via OIDC trusted publishing (no npm token needed).
+# Run it from `main` after bumping the version in projects/angular-image-editor/package.json.
+# npm must have a Trusted Publisher configured for this package pointing at this repo + workflow
+# (npmjs.com -> package -> Settings -> Trusted Publisher -> GitHub Actions).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance / trusted publishing
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Verify the release runs from main
+        run: |
+          ref='${{ github.ref_name }}'
+          if [ "$ref" != "main" ]; then
+            echo "::error::Refusing to publish from '$ref'. Run Release from main."
+            exit 1
+          fi
+          version="$(node -p "require('./projects/angular-image-editor/package.json').version")"
+          echo "Publishing @ascentsparksoftware/angular-image-editor@$version with dist-tag 'latest'."
+
+      # Trusted publishing (OIDC) needs a recent npm.
+      - run: npm install -g npm@latest
+      - run: npm ci
+      - run: npx ng lint angular-image-editor
+      - run: npx ng test angular-image-editor --watch=false
+      - run: npx ng build angular-image-editor
+
+      # The library's own README is a CLI stub; ship the marketing README + license.
+      - name: Bundle docs into the package
+        run: cp README.md LICENSE dist/angular-image-editor/
+
+      - run: npm publish --provenance --access public --tag latest
+        working-directory: dist/angular-image-editor
