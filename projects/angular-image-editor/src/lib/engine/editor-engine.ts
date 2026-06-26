@@ -17,6 +17,7 @@ import { parseHex, withAlpha } from '../theme/color';
 import { centeredCropRect, aspectRatioValue } from './crop';
 import { clampCornerRadius, maxCornerRadius } from './shapes';
 import { embedFontsInSvg } from './svg-fonts';
+import { decodeImageBlob } from './image-decode';
 import { buildFabricFilters, LOOK_FILTERS } from './fabric-filters';
 import { loadFabric, type FabricModule } from './fabric-loader';
 import { resolveExport } from './export-config';
@@ -980,26 +981,43 @@ export class EditorEngine {
   // ---- image loading -------------------------------------------------------
 
   /**
+   * Resolve an import source into a canvas-ready URL.
+   *
+   * - SVG → rasterized at high resolution (Fabric's vector parser mangles complex
+   *   SVGs and a raw `<img>` misreads their intrinsic size).
+   * - Blob / data URL → decoded with EXIF orientation and downscaled, converting
+   *   formats the browser can't decode natively (HEIC/HEIF). Throws a descriptive
+   *   error on undecodable input rather than silently yielding nothing.
+   * - Remote URL → returned as-is and left to Fabric, since canvas-resampling a
+   *   cross-origin image would taint it.
+   */
+  private async resolveImportUrl(src: string | Blob): Promise<string> {
+    const svgText = await svgTextFrom(src);
+    if (svgText) {
+      return rasterizeSvg(svgText, MAX_IMPORT_DIM);
+    }
+    if (typeof src === 'string') {
+      return src.startsWith('data:')
+        ? decodeImageBlob(dataUrlToBlob(src), MAX_IMPORT_DIM)
+        : src;
+    }
+    return decodeImageBlob(src, MAX_IMPORT_DIM, (src as File).name ?? '');
+  }
+
+  /**
    * Load an image from a URL or Blob, fit it to the canvas, and reset history.
    *
-   * A Blob is first read into a data URL so the image's serialized `src` survives
-   * in history snapshots (a transient object URL would be revoked and break undo).
+   * A Blob is first decoded into a data URL so the image's serialized `src`
+   * survives in history snapshots (a transient object URL would be revoked and
+   * break undo).
    */
   async loadImage(src: string | Blob): Promise<void> {
-    // The base image must be a raster (crop/filters/AI operate on pixels), so an
-    // SVG is rasterized at its true size first rather than loaded as an <img>
-    // (which misreads the SVG's intrinsic size and renders it clipped).
-    const svgText = await svgTextFrom(src);
-    const raw = svgText
-      ? await rasterizeSvg(svgText, MAX_IMPORT_DIM)
-      : typeof src === 'string'
-        ? src
-        : await blobToDataUrl(src);
-    // Downscale large same-origin (data URL) imports; remote URLs are left to
-    // Fabric (canvas-resampling a cross-origin image would taint it).
-    const url = raw.startsWith('data:') ? await downscaleDataUrl(raw, MAX_IMPORT_DIM) : raw;
-    const loadOptions = typeof src === 'string' ? { crossOrigin: 'anonymous' as const } : {};
+    const url = await this.resolveImportUrl(src);
+    const loadOptions = url.startsWith('data:') ? {} : { crossOrigin: 'anonymous' as const };
     const image = await this.fabric.FabricImage.fromURL(url, loadOptions, {});
+    if (!image.width || !image.height) {
+      throw new Error('The image could not be loaded.');
+    }
     this.canvas.remove(...this.canvas.getObjects());
     this.baseImage = image;
     this.rotation = 0;
@@ -1535,9 +1553,9 @@ export class EditorEngine {
 
   /** Set an uploaded image as the canvas background, scaled to cover. */
   async setBackgroundImage(src: string | Blob): Promise<void> {
-    const raw = typeof src === 'string' ? src : await blobToDataUrl(src);
-    const url = raw.startsWith('data:') ? await downscaleDataUrl(raw, MAX_IMPORT_DIM) : raw;
-    const image = await this.fabric.FabricImage.fromURL(url, {}, {});
+    const url = await this.resolveImportUrl(src);
+    const loadOptions = url.startsWith('data:') ? {} : { crossOrigin: 'anonymous' as const };
+    const image = await this.fabric.FabricImage.fromURL(url, loadOptions, {});
     const cw = this.canvas.getWidth();
     const ch = this.canvas.getHeight();
     const scale = Math.max(cw / (image.width || 1), ch / (image.height || 1));
@@ -1700,17 +1718,12 @@ export class EditorEngine {
 
   /** Add an image (e.g. pasted from the OS clipboard) as a movable object. */
   async addImageObject(src: string | Blob): Promise<void> {
-    // SVGs are rasterized with the browser's native renderer (faithful to
-    // gradients/clip-paths/masks) at high resolution — Fabric's vector parser
-    // mangles complex SVGs, and a raw <img> misreads their intrinsic size.
-    const svgText = await svgTextFrom(src);
-    const raw = svgText
-      ? await rasterizeSvg(svgText, MAX_IMPORT_DIM)
-      : typeof src === 'string'
-        ? src
-        : await blobToDataUrl(src);
-    const url = raw.startsWith('data:') ? await downscaleDataUrl(raw, MAX_IMPORT_DIM) : raw;
-    const image = await this.fabric.FabricImage.fromURL(url, {}, {});
+    const url = await this.resolveImportUrl(src);
+    const loadOptions = url.startsWith('data:') ? {} : { crossOrigin: 'anonymous' as const };
+    const image = await this.fabric.FabricImage.fromURL(url, loadOptions, {});
+    if (!image.width || !image.height) {
+      throw new Error('The image could not be loaded.');
+    }
     const cw = this.canvas.getWidth();
     const ch = this.canvas.getHeight();
     const scale = Math.min(1, (cw * 0.6) / (image.width || 1), (ch * 0.6) / (image.height || 1));
@@ -2531,32 +2544,6 @@ function loadHtmlImage(src: string): Promise<HTMLImageElement> {
     img.onerror = () => reject(new Error('Failed to decode image'));
     img.src = src;
   });
-}
-
-/**
- * Downscale a data-URL image so its longest edge is at most `maxDim`, preserving
- * aspect ratio. Returns the original URL when already within bounds or if no 2D
- * context is available. Safe (same-origin data URL never taints the canvas).
- */
-async function downscaleDataUrl(dataUrl: string, maxDim: number): Promise<string> {
-  const img = await loadHtmlImage(dataUrl);
-  const w = img.naturalWidth;
-  const h = img.naturalHeight;
-  const longest = Math.max(w, h);
-  if (longest <= maxDim || longest === 0) {
-    return dataUrl;
-  }
-  const scale = maxDim / longest;
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(w * scale);
-  canvas.height = Math.round(h * scale);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    return dataUrl;
-  }
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/png');
 }
 
 /** Read a Blob into a data URL (so it persists in serialized history). */

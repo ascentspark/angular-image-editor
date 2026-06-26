@@ -36,6 +36,7 @@
   },
   "optionalDependencies": {
     "@imgly/background-removal": "^1.7.0",
+    "heic2any": "^0.0.4",
     "onnxruntime-web": "1.21.0"
   },
   "sideEffects": false
