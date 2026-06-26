@@ -96,9 +96,13 @@
 }
 .asp-layers__alignmenu {
   position: absolute;
-  bottom: calc(100% + 4px);
+  /* The align button sits at the top of the panel (just under the Layers
+     header), so the menu opens DOWNWARD over the layer list. Opening upward
+     pushed it out of the panel into the canvas band, where the panel's
+     overflow:hidden clipped it and the canvas painted over it. */
+  top: calc(100% + 4px);
   left: 0;
-  z-index: 19;
+  z-index: 30;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 2px;
