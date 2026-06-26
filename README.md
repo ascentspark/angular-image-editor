@@ -14,6 +14,8 @@ by&nbsp;<a href="https://ascentspark.com" target="_blank" rel="noopener"><img sr
 [![Angular 22](https://img.shields.io/badge/Angular-22-dd0031.svg)](https://angular.dev)
 [![license MIT](https://img.shields.io/github/license/ascentspark/angular-image-editor?color=3b82f6)](https://github.com/ascentspark/angular-image-editor/blob/main/LICENSE)
 
+### **[🚀 Live demo &amp; docs →](https://angular-image-editor.ascentspark.com)**
+
 **[✨ Features](#features)** &nbsp;·&nbsp;
 **[🎨 Theming](#theming)** &nbsp;·&nbsp;
 **[🧩 API](#api)** &nbsp;·&nbsp;
@@ -368,6 +370,11 @@ private reporting: [SECURITY.md](https://github.com/ascentspark/angular-image-ed
 
 Following the same approach as the AI tools and magic wand already in the box: modern Angular, and
 free alternatives to capabilities that are otherwise paid in commercial editors.
+
+## Documentation
+
+A live playground and full docs for every tool, theming, the complete API and more:
+**[angular-image-editor.ascentspark.com](https://angular-image-editor.ascentspark.com)**.
 
 ## Local development
 
