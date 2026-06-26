@@ -86,12 +86,10 @@
 .hdr__maintainer:hover {
   color: var(--ink);
 }
-.hdr__glyph {
-  font-size: 1.05rem;
-  color: var(--accent);
-}
-.hdr__maintainer-name {
-  font-weight: 600;
+.hdr__asc {
+  height: 18px;
+  width: auto;
+  display: block;
 }
 .hdr__dark {
   background: transparent;

@@ -1,15 +1,8 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-  PLATFORM_ID,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, PLATFORM_ID, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { NAV } from './nav';
-import { AscGlyph } from './shared/asc-glyph';
 import { SeoService } from './shared/seo.service';
 
 /**
@@ -20,7 +13,7 @@ import { SeoService } from './shared/seo.service';
 @Component({
   selector: 'demo-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, AscGlyph],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
