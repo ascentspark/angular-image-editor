@@ -1,13 +1,13 @@
 <div align="center">
 
+<a href="https://github.com/ascentspark/angular-image-editor"><img src="image-editor-logo.png" alt="Angular Image Editor" height="120"></a>
+
 # @ascentsparksoftware/angular-image-editor
 
-A standalone, themeable image editor for Angular, by
-<a href="https://ascentspark.com" target="_blank" rel="noopener">Ascentspark</a>
+A standalone, themeable **Angular 22** image editor — crop, filter, draw, redact, layers and
+**in-browser AI background removal** — built from scratch on **Fabric.js v7**.
 
-<a href="https://ascentspark.com" target="_blank" rel="noopener"><img src="https://cdn.ascentspark.com/assets/images/asc-logo-full.svg" alt="Ascentspark" height="72"></a>
-
-### Crop, filter, draw, redact, layers and in-browser AI background removal — built from scratch on Fabric.js v7
+by&nbsp;<a href="https://ascentspark.com" target="_blank" rel="noopener"><img src="https://cdn.ascentspark.com/assets/images/asc-logo-full.svg" alt="Ascentspark" height="22" valign="middle"></a>
 
 [![npm version](https://img.shields.io/npm/v/@ascentsparksoftware/angular-image-editor.svg?color=dd0031)](https://www.npmjs.com/package/@ascentsparksoftware/angular-image-editor)
 [![downloads](https://img.shields.io/npm/dm/@ascentsparksoftware/angular-image-editor.svg)](https://www.npmjs.com/package/@ascentsparksoftware/angular-image-editor)
