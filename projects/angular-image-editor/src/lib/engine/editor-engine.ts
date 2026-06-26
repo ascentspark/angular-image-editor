@@ -16,6 +16,7 @@ import type * as Fabric from 'fabric';
 import { parseHex, withAlpha } from '../theme/color';
 import { centeredCropRect, aspectRatioValue } from './crop';
 import { clampCornerRadius, maxCornerRadius } from './shapes';
+import { embedFontsInSvg } from './svg-fonts';
 import { buildFabricFilters, LOOK_FILTERS } from './fabric-filters';
 import { loadFabric, type FabricModule } from './fabric-loader';
 import { resolveExport } from './export-config';
@@ -2351,13 +2352,52 @@ export class EditorEngine {
       return new Blob([JSON.stringify(this.canvas.toJSON())], { type: cfg.mimeType });
     }
     if (cfg.kind === 'vector') {
-      return new Blob([this.canvas.toSVG()], { type: cfg.mimeType });
+      // Embed the web fonts used by text so the SVG renders the true typeface in
+      // any viewer instead of falling back to a generic family.
+      const svg = await this.embedSvgFonts(this.canvas.toSVG());
+      return new Blob([svg], { type: cfg.mimeType });
     }
     if (cfg.kind === 'pdf') {
       return this.exportPdf(cfg.quality);
     }
     const rasterFormat = cfg.format === 'jpeg' ? 'jpeg' : cfg.format === 'webp' ? 'webp' : 'png';
     return dataUrlToBlob(this.artboardDataUrl(rasterFormat, cfg.quality));
+  }
+
+  /**
+   * Inline the web fonts used by the scene's text into the SVG so it is
+   * self-contained. Network failures fall back to the original SVG (text keeps
+   * its font-family). No-op outside a browser (no `fetch`).
+   */
+  private async embedSvgFonts(svg: string): Promise<string> {
+    if (typeof fetch !== 'function') {
+      return svg;
+    }
+    try {
+      return await embedFontsInSvg(svg, this.collectTextFontFamilies(), (url, init) =>
+        fetch(url, init),
+      );
+    } catch {
+      return svg;
+    }
+  }
+
+  /** Distinct `fontFamily` values across all text objects (recursing into groups). */
+  private collectTextFontFamilies(): string[] {
+    const families = new Set<string>();
+    const visit = (object: Fabric.FabricObject): void => {
+      if (object.isType('textbox', 'i-text', 'text')) {
+        const family = object.get('fontFamily');
+        if (typeof family === 'string' && family) {
+          families.add(family);
+        }
+      }
+      if (object.isType('group', 'activeselection')) {
+        (object as Fabric.Group).getObjects().forEach(visit);
+      }
+    };
+    this.canvas.getObjects().forEach(visit);
+    return [...families];
   }
 
   /**
