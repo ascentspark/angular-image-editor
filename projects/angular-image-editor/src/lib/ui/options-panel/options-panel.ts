@@ -138,6 +138,12 @@ export class AspOptionsPanel {
   readonly textAlign = input<string>('left');
   readonly lineHeight = input<number>(1.16);
   readonly letterSpacing = input<number>(0);
+  /** Current rectangle corner radius (px) — drives the sharp → pill slider. */
+  readonly cornerRadius = input<number>(0);
+  /** Pill-cap radius: the slider's maximum for the current rectangle. */
+  readonly cornerRadiusMax = input<number>(55);
+  /** Show the corner-radius slider (new rectangle, or a selected rectangle). */
+  readonly showCornerRadius = input<boolean>(false);
   readonly redactMode = input<RedactMode>('pixelate');
   readonly magicTolerance = input<number>(32);
   /** True while an in-browser AI op is running (disables the button, shows progress). */
@@ -181,6 +187,10 @@ export class AspOptionsPanel {
   readonly sizeInput = output<number>();
   /** Final size change (slider release) — commit to history. */
   readonly sizeCommit = output<number>();
+  /** Live corner-radius change (slider drag). */
+  readonly cornerRadiusInput = output<number>();
+  /** Final corner-radius change (slider release) — commit to history. */
+  readonly cornerRadiusCommit = output<number>();
   readonly selectFrame = output<string>();
   /** Switch the Color panel sub-tool (Adjust ⟷ Filters tabs). */
   readonly requestTool = output<AspTool>();
@@ -382,5 +392,13 @@ export class AspOptionsPanel {
 
   protected onSizeCommit(event: Event): void {
     this.sizeCommit.emit(Number((event.target as HTMLInputElement).value));
+  }
+
+  protected onCornerRadiusInput(event: Event): void {
+    this.cornerRadiusInput.emit(Number((event.target as HTMLInputElement).value));
+  }
+
+  protected onCornerRadiusCommit(event: Event): void {
+    this.cornerRadiusCommit.emit(Number((event.target as HTMLInputElement).value));
   }
 }

@@ -242,6 +242,19 @@ export class AspImageEditor implements OnDestroy {
   /** True while a web font for the current choice is still loading. */
   protected readonly fontLoading = signal(false);
   protected readonly activeFrame = signal('none');
+  /** Corner radius (px) for the next rectangle, and the selected rectangle. */
+  protected readonly shapeRadius = signal(0);
+  /** Pill-cap radius driving the corner-radius slider's max. */
+  protected readonly shapeRadiusMax = signal(55);
+  /** True when the current selection is a single rectangle. */
+  protected readonly selectedIsRect = signal(false);
+  /**
+   * Show the corner-radius slider when defining the next rectangle (Shapes tool,
+   * nothing selected) or when a rectangle is selected.
+   */
+  protected readonly showCornerRadius = computed(
+    () => (this.activeTool() === 'shapes' && !this.hasSelection()) || this.selectedIsRect(),
+  );
   protected readonly redactMode = signal<RedactMode>('pixelate');
   protected readonly magicTolerance = signal(32);
   protected readonly aiBusy = signal(false);
@@ -1139,7 +1152,28 @@ export class AspImageEditor implements OnDestroy {
   }
 
   protected addShape(kind: ShapeKind): void {
-    this.engine?.addShape(kind, { color: this.annotationColor(), strokeWidth: this.annotationWidth() });
+    this.engine?.addShape(kind, {
+      color: this.annotationColor(),
+      strokeWidth: this.annotationWidth(),
+      cornerRadius: kind === 'rect' ? this.shapeRadius() : undefined,
+    });
+    this.sync();
+  }
+
+  /** Live corner-radius drag: update a selected rectangle without committing. */
+  protected onCornerRadiusInput(radius: number): void {
+    this.shapeRadius.set(radius);
+    if (this.selectedIsRect()) {
+      this.engine?.setSelectedCornerRadius(radius, false);
+    }
+  }
+
+  /** Corner-radius release: commit the selected rectangle's radius to history. */
+  protected onCornerRadiusCommit(radius: number): void {
+    this.shapeRadius.set(radius);
+    if (this.selectedIsRect()) {
+      this.engine?.setSelectedCornerRadius(radius, true);
+    }
     this.sync();
   }
 
@@ -1207,9 +1241,17 @@ export class AspImageEditor implements OnDestroy {
     this.hasSelection.set(info !== null);
     this.selectionKind.set(info ? info.kind : null);
     if (!info) {
+      this.selectedIsRect.set(false);
       return;
     }
     this.annotationColor.set(info.color);
+    // Reflect a selected rectangle's corner radius into the slider.
+    const isRect = info.cornerRadiusMax !== undefined;
+    this.selectedIsRect.set(isRect);
+    if (isRect) {
+      this.shapeRadius.set(Math.round(info.cornerRadius ?? 0));
+      this.shapeRadiusMax.set(Math.round(info.cornerRadiusMax ?? 55));
+    }
     if (info.kind === 'text') {
       this.fontSize.set(Math.round(info.size));
       if (info.textStyle) {

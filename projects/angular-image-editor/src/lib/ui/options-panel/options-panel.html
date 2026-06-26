@@ -285,6 +285,25 @@
           />
         </div>
 
+        @if (showCornerRadius()) {
+          <div>
+            <div class="asp-field-row">
+              <span class="asp-field-label">Corner radius</span>
+              <span class="asp-field-value">{{ cornerRadius() }} px</span>
+            </div>
+            <input
+              type="range"
+              class="asp-range"
+              min="0"
+              [max]="cornerRadiusMax()"
+              [value]="cornerRadius()"
+              (input)="onCornerRadiusInput($event)"
+              (change)="onCornerRadiusCommit($event)"
+              aria-label="Corner radius"
+            />
+          </div>
+        }
+
         @if (isShape() && !fromSelection()) {
           <div class="asp-shape-grid">
             <button type="button" class="asp-icon-btn" title="Rectangle" (click)="addShape.emit('rect')">

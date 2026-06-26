@@ -15,6 +15,7 @@ import type * as Fabric from 'fabric';
 
 import { parseHex, withAlpha } from '../theme/color';
 import { centeredCropRect, aspectRatioValue } from './crop';
+import { clampCornerRadius, maxCornerRadius } from './shapes';
 import { buildFabricFilters, LOOK_FILTERS } from './fabric-filters';
 import { loadFabric, type FabricModule } from './fabric-loader';
 import { resolveExport } from './export-config';
@@ -43,6 +44,8 @@ export type RedactMode = 'blur' | 'pixelate' | 'solid';
 export interface AnnotationStyle {
   readonly color: string;
   readonly strokeWidth: number;
+  /** Rectangle corner radius (px, in object coordinates). `0`/absent = sharp corners. */
+  readonly cornerRadius?: number;
 }
 
 export interface TextStyle {
@@ -70,6 +73,10 @@ export interface SelectionStyleInfo {
   readonly size: number;
   /** Present when a single text object is selected. */
   readonly textStyle?: TextStyleInfo;
+  /** Present when a single rectangle is selected: its current corner radius. */
+  readonly cornerRadius?: number;
+  /** Present when a single rectangle is selected: the pill-cap radius for its size. */
+  readonly cornerRadiusMax?: number;
 }
 
 /** One entry in the layers panel (top of the z-stack first). */
@@ -448,11 +455,50 @@ export class EditorEngine {
     const stroke = target.get('stroke');
     const fill = target.get('fill');
     const strokeWidth = target.get('strokeWidth');
-    return {
+    const base: SelectionStyleInfo = {
       kind: 'stroke',
       color: typeof stroke === 'string' ? stroke : typeof fill === 'string' ? fill : '#000000',
       size: typeof strokeWidth === 'number' ? strokeWidth : 4,
     };
+    // A single selected rectangle also exposes its corner radius so the Shapes
+    // panel can show (and drive) the sharp → pill slider.
+    if (object.isType('rect')) {
+      const w = (object.width ?? 0) * (object.scaleX ?? 1);
+      const h = (object.height ?? 0) * (object.scaleY ?? 1);
+      const rx = object.get('rx');
+      return {
+        ...base,
+        cornerRadius: typeof rx === 'number' ? rx * (object.scaleX ?? 1) : 0,
+        cornerRadiusMax: maxCornerRadius(w, h),
+      };
+    }
+    return base;
+  }
+
+  /**
+   * Set the corner radius of the currently selected rectangle. The value is in
+   * on-screen pixels and is clamped to the rectangle's pill cap. No-op (returns
+   * false) when the selection is not a single rectangle. Pass `commit: false`
+   * for live slider drags; commit once on release.
+   */
+  setSelectedCornerRadius(radius: number, commit = true): boolean {
+    const active = this.canvas.getActiveObject();
+    if (!active || !active.isType('rect')) {
+      return false;
+    }
+    // rx/ry live in unscaled object space; convert the on-screen request back.
+    const scaleX = active.scaleX ?? 1;
+    const scaleY = active.scaleY ?? 1;
+    const w = (active.width ?? 0) * scaleX;
+    const h = (active.height ?? 0) * scaleY;
+    const screenRadius = clampCornerRadius(radius, w, h);
+    active.set({ rx: screenRadius / scaleX, ry: screenRadius / scaleY });
+    this.canvas.requestRenderAll();
+    if (commit) {
+      this.commit('Corner radius');
+    }
+    this.notifySelection();
+    return true;
   }
 
   /**
@@ -1150,9 +1196,11 @@ export class EditorEngine {
     };
     let object: Fabric.FabricObject;
     switch (kind) {
-      case 'rect':
-        object = new this.fabric.Rect({ ...common, width: 160, height: 110, rx: 6, ry: 6 });
+      case 'rect': {
+        const radius = clampCornerRadius(style.cornerRadius ?? 0, 160, 110);
+        object = new this.fabric.Rect({ ...common, width: 160, height: 110, rx: radius, ry: radius });
         break;
+      }
       case 'ellipse':
         object = new this.fabric.Ellipse({ ...common, rx: 90, ry: 60 });
         break;
