@@ -1,0 +1,116 @@
+# Angular Image Editor — full reference for LLMs
+
+> @ascentsparksoftware/angular-image-editor is a standalone, themeable Angular 22 image editor built
+> on Fabric.js v7. Free and open-source (MIT), maintained by Ascentspark. It runs entirely in the
+> browser and emits the edited image as a Blob.
+
+## Installation
+
+```
+npm i @ascentsparksoftware/angular-image-editor fabric
+```
+
+- Peer dependencies: `@angular/core` and `@angular/common` `^22`.
+- Runtime dependency: `fabric` `^7` (lazy-loaded, not in the initial bundle).
+- Optional (AI background tools): `@imgly/background-removal`, `onnxruntime-web`.
+- Optional (HEIC/HEIF import): `heic2any`.
+
+## Quick start
+
+```ts
+import { Component } from '@angular/core';
+import { AspImageEditor } from '@ascentsparksoftware/angular-image-editor';
+
+@Component({
+  selector: 'app-photo',
+  imports: [AspImageEditor],
+  template: `<asp-image-editor mode="advanced" height="520px" (saved)="onSaved($event)" />`,
+})
+export class PhotoComponent {
+  onSaved(blob: Blob): void { /* upload or preview */ }
+}
+```
+
+## Component API — `<asp-image-editor>` (import `AspImageEditor`)
+
+Inputs:
+- `src: string | Blob | null` (default `null`) — image to load.
+- `mode: 'viewer' | 'basic' | 'advanced' | 'full'` (default `'advanced'`).
+- `width` / `height: number | string | null` — px, %, vh or any CSS length / calc(); per-mode minimum enforced.
+- `tools: AspTool[] | null` — explicit allowlist replacing the mode default.
+- `disabledTools: AspTool[]` — subtracted from the resolved set.
+- `filters: AspFilter[] | 'all' | null`.
+- `aspectPresets: AspAspectPreset[]` (default `['free','1:1','4:3','16:9']`).
+- `aspectRatios: AspAspectOption[]` — custom targets, e.g. `aspectOption(1200, 630)`.
+- `exportFormats: AspExportFormat[]` (default `['png','jpeg','webp']`; also `'svg' | 'pdf' | 'json'`).
+- `exportQuality: number` (default `90`, 10–100).
+- `heading: string` (default `'Edit image'`, basic-mode title).
+- `showHistory: boolean` (default `true`).
+- `keyboardEnabled: boolean` (default `true`).
+- `fonts: FontOption[]` (default `DEFAULT_FONTS`).
+- `baseColor: string` (default `'#f4f6f9'`), `accentColor: string` (default `'#1f6feb'`), `themeMode: 'light' | 'dark'` (default `'light'`).
+
+Outputs:
+- `saved: Blob` — export / Save.
+- `canceled: void` — basic Cancel.
+- `imageLoaded: void` — an image finished loading.
+- `exported: Blob` — Export download produced a Blob.
+- `errorOccurred: AspEditorError` — recoverable load/export/init error.
+
+## Modes
+
+- `viewer` — read-only: zoom + export.
+- `basic` — compact card (also openable as a modal); crop/rotate/flip/zoom.
+- `advanced` (default) — full 3-column workspace, curated tool set.
+- `full` — full workspace, every tool + every filter.
+
+## Tools
+
+Transform: crop, rotate, straighten, flip, resize. Draw/annotate: pen, highlighter, eraser, shapes,
+arrow, line, text, redact, magicwand, removebg, selectsubject. Adjust/color: adjust, filters. Object
+ops: select, layers, duplicate, delete, opacity, align, group. Canvas: background, frame.
+
+## Editing tools (page: /editing-tools)
+
+- Crop — non-destructive interactive crop frame (handles, rule-of-thirds, aspect chips); sets the output region used by export; basic mode positions the frame over an off-ratio image.
+- Adjust & filters — brightness/contrast/saturation/vibrance/hue/blur, plus filter looks.
+- Draw — pen, translucent highlighter, eraser.
+- Text — click-to-add editable text; curated + searchable Google web fonts.
+- Shapes — rectangle (sharp → pill corner radius), ellipse, triangle, polygon, star, line, arrow.
+- Redact — solid/blur/pixelate over composited pixels.
+- Magic wand — flood-fill erase by color (no dependencies).
+- AI — Remove background / Cut out subject; in-browser ONNX model, optional dependency, no data leaves the browser.
+- Background & frames — color/gradient background; mat/line/inset/hook/bead frames.
+
+## Canvas & workflow (page: /workflow)
+
+Layers (reorder/lock/opacity/rename/group/align/duplicate), rulers + draggable guides + snapping,
+artboard output size (exact-pixel export), templates (engine `exportScene`/`loadScene`), robust
+large-image and HEIC import (EXIF orientation, downscale, error toast), keyboard shortcuts
+(undo/redo, delete, copy/paste/duplicate, select-all, Esc, hold-Space to pan).
+
+## Export (page: /export)
+
+PNG / JPEG / WEBP, SVG with embedded web fonts (self-contained @font-face), PDF (lazy jsPDF, page
+sized to the artboard/crop region), and a re-editable JSON scene. With an artboard or crop region,
+raster/PDF export render at exactly that pixel size.
+
+## Integration (page: /reference)
+
+- Modal: `inject(AspImageEditorDialog)`, `await dialog.open({ src, heading, aspectPresets })` → `Promise<Blob | null>`.
+- Headless: `EditorEngine` plus pure helpers `resolveTools`, `resolveFilters`, `deriveTheme`, `applyTheme`, `EditHistory`, `DeltaHistory`.
+- Theming: `deriveTheme(baseColor, accentColor, mode)` returns the full `--asp-*` token map.
+
+## Accessibility & security
+
+WCAG AA contrast, keyboard operable, `:focus-visible`, `prefers-reduced-motion`, Trusted-Types-safe
+icons. Consumer-supplied SVGs are rasterized through a sandboxed `<img>` (scripts do not execute);
+validate uploads at your boundary. The optional AI model is fetched at runtime but no image data
+leaves the browser. Security policy: https://github.com/ascentspark/angular-image-editor/blob/main/SECURITY.md
+
+## Links
+
+- Site: https://angular-image-editor.ascentspark.com
+- npm: https://www.npmjs.com/package/@ascentsparksoftware/angular-image-editor
+- GitHub: https://github.com/ascentspark/angular-image-editor
+- License: MIT

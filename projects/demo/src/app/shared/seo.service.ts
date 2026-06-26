@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { inject, Injectable } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
-import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, NavigationStart, Router } from '@angular/router';
 import { filter } from 'rxjs';
 
 import {
@@ -33,6 +33,12 @@ export class SeoService {
     // Sitewide SoftwareApplication structured data (set once).
     this.setJsonLd('app', softwareApplicationLd());
 
+    // Clear any previous page's FAQ block as navigation STARTS, so a page that
+    // sets FAQ in its constructor (which runs before NavigationEnd) keeps it.
+    this.router.events
+      .pipe(filter((e): e is NavigationStart => e instanceof NavigationStart))
+      .subscribe(() => this.clearJsonLd('faq'));
+
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
@@ -53,8 +59,6 @@ export class SeoService {
         this.meta.updateTag({ name: 'twitter:description', content: description });
         this.setCanonical(url);
         this.setJsonLd('page', webPageLd(pageTitle, description, path));
-        // FAQ structured data is page-specific; clear any from a previous page.
-        this.clearJsonLd('faq');
       });
   }
 

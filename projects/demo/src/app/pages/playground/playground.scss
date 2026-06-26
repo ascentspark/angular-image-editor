@@ -617,3 +617,9 @@
   background: var(--surface-2);
   font-size: 0.95rem;
 }
+
+/* When the whole docs site is in dark mode, the playground follows — independent
+   of the editor's own themeMode (which themes the canvas, not these controls). */
+:host-context(html.dark) .pg {
+  @extend .pg--dark;
+}

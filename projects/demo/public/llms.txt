@@ -1,0 +1,42 @@
+# Angular Image Editor
+
+> A standalone, themeable Angular 22 image editor built from scratch on Fabric.js v7. It provides
+> crop, filters, draw, text, shapes, redact, layers, in-browser AI background removal, and export to
+> PNG, JPEG, WEBP, SVG, PDF and JSON — as a single drop-in Angular component. Free and open-source
+> (MIT). Maintained by Ascentspark.
+
+Angular Image Editor is published on npm as `@ascentsparksoftware/angular-image-editor`. You import
+the standalone `AspImageEditor` component, give the host a size, and listen to `(saved)` for the
+edited image as a `Blob`. It is signal-driven, standalone, OnPush and zoneless-compatible, and runs
+entirely in the browser (no backend). Fabric.js is a runtime dependency; Angular is a peer
+dependency. Optional, lazily-loaded dependencies add in-browser AI background removal
+(`@imgly/background-removal`) and HEIC/HEIF import (`heic2any`).
+
+The whole UI palette is derived at runtime from three inputs (baseColor, accentColor, themeMode) with
+guaranteed WCAG AA contrast. Four modes — viewer, basic, advanced, full — set the chrome and default
+tool set; `tools`, `disabledTools` and `filters` refine it. A non-destructive interactive crop, a
+persistent layers panel, rulers/guides/snapping, an output artboard, re-editable templates and robust
+large-image/HEIC import round out the workflow.
+
+## Documentation
+
+- [Playground](https://angular-image-editor.ascentspark.com/): the live editor with theme, mode and size controls.
+- [Getting started](https://angular-image-editor.ascentspark.com/getting-started): install, quick start, and modes.
+- [Configuration](https://angular-image-editor.ascentspark.com/configuration): tools, filters, theming and sizing.
+- [Editing tools](https://angular-image-editor.ascentspark.com/editing-tools): crop, draw, text, shapes, redact, magic wand, AI, background & frames.
+- [Canvas & workflow](https://angular-image-editor.ascentspark.com/workflow): layers, guides, artboard, templates, import, keyboard.
+- [Export](https://angular-image-editor.ascentspark.com/export): PNG, JPEG, WEBP, font-embedded SVG, PDF, and JSON.
+- [Integration & API](https://angular-image-editor.ascentspark.com/reference): modal dialog, headless engine, events, and the full API.
+- [GitHub repository](https://github.com/ascentspark/angular-image-editor): source, README, and security policy.
+- [Fabric.js](https://fabricjs.com): the canvas library this editor is built on.
+
+## Key facts
+
+- Install: `npm i @ascentsparksoftware/angular-image-editor fabric`
+- Component: `<asp-image-editor>` (standalone, import `AspImageEditor`).
+- Key inputs: `src`, `mode`, `width`/`height`, `tools`, `disabledTools`, `filters`, `baseColor`, `accentColor`, `themeMode`, `exportFormats`, `exportQuality`.
+- Key outputs: `saved` (Blob), `exported` (Blob), `canceled`, `imageLoaded`, `errorOccurred`.
+- Modes: `viewer`, `basic`, `advanced`, `full`.
+- Export formats: `png`, `jpeg`, `webp`, `svg` (with embedded fonts), `pdf`, `json`.
+- Modal: inject `AspImageEditorDialog`, call `open(config)` → `Promise<Blob | null>`.
+- License: MIT. Angular 22. Built on Fabric.js v7.
