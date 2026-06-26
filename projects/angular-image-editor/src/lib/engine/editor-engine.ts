@@ -18,6 +18,7 @@ import { centeredCropRect, aspectRatioValue } from './crop';
 import { clampCornerRadius, maxCornerRadius } from './shapes';
 import { embedFontsInSvg } from './svg-fonts';
 import { decodeImageBlob } from './image-decode';
+import { type FrameRect, defaultCropFrame, clampFrame, applyRatio } from './crop-session';
 import { buildFabricFilters, LOOK_FILTERS } from './fabric-filters';
 import { loadFabric, type FabricModule } from './fabric-loader';
 import { resolveExport } from './export-config';
@@ -224,6 +225,15 @@ export class EditorEngine {
   private snapEnabled = true;
   private activeGuides: GuideLine[] = [];
   private artboard: ArtboardSize | null = null;
+  /** Committed crop region (scene coords) — drives the dim mask and raster/PDF export. */
+  private cropRegion: FrameRect | null = null;
+  /** The interactive crop frame while the Crop tool is active, else null. */
+  private cropFrame: Fabric.Rect | null = null;
+  /** Aspect ratio (w/h) constraining the crop frame, or null for free crop. */
+  private cropRatio: number | null = null;
+  /** Per-object interactivity saved while a crop session locks the rest of the scene. */
+  private cropPrevState = new Map<Fabric.FabricObject, { selectable: boolean; evented: boolean }>();
+  private cropPrevUniformScaling = true;
   private rulersEnabled = false;
   private manualGuides: ManualGuide[] = [];
   /** Live preview of a guide being dragged from a ruler (not yet committed). */
@@ -364,12 +374,34 @@ export class EditorEngine {
       this.clearGuides();
     });
     // Edge/center snapping with alignment guides while dragging an object.
-    this.canvas.on('object:moving', (e) => this.applySnap(e.target));
-    this.canvas.on('object:modified', () => this.clearGuides());
+    this.canvas.on('object:moving', (e) => {
+      if (e.target && e.target === this.cropFrame) {
+        this.constrainCropFrame();
+        return;
+      }
+      this.applySnap(e.target);
+    });
+    this.canvas.on('object:scaling', (e) => {
+      if (e.target && e.target === this.cropFrame) {
+        this.constrainCropFrame();
+      }
+    });
+    this.canvas.on('object:modified', (e) => {
+      if (e.target && e.target === this.cropFrame) {
+        this.constrainCropFrame();
+        return;
+      }
+      this.clearGuides();
+    });
     // The artboard mask, manual guides, and snap guides live on the top (overlay)
     // context, redrawn after every render so they survive Fabric clearing the
     // overlay to repaint selection controls. Mask first, then guides on top.
     this.canvas.on('after:render', () => {
+      // Clear stale overlay paint first; during a drag Fabric does not clear the
+      // top context between renders, so the mask/thirds would otherwise smear.
+      if (this.cropFrame) {
+        this.clearOverlay();
+      }
       this.drawArtboardMask();
       this.drawGuides();
       this.notifyViewportIfChanged();
@@ -886,6 +918,170 @@ export class EditorEngine {
     return this.artboard;
   }
 
+  // ---- interactive crop ----------------------------------------------------
+
+  /** True while the interactive crop frame is on the canvas. */
+  isCropping(): boolean {
+    return this.cropFrame !== null;
+  }
+
+  /** True once a crop region has been applied (drives the dim mask + export). */
+  hasCropRegion(): boolean {
+    return this.cropRegion !== null;
+  }
+
+  /**
+   * Begin an interactive crop. Drops a draggable, resizable frame over the canvas
+   * (rule-of-thirds + dimmed surroundings), starting from any existing crop region
+   * or a centered default for the given aspect `ratio` (null = free). The rest of
+   * the scene is made non-interactive until {@link applyCropRegion} or
+   * {@link cancelCrop}.
+   */
+  beginCrop(ratio: number | null): void {
+    if (this.cropFrame) {
+      this.setCropRatio(ratio);
+      return;
+    }
+    this.cropRatio = ratio;
+    const cw = this.canvas.getWidth();
+    const ch = this.canvas.getHeight();
+    const start = applyRatio(this.cropRegion ?? defaultCropFrame(cw, ch, ratio), ratio, cw, ch);
+
+    this.canvas.discardActiveObject();
+    this.cropPrevState.clear();
+    for (const o of this.canvas.getObjects()) {
+      this.cropPrevState.set(o, { selectable: o.selectable ?? true, evented: o.evented ?? true });
+      o.selectable = false;
+      o.evented = false;
+    }
+    this.cropPrevUniformScaling = this.canvas.uniformScaling ?? true;
+    this.canvas.uniformScaling = ratio !== null;
+
+    const frame = new this.fabric.Rect({
+      left: start.left,
+      top: start.top,
+      width: start.width,
+      height: start.height,
+      originX: 'left',
+      originY: 'top',
+      // Near-zero alpha fill so the interior is grabbable for moving the frame.
+      fill: 'rgba(0,0,0,0.001)',
+      stroke: '#ffffff',
+      strokeWidth: 1,
+      strokeUniform: true,
+      cornerColor: '#ffffff',
+      cornerStrokeColor: '#1f6feb',
+      transparentCorners: false,
+      cornerSize: 12,
+      borderColor: 'rgba(255,255,255,0.9)',
+      lockRotation: true,
+      objectCaching: false,
+    });
+    frame.set('aspId', 'cropframe');
+    frame.set('excludeFromExport', true);
+    this.applyCropControls(frame, ratio);
+    frame.setControlsVisibility({ mtr: false });
+    this.cropFrame = frame;
+    this.canvas.add(frame);
+    this.canvas.setActiveObject(frame);
+    this.canvas.renderAll();
+  }
+
+  /** Reshape the active crop frame to a new aspect `ratio` (null = free). */
+  setCropRatio(ratio: number | null): void {
+    this.cropRatio = ratio;
+    const f = this.cropFrame;
+    if (!f) {
+      return;
+    }
+    this.canvas.uniformScaling = ratio !== null;
+    const cw = this.canvas.getWidth();
+    const ch = this.canvas.getHeight();
+    const rect = applyRatio(this.cropFrameRect() ?? defaultCropFrame(cw, ch, ratio), ratio, cw, ch);
+    f.set({ left: rect.left, top: rect.top, width: rect.width, height: rect.height, scaleX: 1, scaleY: 1 });
+    this.applyCropControls(f, ratio);
+    f.setCoords();
+    this.canvas.renderAll();
+  }
+
+  /** Only corner handles when an aspect ratio is locked; all handles when free. */
+  private applyCropControls(frame: Fabric.Rect, ratio: number | null): void {
+    const free = ratio === null;
+    frame.setControlsVisibility({
+      tl: true,
+      tr: true,
+      bl: true,
+      br: true,
+      ml: free,
+      mr: free,
+      mt: free,
+      mb: free,
+    });
+  }
+
+  /** Keep the dragged/resized crop frame within the canvas (and on-ratio). */
+  private constrainCropFrame(): void {
+    const f = this.cropFrame;
+    if (!f) {
+      return;
+    }
+    const cw = this.canvas.getWidth();
+    const ch = this.canvas.getHeight();
+    const raw: FrameRect = {
+      left: f.left ?? 0,
+      top: f.top ?? 0,
+      width: (f.width ?? 0) * (f.scaleX ?? 1),
+      height: (f.height ?? 0) * (f.scaleY ?? 1),
+    };
+    const rect = this.cropRatio ? applyRatio(raw, this.cropRatio, cw, ch) : clampFrame(raw, cw, ch);
+    f.set({ left: rect.left, top: rect.top, width: rect.width, height: rect.height, scaleX: 1, scaleY: 1 });
+    f.setCoords();
+    this.canvas.requestRenderAll();
+  }
+
+  /** Commit the crop frame as the output region and end the session. */
+  applyCropRegion(): void {
+    const rect = this.cropFrameRect();
+    this.endCropSession();
+    if (rect) {
+      this.cropRegion = rect;
+      // A crop region supersedes a centered artboard preset.
+      this.artboard = null;
+    }
+    this.clearOverlay();
+    this.canvas.renderAll();
+  }
+
+  /** End the crop session without applying (the previous region is kept). */
+  cancelCrop(): void {
+    this.endCropSession();
+    this.clearOverlay();
+    this.canvas.renderAll();
+  }
+
+  /** Clear any committed crop region (back to the full canvas). */
+  clearCropRegion(): void {
+    this.cropRegion = null;
+    this.clearOverlay();
+    this.canvas.renderAll();
+  }
+
+  /** Remove the crop frame and restore the rest of the scene's interactivity. */
+  private endCropSession(): void {
+    const frame = this.cropFrame;
+    this.cropFrame = null;
+    if (frame) {
+      this.canvas.remove(frame);
+    }
+    this.canvas.uniformScaling = this.cropPrevUniformScaling;
+    for (const [o, state] of this.cropPrevState) {
+      o.selectable = state.selectable;
+      o.evented = state.evented;
+    }
+    this.cropPrevState.clear();
+    this.canvas.discardActiveObject();
+  }
+
   /**
    * The artboard's on-canvas rectangle in scene coordinates: the largest
    * centered rectangle of the artboard's aspect ratio that fits the canvas.
@@ -907,12 +1103,15 @@ export class EditorEngine {
     return { left: (cw - width) / 2, top: (ch - height) / 2, width, height };
   }
 
-  /** Render the artboard region to a data URL at exactly the artboard pixel size. */
+  /** Render the output region to a data URL at its target pixel size. */
   private artboardDataUrl(format: 'png' | 'jpeg' | 'webp', quality: number): string {
-    const rect = this.artboardRect();
-    if (!rect || !this.artboard) {
+    const rect = this.outputRect();
+    if (!rect) {
       return this.canvas.toDataURL({ format, quality, multiplier: 1 });
     }
+    // A centered artboard targets its preset pixel width; a crop region exports at
+    // scene resolution (multiplier 1).
+    const multiplier = !this.cropRegion && this.artboard ? this.artboard.width / rect.width : 1;
     return this.canvas.toDataURL({
       format,
       quality,
@@ -920,13 +1119,30 @@ export class EditorEngine {
       top: rect.top,
       width: rect.width,
       height: rect.height,
-      multiplier: this.artboard.width / rect.width,
+      multiplier,
     });
   }
 
-  /** Dim the canvas outside the artboard and outline it, on the overlay context. */
+  /** Output pixel size of the current region (crop region in scene px, else artboard preset). */
+  private outputSize(): { width: number; height: number } | null {
+    if (this.cropRegion) {
+      return {
+        width: Math.round(this.cropRegion.width),
+        height: Math.round(this.cropRegion.height),
+      };
+    }
+    return this.artboard;
+  }
+
+  /**
+   * Dim the canvas outside the current output region and outline it, on the
+   * overlay context. During an interactive crop the region is the live crop
+   * frame (with a rule-of-thirds grid and no extra outline, since Fabric draws
+   * the frame and its handles); otherwise it is the committed crop/artboard.
+   */
   private drawArtboardMask(): void {
-    const rect = this.artboardRect();
+    const cropping = this.cropFrame !== null;
+    const rect = cropping ? this.cropFrameRect() : this.outputRect();
     if (!rect) {
       return;
     }
@@ -947,22 +1163,61 @@ export class EditorEngine {
     const w = br.x - tl.x;
     const h = br.y - tl.y;
     ctx.save();
-    // Dim the four bands around the artboard (not a composite punch-through, so
-    // it is independent of any prior overlay content).
+    // Dim the four bands around the region (not a composite punch-through, so it
+    // is independent of any prior overlay content).
     ctx.fillStyle = 'rgba(17, 21, 30, 0.46)';
     ctx.fillRect(0, 0, cw, y);
     ctx.fillRect(0, y + h, cw, ch - (y + h));
     ctx.fillRect(0, y, x, h);
     ctx.fillRect(x + w, y, cw - (x + w), h);
-    // Two-tone outline reads on any background.
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
-    ctx.setLineDash([]);
-    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
-    ctx.strokeStyle = '#ffffff';
-    ctx.setLineDash([5, 4]);
-    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    if (cropping) {
+      // Rule-of-thirds grid; the frame's own stroke + Fabric handles are the outline.
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([]);
+      for (let i = 1; i <= 2; i += 1) {
+        const gx = x + (w * i) / 3;
+        const gy = y + (h * i) / 3;
+        ctx.beginPath();
+        ctx.moveTo(gx, y);
+        ctx.lineTo(gx, y + h);
+        ctx.moveTo(x, gy);
+        ctx.lineTo(x + w, gy);
+        ctx.stroke();
+      }
+    } else {
+      // Two-tone outline reads on any background.
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.setLineDash([]);
+      ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+      ctx.strokeStyle = '#ffffff';
+      ctx.setLineDash([5, 4]);
+      ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    }
     ctx.restore();
+  }
+
+  /** The current output region (committed crop, else centered artboard), scene coords. */
+  private outputRect(): FrameRect | null {
+    if (this.cropRegion) {
+      return this.cropRegion;
+    }
+    return this.artboardRect();
+  }
+
+  /** The live crop frame's rectangle in scene coordinates (bakes its scale). */
+  private cropFrameRect(): FrameRect | null {
+    const f = this.cropFrame;
+    if (!f) {
+      return null;
+    }
+    return {
+      left: f.left ?? 0,
+      top: f.top ?? 0,
+      width: (f.width ?? 0) * (f.scaleX ?? 1),
+      height: (f.height ?? 0) * (f.scaleY ?? 1),
+    };
   }
 
   /** Create an engine bound to a `<canvas>` element. */
@@ -2210,7 +2465,7 @@ export class EditorEngine {
         removable: true,
       };
     });
-    return layers.filter((l) => l.id !== '').reverse();
+    return layers.filter((l) => l.id !== '' && l.id !== 'cropframe').reverse();
   }
 
   private findById(id: string): Fabric.FabricObject | null {
@@ -2418,9 +2673,9 @@ export class EditorEngine {
    * or the full canvas, and the image is the matching region. jsPDF is lazy-loaded.
    */
   private async exportPdf(quality: number): Promise<Blob> {
-    const art = this.artboard;
-    const width = art ? art.width : this.canvas.getWidth();
-    const height = art ? art.height : this.canvas.getHeight();
+    const out = this.outputSize();
+    const width = out ? out.width : this.canvas.getWidth();
+    const height = out ? out.height : this.canvas.getHeight();
     const dataUrl = this.artboardDataUrl('jpeg', quality);
     const { jsPDF } = await import('jspdf');
     const pdf = new jsPDF({

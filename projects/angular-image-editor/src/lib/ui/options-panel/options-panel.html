@@ -103,6 +103,19 @@
           </div>
         </div>
 
+        <p class="asp-hint">
+          <asp-icon name="info" [size]="13" />
+          Drag the frame and its handles to choose the area to keep, then Apply.
+        </p>
+        <div class="asp-btn-row">
+          <button type="button" class="asp-btn-accent" (click)="applyCrop.emit()">Apply crop</button>
+          <button type="button" class="asp-btn-line" (click)="cancelCrop.emit()">Cancel</button>
+        </div>
+        @if (hasCropRegion()) {
+          <button type="button" class="asp-btn-line" (click)="resetCrop.emit()">Reset crop</button>
+        }
+
+        <div class="asp-section-label asp-mt">Rotate &amp; flip</div>
         <div class="asp-btn-row">
           <button type="button" class="asp-btn-line" (click)="rotate.emit(-90)">
             <asp-icon name="rotate-ccw" [size]="16" /> 90°

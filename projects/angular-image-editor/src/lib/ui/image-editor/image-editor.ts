@@ -24,6 +24,7 @@ import {
   type ShapeKind,
 } from '../../engine/editor-engine';
 import type { HistoryStep } from '../../engine/delta-history';
+import { aspectRatioValue } from '../../engine/crop';
 import { drawRuler, type RulerColors } from '../../engine/rulers';
 import { AspIcon } from '../../icons/asp-icon';
 import { FILTER_REGISTRY, TOOL_REGISTRY, type FilterMeta, type ToolMeta } from '../../registry/tool-registry';
@@ -263,7 +264,10 @@ export class AspImageEditor implements OnDestroy {
   protected readonly aiBusy = signal(false);
   protected readonly aiStage = signal('');
   protected readonly aiProgress = signal(0);
+  /** True once a crop region has been applied (enables the panel's Reset). */
+  protected readonly hasCropRegion = signal(false);
   private redactActive = false;
+  private cropActive = false;
 
   protected onMagicTolerance(value: number): void {
     this.magicTolerance.set(value);
@@ -454,6 +458,22 @@ export class AspImageEditor implements OnDestroy {
       if (this.rulersEnabled() && el && this.engineReady() && this.engine) {
         this.renderGuidesOverlay(el);
       }
+    });
+
+    // Crop tool shows an interactive frame; entering begins a session at the
+    // current aspect, leaving without Apply discards the frame (the committed
+    // region, if any, persists).
+    effect(() => {
+      const isCrop = this.activeTool() === 'crop' && this.engineReady();
+      untracked(() => {
+        if (isCrop && !this.cropActive) {
+          this.engine?.beginCrop(this.ratioFromPreset(this.activeCrop()));
+          this.cropActive = true;
+        } else if (!isCrop && this.cropActive) {
+          this.engine?.cancelCrop();
+          this.cropActive = false;
+        }
+      });
     });
 
     // Redact tool shows a positioning marquee; leaving it discards an unapplied
@@ -1146,16 +1166,46 @@ export class AspImageEditor implements OnDestroy {
     this.sync();
   }
 
+  /** Resolve a crop preset to an aspect ratio (w/h), or null for a free crop. */
+  private ratioFromPreset(preset: AspAspectPreset): number | null {
+    return aspectRatioValue(preset);
+  }
+
+  /** Choose a crop aspect preset — reshapes the live crop frame. */
   protected selectCrop(preset: AspAspectPreset): void {
     this.activeCrop.set(preset);
     this.activeAspectLabel.set('');
-    this.engine?.applyCrop(preset);
+    this.engine?.setCropRatio(this.ratioFromPreset(preset));
     this.sync();
   }
 
+  /** Choose a custom crop aspect (e.g. a CMS target) — reshapes the live frame. */
   protected selectCustomCrop(option: AspAspectOption): void {
     this.activeAspectLabel.set(option.label);
-    this.engine?.applyCropRatio(option.ratio);
+    this.engine?.setCropRatio(option.ratio);
+    this.sync();
+  }
+
+  /** Commit the crop frame as the output region, then return to Select. */
+  protected applyCrop(): void {
+    this.engine?.applyCropRegion();
+    this.hasCropRegion.set(true);
+    this.sync();
+    this.selectTool('select');
+  }
+
+  /** Discard the in-progress crop frame and return to Select. */
+  protected cancelCrop(): void {
+    this.engine?.cancelCrop();
+    this.cropActive = false;
+    this.selectTool('select');
+  }
+
+  /** Clear any applied crop region and restart the frame at the current ratio. */
+  protected resetCrop(): void {
+    this.engine?.clearCropRegion();
+    this.hasCropRegion.set(false);
+    this.engine?.beginCrop(this.ratioFromPreset(this.activeCrop()));
     this.sync();
   }
 

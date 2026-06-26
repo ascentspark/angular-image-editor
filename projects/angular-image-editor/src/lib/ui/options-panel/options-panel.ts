@@ -161,6 +161,11 @@ export class AspOptionsPanel {
   readonly selectLook = output<AspFilter | null>();
   readonly selectCrop = output<AspAspectPreset>();
   readonly selectCustomCrop = output<AspAspectOption>();
+  /** True once a crop region is applied — enables the Reset control. */
+  readonly hasCropRegion = input<boolean>(false);
+  readonly applyCrop = output<void>();
+  readonly cancelCrop = output<void>();
+  readonly resetCrop = output<void>();
   readonly rotate = output<number>();
   readonly flip = output<'h' | 'v'>();
   readonly straightenInput = output<number>();
