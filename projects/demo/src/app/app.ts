@@ -10,6 +10,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { NAV } from './nav';
 import { AscGlyph } from './shared/asc-glyph';
+import { SeoService } from './shared/seo.service';
 
 /**
  * The docs-site shell: a branded header (with a light/dark toggle), a grouped
@@ -26,11 +27,13 @@ import { AscGlyph } from './shared/asc-glyph';
 export class App {
   private readonly doc = inject(DOCUMENT);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly seo = inject(SeoService);
 
   protected readonly nav = NAV;
   protected readonly dark = signal(false);
 
   constructor() {
+    this.seo.init();
     if (this.isBrowser) {
       const stored = localStorage.getItem('aie-docs-theme');
       this.setDark(stored === 'dark');
