@@ -18,8 +18,13 @@
     >
       GitHub
     </a>
-    <a href="https://ascentspark.com" target="_blank" rel="noopener" class="hdr__maintainer">
-      <span>by</span>
+    <a
+      href="https://ascentspark.com"
+      target="_blank"
+      rel="noopener"
+      class="hdr__maintainer"
+      aria-label="Ascentspark"
+    >
       <img src="asc-logo-full.svg" alt="Ascentspark" class="hdr__asc" />
     </a>
     <button type="button" class="hdr__dark" (click)="toggleDark()">
@@ -55,3 +60,10 @@
     <router-outlet />
   </main>
 </div>
+
+<footer class="footer">
+  <a href="https://ascentspark.com" target="_blank" rel="noopener" class="footer__brand">
+    <span class="footer__label">Open Source project by</span>
+    <img src="asc-logo-full.svg" alt="Ascentspark" class="footer__logo" />
+  </a>
+</footer>
