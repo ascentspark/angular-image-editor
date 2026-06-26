@@ -241,6 +241,9 @@ export class AspImageEditor implements OnDestroy {
   protected readonly selectionKind = signal<'text' | 'stroke' | null>(null);
   /** True while a web font for the current choice is still loading. */
   protected readonly fontLoading = signal(false);
+  /** Transient error message shown as an in-editor toast (null = hidden). */
+  protected readonly errorToast = signal<string | null>(null);
+  private errorToastTimer: ReturnType<typeof setTimeout> | null = null;
   protected readonly activeFrame = signal('none');
   /** Corner radius (px) for the next rectangle, and the selected rectangle. */
   protected readonly shapeRadius = signal(0);
@@ -473,6 +476,9 @@ export class AspImageEditor implements OnDestroy {
   ngOnDestroy(): void {
     this.guideDraftCleanup?.();
     this.resizeObserver?.disconnect();
+    if (this.errorToastTimer !== null) {
+      clearTimeout(this.errorToastTimer);
+    }
     void this.engine?.destroy();
   }
 
@@ -825,6 +831,29 @@ export class AspImageEditor implements OnDestroy {
   private emitError(code: string, error: unknown): void {
     const message = error instanceof Error ? error.message : String(error);
     this.errorOccurred.emit({ code, message });
+    // Also show a transient in-editor toast so failures are never silent — the
+    // previous behavior on a bad import looked like "nothing happened".
+    this.showErrorToast(message);
+  }
+
+  /** Surface a dismissible error toast, auto-clearing after a few seconds. */
+  private showErrorToast(message: string): void {
+    this.errorToast.set(message);
+    if (this.errorToastTimer !== null) {
+      clearTimeout(this.errorToastTimer);
+    }
+    this.errorToastTimer = setTimeout(() => {
+      this.errorToast.set(null);
+      this.errorToastTimer = null;
+    }, 6000);
+  }
+
+  protected dismissErrorToast(): void {
+    if (this.errorToastTimer !== null) {
+      clearTimeout(this.errorToastTimer);
+      this.errorToastTimer = null;
+    }
+    this.errorToast.set(null);
   }
 
   private observeResize(stage: HTMLElement): void {

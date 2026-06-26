@@ -1,3 +1,13 @@
+@if (errorToast(); as toastMsg) {
+  <div class="asp-toast" role="alert">
+    <asp-icon name="info" [size]="16" />
+    <span class="asp-toast__msg">{{ toastMsg }}</span>
+    <button type="button" class="asp-toast__close" aria-label="Dismiss" (click)="dismissErrorToast()">
+      <asp-icon name="x" [size]="15" />
+    </button>
+  </div>
+}
+
 @switch (layout()) {
   @case ('workspace') {
     <div class="asp-workspace">
