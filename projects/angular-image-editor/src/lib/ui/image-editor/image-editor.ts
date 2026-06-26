@@ -1109,6 +1109,12 @@ export class AspImageEditor implements OnDestroy {
     }
     const format = this.exportFormats()[0] ?? 'png';
     try {
+      // Commit an in-progress crop frame (basic mode crops on Save) before export.
+      if (engine.isCropping()) {
+        engine.applyCropRegion();
+        this.cropActive = false;
+        this.hasCropRegion.set(true);
+      }
       const blob = await engine.exportImage(format, this.exportQ(), this.exportFormats());
       this.saved.emit(blob);
     } catch (error) {
@@ -1117,6 +1123,10 @@ export class AspImageEditor implements OnDestroy {
   }
 
   protected cancel(): void {
+    if (this.engine?.isCropping()) {
+      this.engine.cancelCrop();
+      this.cropActive = false;
+    }
     this.canceled.emit();
   }
 
@@ -1171,18 +1181,28 @@ export class AspImageEditor implements OnDestroy {
     return aspectRatioValue(preset);
   }
 
-  /** Choose a crop aspect preset — reshapes the live crop frame. */
+  /** Start the crop frame if one isn't already active (e.g. from the basic-mode chips). */
+  private ensureCropSession(ratio: number | null): void {
+    if (this.engine && !this.engine.isCropping()) {
+      this.engine.beginCrop(ratio);
+      this.cropActive = true;
+    } else {
+      this.engine?.setCropRatio(ratio);
+    }
+  }
+
+  /** Choose a crop aspect preset — reshapes (or starts) the live crop frame. */
   protected selectCrop(preset: AspAspectPreset): void {
     this.activeCrop.set(preset);
     this.activeAspectLabel.set('');
-    this.engine?.setCropRatio(this.ratioFromPreset(preset));
+    this.ensureCropSession(this.ratioFromPreset(preset));
     this.sync();
   }
 
-  /** Choose a custom crop aspect (e.g. a CMS target) — reshapes the live frame. */
+  /** Choose a custom crop aspect (e.g. a CMS target) — reshapes (or starts) the live frame. */
   protected selectCustomCrop(option: AspAspectOption): void {
     this.activeAspectLabel.set(option.label);
-    this.engine?.setCropRatio(option.ratio);
+    this.ensureCropSession(option.ratio);
     this.sync();
   }
 
