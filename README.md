@@ -17,7 +17,8 @@ A standalone, themeable image editor for Angular, by
 **[✨ Features](#features)** &nbsp;·&nbsp;
 **[🎨 Theming](#theming)** &nbsp;·&nbsp;
 **[🧩 API](#api)** &nbsp;·&nbsp;
-**[🔒 Security](#security)**
+**[🔒 Security](#security)** &nbsp;·&nbsp;
+**[🗺️ Roadmap](#-roadmap)**
 
 </div>
 
@@ -325,6 +326,48 @@ user-uploaded files as untrusted: validate type and size at your upload boundary
 text you overlay from untrusted sources. Exported blobs and PDFs reflect exactly what was drawn. The
 optional AI tools download a model at runtime but never send your image data anywhere. Full policy and
 private reporting: [SECURITY.md](https://github.com/ascentspark/angular-image-editor/blob/main/SECURITY.md).
+
+## 🗺️ Roadmap
+
+> 🚧 **Work in progress for upcoming releases.** Everything below is built on **free** Fabric.js v7 —
+> no paid SDKs, no commercial extensions — there are no firm dates yet, and pull requests are very
+> welcome. The north star is the essential Photoshop / Photopea toolset, delivered the modern-Angular
+> way (signals, standalone, zoneless) and free.
+
+**Selection & masking**
+
+| | Tool | What's coming |
+| :-: | --- | --- |
+| 🟦 | **Marquee & lasso selection** | Rectangular, elliptical and freehand selections that become a reusable mask — fill it, delete it, or confine a filter / adjustment to just the selected pixels. Complements the existing flood-fill magic wand. |
+| 🎭 | **Layer masks** | Non-destructive per-layer masking (Fabric `clipPath`), painted with a brush or a gradient, so you can hide and reveal without touching the pixels underneath. |
+
+**Retouch & paint**
+
+| | Tool | What's coming |
+| :-: | --- | --- |
+| 🩹 | **Clone stamp & healing brush** | Sample pixels from one area and paint them over another to remove blemishes, objects or backgrounds; spot-heal blends the surrounding texture automatically. |
+| 🪣 | **Paint bucket & eyedropper** | Flood-fill a region with a solid color or pattern, and sample any on-canvas color into the active swatch. |
+| 🌗 | **Dodge, burn & smudge** | Brush-based local retouching — lighten, darken, saturate, or push pixels around for quick corrections. |
+
+**Color & tone**
+
+| | Tool | What's coming |
+| :-: | --- | --- |
+| 📈 | **Curves & levels** | Histogram-driven tonal control with per-channel curves and black / white / gamma points, alongside today's slider adjustments. |
+| 🧪 | **Blend modes** | Per-layer compositing (multiply, screen, overlay, soft-light, …) via canvas composite operations, for the standard layer-stack looks. |
+| 🧱 | **Adjustment layers** | Stackable, re-editable color and tone adjustments that affect the layers beneath them, instead of baking changes into a single image. |
+
+**Vector, type & transform**
+
+| | Tool | What's coming |
+| :-: | --- | --- |
+| ✒️ | **Bézier pen & boolean shapes** | A true vector pen with editable nodes for precise paths, plus union / subtract / intersect on shapes to build compound vectors. |
+| 🔤 | **Text on a path & rich type** | Curve text along a path, with letter-spacing, line-height and OpenType controls on top of the current web-font picker. |
+| 🔲 | **Free transform** | Skew, distort, perspective and warp, on top of the existing move / scale / rotate. |
+| 🙂 | **Sticker & emoji library** | Finish the declared `sticker` tool with a searchable emoji / shape / badge library you can drop onto the canvas. |
+
+Following the same approach as the AI tools and magic wand already in the box: modern Angular, and
+free alternatives to capabilities that are otherwise paid in commercial editors.
 
 ## Local development
 
