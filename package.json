@@ -28,7 +28,7 @@
     "heic2any": "^0.0.4",
     "jsondiffpatch": "^0.7.6",
     "jspdf": "^4.2.1",
-    "onnxruntime-web": "1.21.0",
+    "onnxruntime-web": "1.27.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
