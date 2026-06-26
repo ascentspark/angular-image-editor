@@ -5,7 +5,7 @@
 A standalone, themeable image editor for Angular, by
 <a href="https://ascentspark.com" target="_blank" rel="noopener">Ascentspark</a>
 
-<a href="https://ascentspark.com" target="_blank" rel="noopener"><img src="https://cdn.ascentspark.com/assets/images/asc-logo-full.svg" alt="Ascentspark" height="40"></a>
+<a href="https://ascentspark.com" target="_blank" rel="noopener"><img src="https://cdn.ascentspark.com/assets/images/asc-logo-full.svg" alt="Ascentspark" height="72"></a>
 
 ### Crop, filter, draw, redact, layers and in-browser AI background removal — built from scratch on Fabric.js v7
 
