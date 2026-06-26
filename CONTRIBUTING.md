@@ -65,3 +65,26 @@ Before opening a PR, make sure:
 - [ ] No `any` / `@ts-ignore`; no top-level Fabric import in the initial bundle
 
 Keep PRs focused — one logical change per PR. Reference the issue it closes (`Closes #123`).
+
+## Releasing (maintainers)
+
+The library is published to npm with **provenance via OIDC trusted publishing** — no npm token is
+stored anywhere. Publishing is handled by the **Release** GitHub Actions workflow
+(`.github/workflows/release.yml`).
+
+To cut a release:
+
+1. Bump `version` in `projects/angular-image-editor/package.json` (semver).
+2. Commit and push to `main`. CI (`ci.yml`) runs lint + build + tests on the push.
+3. Once CI is green, run the workflow: **Actions → Release → Run workflow** (from `main`), or
+   `gh workflow run release.yml`.
+
+The workflow builds the library, bundles the README + `LICENSE` into the package, publishes
+`@ascentsparksoftware/angular-image-editor@<version>` to npm with `--provenance --access public`,
+and then tags the commit and cuts a matching GitHub Release. It refuses to run from any branch other
+than `main`, and re-running for an already-published version fails fast at the npm step (npm rejects
+re-publishing an existing version).
+
+> One-time setup (already configured): npm must list this repo + the `release.yml` workflow as a
+> **Trusted Publisher** for the package (npmjs.com → package → Settings → Trusted Publisher → GitHub
+> Actions). No `NPM_TOKEN` secret is needed.
