@@ -1,0 +1,157 @@
+<div class="pg" [class.pg--dark]="themeMode() === 'dark'">
+  <section class="hero">
+    <h1 class="hero__title">Angular Image Editor</h1>
+    <p class="hero__lead">
+      A standalone, themeable <strong>Angular 22</strong> image editor built on
+      <strong>Fabric.js v7</strong> — crop, filters, draw, text, redact, shapes, layers, in-browser
+      AI background removal, and PNG/JPEG/WEBP/SVG/PDF export. Free and open-source (MIT).
+    </p>
+    <pre class="hero__install">npm i &#64;ascentsparksoftware/angular-image-editor fabric</pre>
+    <div class="hero__actions">
+      <a class="hero__btn hero__btn--primary" routerLink="/getting-started">Getting started →</a>
+      <a
+        class="hero__btn"
+        href="https://github.com/ascentspark/angular-image-editor"
+        target="_blank"
+        rel="noopener"
+      >
+        GitHub
+      </a>
+    </div>
+  </section>
+
+  <section class="toolbar">
+    <div class="group">
+      <span class="group__label">Theme</span>
+      <div class="chips">
+        @for (preset of presets; track preset.label) {
+          <button
+            type="button"
+            class="chip"
+            [class.chip--active]="base() === preset.base && accent() === preset.accent"
+            (click)="applyPreset(preset)"
+          >
+            <span class="chip__dot" [style.background]="preset.accent"></span>
+            {{ preset.label }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="group">
+      <span class="group__label">Editor theme</span>
+      <div class="theme-cluster">
+        <label class="swatch" title="Base color">
+          <input type="color" [value]="base()" (input)="onBaseInput($event)" aria-label="Base color" />
+          <span class="swatch__txt">Base</span>
+        </label>
+        <label class="swatch" title="Accent color">
+          <input type="color" [value]="accent()" (input)="onAccentInput($event)" aria-label="Accent color" />
+          <span class="swatch__txt">Accent</span>
+        </label>
+        <button type="button" class="mode-toggle" (click)="toggleMode()">
+          {{ themeMode() === 'dark' ? 'Dark' : 'Light' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="group">
+      <span class="group__label">Mode</span>
+      <div class="segmented" role="group" aria-label="Editor mode">
+        @for (m of editorModes; track m) {
+          <button
+            type="button"
+            class="segmented__item"
+            [class.segmented__item--active]="editorMode() === m"
+            (click)="setEditorMode(m)"
+          >
+            {{ m }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="group">
+      <span class="group__label">Canvas size</span>
+      <div class="chips">
+        @for (preset of sizePresets; track preset.value) {
+          <button
+            type="button"
+            class="chip"
+            [class.chip--active]="editorHeight() === preset.value"
+            (click)="setHeight(preset.value)"
+          >
+            {{ preset.label }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="group group--end">
+      <span class="group__label">Demo options</span>
+      <div class="opts">
+        <button
+          type="button"
+          class="toggle"
+          [class.toggle--on]="customTools()"
+          (click)="toggleCustomRail()"
+        >
+          Custom tools
+        </button>
+        <button
+          type="button"
+          class="toggle"
+          [class.toggle--on]="disabled().length"
+          (click)="toggleDisabled()"
+        >
+          Disable filters / frame / redact
+        </button>
+        <button type="button" class="toggle" (click)="toggleCode()">&lt;/&gt; Show code</button>
+        <button type="button" class="btn-brand" (click)="openDialog()">Open dialog</button>
+        @if (lastResult()) {
+          <span class="result">{{ lastResult() }}</span>
+        }
+      </div>
+    </div>
+  </section>
+
+  @if (codeOpen()) {
+    <div class="code-modal" role="dialog" aria-modal="true" aria-label="Render code">
+      <button type="button" class="code-modal__scrim" aria-label="Close" (click)="toggleCode()"></button>
+      <div class="code-modal__panel">
+        <div class="code-modal__head">
+          <div>
+            <strong>Render with these options</strong>
+            <p>This snippet reflects the controls above — copy it into your app.</p>
+          </div>
+          <div class="code-modal__actions">
+            <button type="button" class="toggle" (click)="copyCode()">
+              {{ codeCopied() ? 'Copied ✓' : 'Copy' }}
+            </button>
+            <button type="button" class="toggle" (click)="toggleCode()">Close</button>
+          </div>
+        </div>
+        <pre class="code-modal__code"><code>{{ codeSnippet() }}</code></pre>
+      </div>
+    </div>
+  }
+
+  <main class="stage">
+    @defer (on viewport) {
+      <asp-image-editor
+        [mode]="editorMode()"
+        [tools]="customTools()"
+        [disabledTools]="disabled()"
+        [aspectRatios]="cmsAspects"
+        [exportFormats]="allFormats"
+        [height]="editorHeight()"
+        [baseColor]="base()"
+        [accentColor]="accent()"
+        [themeMode]="themeMode()"
+        (saved)="onSaved($event)"
+      ></asp-image-editor>
+    } @placeholder {
+      <div class="editor-skeleton">Loading editor…</div>
+    }
+  </main>
+</div>
