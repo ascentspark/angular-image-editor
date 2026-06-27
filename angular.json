@@ -27,7 +27,10 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "projects/angular-image-editor/tsconfig.spec.json"
+            "tsConfig": "projects/angular-image-editor/tsconfig.spec.json",
+            "buildTarget": "angular-image-editor:build",
+            "runner": "vitest",
+            "providersFile": "projects/angular-image-editor/src/test-providers.ts"
           }
         },
         "lint": {

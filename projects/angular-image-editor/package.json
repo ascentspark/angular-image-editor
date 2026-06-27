@@ -1,6 +1,6 @@
 {
   "name": "@ascentsparksoftware/angular-image-editor",
-  "version": "22.0.0",
+  "version": "20.0.0",
   "description": "Standalone, themeable Angular 22 image editor built on Fabric.js v7 (MIT). A free, open-source alternative to commercial image editors — crop, rotate, filters, draw, text, redact, export.",
   "keywords": [
     "angular",
@@ -25,8 +25,8 @@
     "url": "https://github.com/ascentspark/angular-image-editor/issues"
   },
   "peerDependencies": {
-    "@angular/common": "^22.0.0",
-    "@angular/core": "^22.0.0"
+    "@angular/common": "^20.0.0",
+    "@angular/core": "^20.0.0"
   },
   "dependencies": {
     "fabric": "^7.4.0",
