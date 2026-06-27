@@ -1,14 +1,14 @@
 name: CI
 on:
   push:
-    branches: [main]
+    branches: ['21.x']
   pull_request:
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   build-test:
-    name: build & test
+    name: Angular 21
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
