@@ -1,7 +1,10 @@
 name: Release
 
 # Publishes the library to npm with provenance via OIDC trusted publishing (no npm token needed).
-# Run it from `main` after bumping the version in projects/angular-image-editor/package.json.
+# Run it from the branch of the line you are releasing, after bumping the version in
+# projects/angular-image-editor/package.json. The npm dist-tag is DERIVED from the branch
+# automatically (main -> latest, <N>.x -> ng<N>), so a maintenance-line release can never clobber
+# `latest`. The version major is also checked against the branch as a safety net.
 # npm must have a Trusted Publisher configured for this package pointing at this repo + workflow
 # (npmjs.com -> package -> Settings -> Trusted Publisher -> GitHub Actions).
 on:
@@ -23,17 +26,29 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: npm
 
-      - name: Verify the release runs from main
+      - name: Derive npm dist-tag from the branch and verify the version
         id: meta
         run: |
           ref='${{ github.ref_name }}'
-          if [ "$ref" != "main" ]; then
-            echo "::error::Refusing to publish from '$ref'. Run Release from main."
+          version="$(node -p "require('./projects/angular-image-editor/package.json').version")"
+          major="${version%%.*}"
+          if [ "$ref" = "main" ]; then
+            tag="latest"
+          elif printf '%s' "$ref" | grep -qE '^[0-9]+\.x$'; then
+            line="${ref%.x}"
+            tag="ng${line}"
+            if [ "$major" != "$line" ]; then
+              echo "::error::Version $version (major $major) does not match release line $ref."
+              exit 1
+            fi
+          else
+            echo "::error::Refusing to publish from branch '$ref'. Run Release from main or an <N>.x branch."
             exit 1
           fi
-          version="$(node -p "require('./projects/angular-image-editor/package.json').version")"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "Publishing @ascentsparksoftware/angular-image-editor@$version with dist-tag 'latest'."
+          echo "major=$major" >> "$GITHUB_OUTPUT"
+          echo "Publishing $version with dist-tag '$tag' from branch '$ref'."
 
       # Trusted publishing (OIDC) needs a recent npm.
       - run: npm install -g npm@latest
@@ -44,16 +59,25 @@ jobs:
       - name: Bundle docs into the package
         run: cp README.md LICENSE dist/angular-image-editor/
 
-      - run: npm publish --provenance --access public --tag latest
+      - run: npm publish --provenance --access public --tag '${{ steps.meta.outputs.tag }}'
         working-directory: dist/angular-image-editor
 
-      # Tag the published commit and cut a GitHub Release. Idempotent: skips if the tag/release
-      # already exists (so re-running for an existing version is safe).
+      # Tag the published commit and cut a GitHub Release. Only the main line (dist-tag `latest`) is
+      # marked the latest GitHub Release; maintenance lines are non-latest so they never displace it.
+      # Idempotent: skips if the tag/release already exists.
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           version='${{ steps.meta.outputs.version }}'
+          disttag='${{ steps.meta.outputs.tag }}'
+          if [ "$disttag" = "latest" ]; then
+            latest_flag="--latest"
+            install="npm i @ascentsparksoftware/angular-image-editor"
+          else
+            latest_flag="--latest=false"
+            install="npm i @ascentsparksoftware/angular-image-editor@$disttag"
+          fi
           if gh release view "v$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Release v$version already exists — skipping."
           else
@@ -61,6 +85,6 @@ jobs:
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
               --title "v$version" \
-              --notes "npm: \`npm i @ascentsparksoftware/angular-image-editor\` — published with provenance. See the [README](https://github.com/$GITHUB_REPOSITORY#readme)." \
-              --latest
+              --notes "npm dist-tag \`$disttag\` — \`$install\`. Published with provenance. See the [README](https://github.com/$GITHUB_REPOSITORY#readme)." \
+              $latest_flag
           fi

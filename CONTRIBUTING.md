@@ -66,6 +66,22 @@ Before opening a PR, make sure:
 
 Keep PRs focused — one logical change per PR. Reference the issue it closes (`Closes #123`).
 
+## Release lines
+
+One package major per Angular major, each on its own long-lived branch:
+
+| Branch | Package | Angular | npm dist-tag |
+| ------ | ------- | ------- | ------------ |
+| `main` | `22.x`  | 22      | `latest`     |
+| `21.x` | `21.x`  | 21      | `ng21`       |
+| `20.x` | `20.x`  | 20      | `ng20`       |
+
+Each branch pins one Angular major in `peerDependencies` and is built against that major (its own
+`package-lock.json` — **never** cherry-pick a lockfile across lines). Land cross-cutting fixes on
+`main` first, then cherry-pick to the older lines newest→oldest. The `NN.x` branches are long-lived
+release lines, not feature branches — ignore GitHub's "create a pull request" banner after pushing
+to them.
+
 ## Releasing (maintainers)
 
 The library is published to npm with **provenance via OIDC trusted publishing** — no npm token is
@@ -74,16 +90,18 @@ stored anywhere. Publishing is handled by the **Release** GitHub Actions workflo
 
 To cut a release:
 
-1. Bump `version` in `projects/angular-image-editor/package.json` (semver).
-2. Commit and push to `main`. CI (`ci.yml`) runs lint + build + tests on the push.
-3. Once CI is green, run the workflow: **Actions → Release → Run workflow** (from `main`), or
-   `gh workflow run release.yml`.
+1. On the line's branch (`main`, `21.x` or `20.x`), bump `version` in
+   `projects/angular-image-editor/package.json` so its **major matches the Angular major** of that
+   line (e.g. `22.1.0` on `main`, `21.0.1` on `21.x`).
+2. Commit and push. CI (`ci.yml`) runs build + tests on the push.
+3. Once CI is green, run the workflow from that branch: **Actions → Release → Run workflow**, or
+   `gh workflow run release.yml --ref <branch>`.
 
-The workflow builds the library, bundles the README + `LICENSE` into the package, publishes
-`@ascentsparksoftware/angular-image-editor@<version>` to npm with `--provenance --access public`,
-and then tags the commit and cuts a matching GitHub Release. It refuses to run from any branch other
-than `main`, and re-running for an already-published version fails fast at the npm step (npm rejects
-re-publishing an existing version).
+The workflow derives the npm dist-tag from the branch (`main → latest`, `NN.x → ngNN`), builds the
+library, bundles the README + `LICENSE`, publishes with `--provenance --access public --tag <tag>`,
+and then tags the commit and cuts a matching GitHub Release (only the `latest` line is marked the
+latest GitHub Release). It refuses to run from any branch that is not `main` or `NN.x`, verifies the
+version major matches the line, and fails fast if the version already exists on npm.
 
 > One-time setup (already configured): npm must list this repo + the `release.yml` workflow as a
 > **Trusted Publisher** for the package (npmjs.com → package → Settings → Trusted Publisher → GitHub

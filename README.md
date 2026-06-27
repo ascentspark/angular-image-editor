@@ -86,10 +86,17 @@ never weighs down your initial bundle.
 ## Install
 
 ```bash
+# Angular 22 (latest)
 npm install @ascentsparksoftware/angular-image-editor fabric
+
+# Angular 21 → npm i @ascentsparksoftware/angular-image-editor@ng21 fabric
+# Angular 20 → npm i @ascentsparksoftware/angular-image-editor@ng20 fabric
 ```
 
-- **Peer dependencies:** `@angular/core` and `@angular/common` `^22`.
+One package major per Angular major (see [Versions](#versions)). Pick the line that matches your app.
+
+- **Peer dependencies:** `@angular/core` and `@angular/common` (`^22` on the latest line, `^21` / `^20`
+  on the maintenance lines).
 - **Runtime dependency:** `fabric` `^7.4.0` (declared by the package; install it alongside). Fabric is
   lazy-loaded on demand, so it never weighs down your initial bundle.
 - **Optional** (only if you want the AI tools): `@imgly/background-removal` and `onnxruntime-web`.
@@ -328,6 +335,20 @@ user-uploaded files as untrusted: validate type and size at your upload boundary
 text you overlay from untrusted sources. Exported blobs and PDFs reflect exactly what was drawn. The
 optional AI tools download a model at runtime but never send your image data anywhere. Full policy and
 private reporting: [SECURITY.md](https://github.com/ascentspark/angular-image-editor/blob/main/SECURITY.md).
+
+## Versions
+
+One package major per Angular major. Install the line that matches your app.
+
+| Package | Angular | npm tag |
+| ------- | ------- | ------- |
+| `22.x`  | 22      | `latest` |
+| `21.x`  | 21      | `ng21`  |
+| `20.x`  | 20      | `ng20`  |
+
+Each line is built and published against its own Angular major (separate `NN.x` branches), with the
+matching `peerDependencies` range. Cross-cutting fixes land on `main` first and are cherry-picked to
+the older lines.
 
 ## 🗺️ Roadmap
 

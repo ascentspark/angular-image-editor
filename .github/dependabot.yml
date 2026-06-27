@@ -1,5 +1,10 @@
 version: 2
+# One npm entry per release line. Each Angular major is pinned to its line, so Angular-major bumps
+# are ignored (handled manually by cutting a new line). Older lines also pin TypeScript's major,
+# because their Angular major cannot take the next TS major (Angular 20 needs TS <6.0, Angular 21
+# needs TS <6.1). Lives only on the default branch; it manages every branch via target-branch.
 updates:
+  # main = Angular 22 (dist-tag latest)
   - package-ecosystem: npm
     directory: "/"
     schedule:
@@ -12,8 +17,45 @@ updates:
       dev-dependencies:
         dependency-type: development
     ignore:
-      # Each Angular major is pinned to one line of this library; major bumps are handled manually.
       - dependency-name: "@angular/*"
+        update-types: ["version-update:semver-major"]
+
+  # 21.x = Angular 21 (dist-tag ng21)
+  - package-ecosystem: npm
+    directory: "/"
+    target-branch: "21.x"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    labels: ["dependencies"]
+    groups:
+      angular:
+        patterns: ["@angular/*", "@angular-devkit/*", "ng-packagr"]
+      dev-dependencies:
+        dependency-type: development
+    ignore:
+      - dependency-name: "@angular/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+
+  # 20.x = Angular 20 (dist-tag ng20)
+  - package-ecosystem: npm
+    directory: "/"
+    target-branch: "20.x"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    labels: ["dependencies"]
+    groups:
+      angular:
+        patterns: ["@angular/*", "@angular-devkit/*", "ng-packagr"]
+      dev-dependencies:
+        dependency-type: development
+    ignore:
+      - dependency-name: "@angular/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions

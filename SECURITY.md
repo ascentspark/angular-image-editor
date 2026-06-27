@@ -14,13 +14,14 @@ Please give us a reasonable window to release a fix before any public disclosure
 
 ## Supported versions
 
-`@ascentsparksoftware/angular-image-editor` is pre-1.0. Security fixes are provided for the latest
-published release:
+Security fixes are provided for the latest release of each supported Angular line:
 
-| Version | Supported |
-|---------|-----------|
-| 0.x (latest) | ✅ |
-| < latest 0.x | ❌ |
+| Version | Angular | Supported |
+|---------|---------|-----------|
+| `22.x`  | 22      | ✅ |
+| `21.x`  | 21      | ✅ |
+| `20.x`  | 20      | ✅ |
+| < these | —       | ❌ |
 
 Once 1.0 ships, this table will track the supported major lines.
 
