@@ -142,6 +142,13 @@ export class AspImageEditor implements OnDestroy {
   readonly disabledTools = input<AspTool[]>([]);
   readonly filters = input<AspFilter[] | 'all' | null>(null);
   readonly aspectPresets = input<AspAspectPreset[]>(['free', '1:1', '4:3', '16:9']);
+  /**
+   * Aspect the crop starts at. When set, the editor opens already constrained to
+   * it (in basic mode the crop frame is live immediately; in advanced/full it is
+   * the crop tool's starting aspect). When unset, a sole non-`free` preset is
+   * auto-selected, otherwise the crop opens unconstrained (`free`).
+   */
+  readonly initialAspect = input<AspAspectPreset | null>(null);
   /** Host-defined crop aspect targets (e.g. CMS sizes); shown after the presets. */
   readonly aspectRatios = input<AspAspectOption[]>([]);
   readonly exportFormats = input<AspExportFormat[]>(['png', 'jpeg', 'webp']);
@@ -876,9 +883,44 @@ export class AspImageEditor implements OnDestroy {
       await this.engine?.loadImage(source);
       this.resetUiState();
       this.sync();
+      this.applyInitialAspect();
       this.imageLoaded.emit();
     } catch (error) {
       this.emitError('load-failed', error);
+    }
+  }
+
+  /**
+   * The aspect a freshly loaded image starts cropped to: an explicit
+   * {@link initialAspect}, else the sole non-`free` {@link aspectPresets} entry,
+   * else `free` (unconstrained).
+   */
+  private resolveInitialAspect(): AspAspectPreset {
+    const explicit = this.initialAspect();
+    if (explicit) {
+      return explicit;
+    }
+    const presets = this.aspectPresets();
+    const constrained = presets.filter((p) => p !== 'free');
+    // Auto-pin the sole ratio only when the consumer did NOT also offer a Free
+    // chip — offering Free means unconstrained is a deliberate, selectable default.
+    if (constrained.length === 1 && !presets.includes('free')) {
+      return constrained[0];
+    }
+    return 'free';
+  }
+
+  /**
+   * After a load, constrain the crop to the resolved initial aspect. In basic
+   * (dialog) mode the crop IS the mode, so start it live; advanced/full only set
+   * the active aspect (the crop tool reads it when the user enters cropping).
+   */
+  private applyInitialAspect(): void {
+    const aspect = this.resolveInitialAspect();
+    this.activeCrop.set(aspect);
+    if (aspect !== 'free' && this.layout() === 'basic') {
+      this.activeAspectLabel.set('');
+      this.ensureCropSession(this.ratioFromPreset(aspect));
     }
   }
 
