@@ -317,6 +317,7 @@ export class AvatarComponent {
       src,
       heading: 'Update profile photo',
       aspectPresets: ['1:1', '4:3', 'free'],
+      initialAspect: '1:1', // open already square & centered
     });
     if (blob) {
       /* user saved — upload `blob` */
@@ -324,6 +325,12 @@ export class AvatarComponent {
   }
 }
 ```
+
+**Starting crop.** Pass `initialAspect` (e.g. `'1:1'`) — on `AspImageEditorDialog.open()` or as the
+`initialAspect` input on `<asp-image-editor>` — to open already constrained to that ratio. If you omit
+it and supply a single non-`free` preset (e.g. `aspectPresets: ['1:1']`), that ratio is auto-selected;
+otherwise the crop opens unconstrained (`free`). In `basic` mode the crop frame is live immediately;
+in `advanced`/`full` it becomes the crop tool's starting aspect.
 
 ## API
 
@@ -338,6 +345,7 @@ class AspImageEditor {
   disabledTools = input<AspTool[]>([]);               // subtracted from the resolved set
   filters     = input<AspFilter[] | 'all' | null>(null);
   aspectPresets = input<AspAspectPreset[]>(['free', '1:1', '4:3', '16:9']);
+  initialAspect = input<AspAspectPreset | null>(null); // open already cropped to this ratio
   aspectRatios  = input<AspAspectOption[]>([]);       // custom CMS targets, e.g. aspectOption(1200,630)
   exportFormats = input<AspExportFormat[]>(['png', 'jpeg', 'webp']); // + 'svg' | 'pdf' | 'json'
   exportQuality = input<number>(90);                  // 10–100
