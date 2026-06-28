@@ -267,7 +267,7 @@ export class AspImageEditor implements OnDestroy {
   /** True once a crop region has been applied (enables the panel's Reset). */
   protected readonly hasCropRegion = signal(false);
   private redactActive = false;
-  private cropActive = false;
+  protected cropActive = false;
 
   protected onMagicTolerance(value: number): void {
     this.magicTolerance.set(value);
@@ -901,7 +901,7 @@ export class AspImageEditor implements OnDestroy {
     this.canRedo.set(engine.canRedo);
     this.historyEntries.set(engine.historyEntries);
     this.historyIndex.set(engine.historyIndex);
-    this.zoomPct.set(engine.zoom);
+    this.zoomPct.set(engine.isImageCropping() ? engine.imageCropZoomPct : engine.zoom);
     this.refreshLayers();
   }
 
@@ -1109,8 +1109,12 @@ export class AspImageEditor implements OnDestroy {
     }
     const format = this.exportFormats()[0] ?? 'png';
     try {
-      // Commit an in-progress crop frame (basic mode crops on Save) before export.
-      if (engine.isCropping()) {
+      // Commit an in-progress crop (basic mode crops on Save) before export.
+      if (engine.isImageCropping()) {
+        engine.applyImageCrop();
+        this.cropActive = false;
+        this.hasCropRegion.set(true);
+      } else if (engine.isCropping()) {
         engine.applyCropRegion();
         this.cropActive = false;
         this.hasCropRegion.set(true);
@@ -1123,7 +1127,10 @@ export class AspImageEditor implements OnDestroy {
   }
 
   protected cancel(): void {
-    if (this.engine?.isCropping()) {
+    if (this.engine?.isImageCropping()) {
+      this.engine.cancelImageCrop();
+      this.cropActive = false;
+    } else if (this.engine?.isCropping()) {
       this.engine.cancelCrop();
       this.cropActive = false;
     }
@@ -1132,6 +1139,13 @@ export class AspImageEditor implements OnDestroy {
 
   protected onZoomSlider(event: Event): void {
     const value = Number((event.target as HTMLInputElement).value);
+    // In avatar crop the slider zooms ONLY the image inside the fixed frame
+    // (100% = cover floor), never the canvas viewport.
+    if (this.engine?.isImageCropping()) {
+      this.engine.zoomImageCrop(value);
+      this.zoomPct.set(value);
+      return;
+    }
     this.engine?.setZoom(value);
     this.sync();
   }
@@ -1183,6 +1197,13 @@ export class AspImageEditor implements OnDestroy {
 
   /** Start the crop frame if one isn't already active (e.g. from the basic-mode chips). */
   private ensureCropSession(ratio: number | null): void {
+    // Basic (dialog/avatar) mode: the crop frame is FIXED; the image pans and
+    // zooms underneath it. Advanced mode keeps the movable-frame crop.
+    if (this.layout() === 'basic') {
+      this.engine?.setImageCropRatio(ratio);
+      this.cropActive = this.engine?.isImageCropping() ?? false;
+      return;
+    }
     if (this.engine && !this.engine.isCropping()) {
       this.engine.beginCrop(ratio);
       this.cropActive = true;

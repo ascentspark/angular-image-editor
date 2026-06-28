@@ -257,6 +257,10 @@
           <canvas #canvasEl></canvas>
         </div>
 
+        @if (cropActive) {
+          <p class="asp-basic__hint">Drag the photo to reposition · use the slider to zoom</p>
+        }
+
         <div>
           <div class="asp-section-label">Aspect ratio</div>
           <div class="asp-chip-row">
