@@ -18,6 +18,8 @@ export interface OpenImageEditorConfig {
   readonly accentColor?: string;
   readonly themeMode?: AspThemeMode;
   readonly aspectPresets?: AspAspectPreset[];
+  /** Aspect the crop opens constrained to (e.g. `'1:1'` for an avatar). */
+  readonly initialAspect?: AspAspectPreset;
   readonly exportFormats?: AspExportFormat[];
 }
 
@@ -70,6 +72,9 @@ export class AspImageEditorDialog {
       ref.setInput('themeMode', config.themeMode ?? 'light');
       if (config.aspectPresets) {
         ref.setInput('aspectPresets', config.aspectPresets);
+      }
+      if (config.initialAspect) {
+        ref.setInput('initialAspect', config.initialAspect);
       }
       if (config.exportFormats) {
         ref.setInput('exportFormats', config.exportFormats);
