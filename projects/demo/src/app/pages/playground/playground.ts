@@ -149,6 +149,7 @@ export class Playground {
       accentColor: this.accent(),
       themeMode: this.themeMode(),
       aspectPresets: ['1:1', '4:3', 'free'],
+      initialAspect: '1:1',
     });
     this.lastResult.set(blob ? `saved ${blob.type} (${blob.size} bytes)` : 'canceled');
   }
