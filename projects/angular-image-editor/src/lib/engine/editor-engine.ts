@@ -234,6 +234,14 @@ export class EditorEngine {
   /** Per-object interactivity saved while a crop session locks the rest of the scene. */
   private cropPrevState = new Map<Fabric.FabricObject, { selectable: boolean; evented: boolean }>();
   private cropPrevUniformScaling = true;
+  /**
+   * Avatar-style crop (basic mode): a FIXED crop frame, with the base image
+   * panned and zoomed underneath it. Distinct from the movable `cropFrame` of the
+   * advanced workspace.
+   */
+  private imageCropActive = false;
+  /** The "cover" scale at which the image exactly fills the fixed crop frame (zoom floor). */
+  private imageCropFitScale = 1;
   private rulersEnabled = false;
   private manualGuides: ManualGuide[] = [];
   /** Live preview of a guide being dragged from a ruler (not yet committed). */
@@ -379,6 +387,10 @@ export class EditorEngine {
         this.constrainCropFrame();
         return;
       }
+      if (this.imageCropActive && e.target === this.baseImage) {
+        this.clampImageToCover();
+        return;
+      }
       this.applySnap(e.target);
     });
     this.canvas.on('object:scaling', (e) => {
@@ -391,6 +403,11 @@ export class EditorEngine {
         this.constrainCropFrame();
         return;
       }
+      if (this.imageCropActive && e.target === this.baseImage) {
+        this.clampImageToCover();
+        this.canvas.requestRenderAll();
+        return;
+      }
       this.clearGuides();
     });
     // The artboard mask, manual guides, and snap guides live on the top (overlay)
@@ -399,7 +416,7 @@ export class EditorEngine {
     this.canvas.on('after:render', () => {
       // Clear stale overlay paint first; during a drag Fabric does not clear the
       // top context between renders, so the mask/thirds would otherwise smear.
-      if (this.cropFrame) {
+      if (this.cropFrame || this.imageCropActive) {
         this.clearOverlay();
       }
       this.drawArtboardMask();
@@ -1066,6 +1083,191 @@ export class EditorEngine {
     this.canvas.renderAll();
   }
 
+  // ---- avatar / image crop (basic mode) ------------------------------------
+
+  /** True while the fixed-frame, pan-and-zoom-the-image crop is active. */
+  isImageCropping(): boolean {
+    return this.imageCropActive;
+  }
+
+  /**
+   * Begin an avatar-style crop: a FIXED crop frame of `ratio`, with the base
+   * image grabbable to pan and zoomable (via {@link zoomImageCrop}) underneath
+   * it. The image always covers the frame — there are no gaps. `null` ratio ends
+   * the image crop (full image).
+   */
+  beginImageCrop(ratio: number | null): void {
+    const image = this.baseImage;
+    if (!image) {
+      return;
+    }
+    if (ratio === null) {
+      this.cancelImageCrop();
+      return;
+    }
+    // No movable frame in this mode; clear any advanced session first.
+    if (this.cropFrame) {
+      this.endCropSession();
+    }
+    this.imageCropActive = true;
+    image.set({
+      selectable: true,
+      evented: true,
+      hasControls: false,
+      hasBorders: false,
+      lockRotation: true,
+      hoverCursor: 'grab',
+      moveCursor: 'grabbing',
+    });
+    this.setImageCropFrame(ratio);
+    this.canvas.setActiveObject(image);
+    this.clearOverlay();
+    this.canvas.renderAll();
+  }
+
+  /** Switch the fixed crop frame to a new aspect (recenters + re-covers the image). */
+  setImageCropRatio(ratio: number | null): void {
+    if (!this.imageCropActive) {
+      this.beginImageCrop(ratio);
+      return;
+    }
+    if (ratio === null) {
+      this.cancelImageCrop();
+      return;
+    }
+    this.setImageCropFrame(ratio);
+    this.clearOverlay();
+    this.canvas.renderAll();
+  }
+
+  /**
+   * Zoom the image within the fixed crop frame. `pct` is 100..400 where 100% is
+   * the "cover" floor (image exactly fills the frame). Zooms about the frame
+   * centre and keeps the frame covered.
+   */
+  zoomImageCrop(pct: number): void {
+    const image = this.baseImage;
+    const frame = this.cropRegion;
+    if (!image || !frame || !this.imageCropActive) {
+      return;
+    }
+    const scale = this.imageCropFitScale * (clamp(pct, 100, 400) / 100);
+    const fcx = frame.left + frame.width / 2;
+    const fcy = frame.top + frame.height / 2;
+    const cur = image.scaleX ?? 1;
+    const k = scale / cur;
+    image.set({
+      scaleX: scale,
+      scaleY: scale,
+      left: fcx + ((image.left ?? 0) - fcx) * k,
+      top: fcy + ((image.top ?? 0) - fcy) * k,
+    });
+    image.setCoords();
+    this.clampImageToCover();
+    this.canvas.requestRenderAll();
+  }
+
+  /** Commit the avatar crop: keep the fixed region as the export region, end the mode. */
+  applyImageCrop(): void {
+    this.artboard = null; // the crop region is the output
+    this.endImageCrop();
+  }
+
+  /** End the avatar crop and clear the region (full image, no crop). */
+  cancelImageCrop(): void {
+    this.cropRegion = null;
+    this.endImageCrop();
+    this.fitBaseImage();
+    this.canvas.requestRenderAll();
+  }
+
+  private endImageCrop(): void {
+    this.imageCropActive = false;
+    this.baseImage?.set({
+      selectable: false,
+      evented: false,
+      hasControls: false,
+      hoverCursor: 'default',
+    });
+    this.canvas.discardActiveObject();
+    this.clearOverlay();
+    this.canvas.renderAll();
+  }
+
+  /** Place the fixed crop frame for `ratio` and cover it with the image, centred. */
+  private setImageCropFrame(ratio: number | null): void {
+    const image = this.baseImage;
+    if (!image) {
+      return;
+    }
+    const cw = this.canvas.getWidth();
+    const ch = this.canvas.getHeight();
+    const frame = defaultCropFrame(cw, ch, ratio, 0.84);
+    this.cropRegion = frame;
+    const cover = this.coverScaleFor(frame);
+    this.imageCropFitScale = cover;
+    image.set({
+      originX: 'center',
+      originY: 'center',
+      scaleX: cover,
+      scaleY: cover,
+      left: frame.left + frame.width / 2,
+      top: frame.top + frame.height / 2,
+    });
+    image.setCoords();
+    this.clampImageToCover();
+  }
+
+  /** The smallest image scale at which its (rotated) bounds still cover `frame`. */
+  private coverScaleFor(frame: FrameRect): number {
+    const image = this.baseImage;
+    if (!image) {
+      return 1;
+    }
+    const iw = image.width ?? 1;
+    const ih = image.height ?? 1;
+    const rad = (((this.rotation + this.straighten) % 360) * Math.PI) / 180;
+    const cos = Math.abs(Math.cos(rad));
+    const sin = Math.abs(Math.sin(rad));
+    const bboxW = iw * cos + ih * sin;
+    const bboxH = iw * sin + ih * cos;
+    return Math.max(frame.width / bboxW, frame.height / bboxH);
+  }
+
+  /** Keep the panned/zoomed image fully covering the fixed crop frame (no gaps). */
+  private clampImageToCover(): void {
+    const image = this.baseImage;
+    const frame = this.cropRegion;
+    if (!image || !frame) {
+      return;
+    }
+    const minScale = this.coverScaleFor(frame);
+    if ((image.scaleX ?? 1) < minScale - 1e-4) {
+      image.set({ scaleX: minScale, scaleY: minScale });
+    }
+    // Fabric updates left/top during a drag but does NOT refresh the cached
+    // corner coords until render, so recompute them before measuring — otherwise
+    // the bounding box is one move stale and the image drifts out of the frame.
+    image.setCoords();
+    const b = image.getBoundingRect();
+    let dx = 0;
+    let dy = 0;
+    if (b.left > frame.left) {
+      dx = frame.left - b.left;
+    } else if (b.left + b.width < frame.left + frame.width) {
+      dx = frame.left + frame.width - (b.left + b.width);
+    }
+    if (b.top > frame.top) {
+      dy = frame.top - b.top;
+    } else if (b.top + b.height < frame.top + frame.height) {
+      dy = frame.top + frame.height - (b.top + b.height);
+    }
+    if (dx !== 0 || dy !== 0) {
+      image.set({ left: (image.left ?? 0) + dx, top: (image.top ?? 0) + dy });
+      image.setCoords();
+    }
+  }
+
   /** Remove the crop frame and restore the rest of the scene's interactivity. */
   private endCropSession(): void {
     const frame = this.cropFrame;
@@ -1141,8 +1343,8 @@ export class EditorEngine {
    * the frame and its handles); otherwise it is the committed crop/artboard.
    */
   private drawArtboardMask(): void {
-    const cropping = this.cropFrame !== null;
-    const rect = cropping ? this.cropFrameRect() : this.outputRect();
+    const cropping = this.cropFrame !== null || this.imageCropActive;
+    const rect = this.cropFrame ? this.cropFrameRect() : this.outputRect();
     if (!rect) {
       return;
     }
@@ -1357,7 +1559,20 @@ export class EditorEngine {
   private applyAngle(): void {
     this.baseImage?.set({ angle: this.rotation + this.straighten });
     this.baseImage?.setCoords();
+    if (this.imageCropActive && this.cropRegion) {
+      this.imageCropFitScale = this.coverScaleFor(this.cropRegion);
+      this.clampImageToCover();
+    }
     this.canvas.requestRenderAll();
+  }
+
+  /** Image-crop zoom as a percentage where 100% is the cover floor (for the slider). */
+  get imageCropZoomPct(): number {
+    const img = this.baseImage;
+    if (!this.imageCropActive || !img || this.imageCropFitScale <= 0) {
+      return 100;
+    }
+    return Math.round(((img.scaleX ?? 1) / this.imageCropFitScale) * 100);
   }
 
   /** Flip the image horizontally or vertically. */
