@@ -40,11 +40,13 @@ never weighs down your initial bundle.
 > ## 🆓 In-browser AI background removal, free
 >
 > One-click background removal is a paid feature in most commercial editors. Here it runs **on-device
-> for free** (MIT): the **Remove background** and **Cut out subject** tools lazy-load an ONNX model
-> and run it entirely in the browser — no image ever leaves the page, no API key, no per-call cost.
-> The model packages are `optionalDependencies`, so if you don't install them the rest of the editor
-> is unaffected and the AI tools simply don't appear. There's also a dependency-free **Magic wand**
-> (flood-fill erase) for clearing flat color regions by click. See [Smart & AI tools](#smart--ai-tools).
+> for free** (MIT): the **Remove background** and **Cut out subject** tools run an ONNX model
+> entirely in the browser — no image ever leaves the page, no API key, no per-call cost.
+> The heavy model packages live **in your app, not in this library** — you opt in by installing them
+> and registering a loader (`provideAspBackgroundRemoval(() => import('@imgly/background-removal'))`).
+> If you don't, the rest of the editor is unaffected and the AI tools simply don't appear. There's
+> also a dependency-free **Magic wand** (flood-fill erase) for clearing flat color regions by click.
+> See [Optional heavy features](#optional-heavy-features-ai--heic).
 
 ## Features
 
@@ -99,8 +101,11 @@ One package major per Angular major (see [Versions](#versions)). Pick the line t
   on the maintenance lines).
 - **Runtime dependency:** `fabric` `^7.4.0` (declared by the package; install it alongside). Fabric is
   lazy-loaded on demand, so it never weighs down your initial bundle.
-- **Optional** (only if you want the AI tools): `@imgly/background-removal` and `onnxruntime-web`.
-  Without them, **Remove background** and **Cut out subject** are simply not shown.
+- **No WASM/ML in the default install.** The core editor's import graph contains only plain‑JS
+  dynamic imports (`fabric`, `jspdf`), so it loads cleanly in any bundler/dev server out of the box —
+  no `optimizeDeps` config, no cache dance. The AI / HEIC features are **opt‑in** and live in your app
+  (see [Optional heavy features](#optional-heavy-features-ai--heic)). Without them, **Remove
+  background**, **Cut out subject**, and HEIC import are simply unavailable; everything else works.
 
 ## Quick start
 
@@ -194,10 +199,56 @@ Fabric filter), or `null` for the mode default.
 | **Remove background** (`removebg`) | In-browser AI that replaces the base image's background with transparency. | optional |
 | **Cut out subject** (`selectsubject`) | In-browser AI that extracts the subject onto its own layer. | optional |
 
-The AI tools lazy-load `@imgly/background-removal`, which fetches and caches an ONNX model at runtime
-and runs it on-device — no image data leaves the browser. A progress bar and busy cursor show while
-the model loads. Install the optional dependencies to enable them; omit them to ship a smaller bundle
-without these two tools. The magic wand has no dependencies and works everywhere.
+The magic wand has no dependencies and works everywhere. The two **AI** tools run
+`@imgly/background-removal` (an ONNX model, on-device — no image data leaves the browser); HEIC/HEIF
+import uses `heic2any`. Both are opt-in — see below.
+
+### Optional heavy features (AI + HEIC)
+
+`@imgly/background-removal` (with `onnxruntime-web`) and `heic2any` ship **WASM, web workers and deep
+CJS graphs** that dev-server bundlers — Vite's dependency optimizer in particular — cannot pre-bundle
+reliably. If those packages lived inside this library's import graph, **every** consumer's bundler
+would have to deal with them the moment the editor opened, whether or not they used the feature — which
+is exactly what caused intermittent `Failed to fetch dynamically imported module` / `504 (Outdated
+Optimize Dep)` errors and blank canvases in earlier versions.
+
+So the core editor **does not import them**. Instead you opt in by installing the package you want and
+registering a loader. The heavy `import()` then lives in **your** bundle, where you own the config:
+
+```bash
+# only if you want these features
+npm install @imgly/background-removal onnxruntime-web   # AI background removal / cut-out
+npm install heic2any                                    # HEIC/HEIF import
+```
+
+```ts
+// app.config.ts
+import {
+  provideAspBackgroundRemoval,
+  provideAspHeicDecoder,
+} from '@ascentsparksoftware/angular-image-editor';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    // …
+    provideAspBackgroundRemoval(() => import('@imgly/background-removal')),
+    provideAspHeicDecoder(() => import('heic2any')),
+  ],
+};
+```
+
+- Provide **only what you need** — register just `provideAspHeicDecoder` and the AI tools stay hidden,
+  or neither and you get the lean default editor.
+- When a loader is absent, the matching tool is **removed from the rail** (and HEIC import throws a
+  clear, catchable error) — nothing breaks.
+- A progress bar and busy cursor show while the model loads on first AI use.
+
+> **Migrating from ≤ 22.0.2 / 21.0.2 / 20.0.2:** these packages used to be `optionalDependencies` that
+> the library `import()`ed for you. They no longer are. If you use the AI/HEIC tools, add the two
+> `provide…` calls above (and keep the packages in your `dependencies`). If you don't, just remove the
+> packages — your install gets smaller and the editor loads with zero WASM. This is a behavioural
+> change shipped as a **patch** because the public type/component API is unchanged; see
+> [Versions](#versions).
 
 ## Theming
 
@@ -348,7 +399,23 @@ One package major per Angular major. Install the line that matches your app.
 
 Each line is built and published against its own Angular major (separate `NN.x` branches), with the
 matching `peerDependencies` range. Cross-cutting fixes land on `main` first and are cherry-picked to
-the older lines.
+the older lines, so the **same fix** ships across all supported Angular versions on the same day.
+
+**How to read the version number.** The **major** is the Angular major it targets — `22.x` is for
+Angular 22, `21.x` for Angular 21, `20.x` for Angular 20. Within a line we follow semver: the
+**patch** (`22.0.2 → 22.0.3`) is a backward-compatible fix, the **minor** (`22.0.x → 22.1.0`) adds
+backward-compatible features. There is no independent "library 1.x / 2.x" track to reconcile against
+your Angular version — the major *is* the Angular version, so picking the right line is unambiguous and
+`npm update` within a line is always safe.
+
+**Why a fix can change behaviour in a patch.** Semver is about the **public API contract**
+(components, inputs/outputs, exported types, DI tokens), not internal mechanics. A release that leaves
+that contract untouched is a patch even if it changes *how* something works under the hood — e.g.
+`22.0.3` moved the optional AI/HEIC packages out of the core import graph (see
+[Optional heavy features](#optional-heavy-features-ai--heic)). No exported symbol changed, so it is a
+patch; the only action needed is for apps that used those tools to register a loader. Pin or range
+your dependency the usual way (`^22.0.0` to take patches/minors automatically); read the release notes
+when a patch's notes call out a migration step like this one.
 
 ## 🗺️ Roadmap
 
