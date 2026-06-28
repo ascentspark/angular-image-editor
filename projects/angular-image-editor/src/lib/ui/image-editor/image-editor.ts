@@ -84,6 +84,15 @@ const MODE_MIN: Record<AspMode, { width: string; height: string }> = {
   full: { width: '640px', height: '460px' },
 };
 
+/**
+ * Width the `basic` (dialog card) layout hugs by default. MUST stay in sync with
+ * `.asp-basic { max-width }` in image-editor.css. `basic` is a self-contained card,
+ * so the host sizes to this rather than stretching to fill (and paint) its
+ * container — otherwise, mounted in a modal scrim, the host becomes a
+ * full-viewport baseColor panel sitting behind the card.
+ */
+const BASIC_DIALOG_WIDTH = '520px';
+
 /** Resolve a host-supplied size to a CSS length (number → px), or a fallback. */
 function toCssSize(value: AspSize | null | undefined, fallback: string): string {
   if (value === null || value === undefined || value === '') {
@@ -383,13 +392,20 @@ export class AspImageEditor implements OnDestroy {
     // the change and resizes the canvas.
     effect(() => {
       const el = this.host.nativeElement;
-      const min = MODE_MIN[this.mode()];
-      el.style.width = toCssSize(this.width(), '100%');
-      el.style.height = toCssSize(this.height(), '100%');
+      const mode = this.mode();
+      const min = MODE_MIN[mode];
+      // `basic` is a self-contained dialog CARD: it hugs its content (a fixed
+      // width, content height) instead of stretching to fill its container. The
+      // other modes fill the host so the workspace can use the available space.
+      const isBasic = mode === 'basic';
+      el.style.width = toCssSize(this.width(), isBasic ? `min(${BASIC_DIALOG_WIDTH}, 100%)` : '100%');
+      el.style.height = toCssSize(this.height(), isBasic ? 'auto' : '100%');
       // Cap the min-width to the available space so the editor never forces
       // horizontal overflow on a narrow screen; the layout reflows instead.
       el.style.minWidth = `min(${min.width}, 100%)`;
-      el.style.minHeight = min.height;
+      // No min-height in `basic`, or a dialog scrim would show a baseColor strip
+      // below the card (the host's background extending past the card's content).
+      el.style.minHeight = isBasic ? '0px' : min.height;
     });
 
     // Show a progress cursor over the editor while a web font is fetching.
