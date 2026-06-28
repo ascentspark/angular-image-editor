@@ -24,6 +24,7 @@ import {
   type ShapeKind,
 } from '../../engine/editor-engine';
 import type { HistoryStep } from '../../engine/delta-history';
+import { ASP_BACKGROUND_REMOVAL_LOADER, ASP_HEIC_DECODER_LOADER } from '../../providers';
 import { aspectRatioValue } from '../../engine/crop';
 import { drawRuler, type RulerColors } from '../../engine/rulers';
 import { AspIcon } from '../../icons/asp-icon';
@@ -167,6 +168,13 @@ export class AspImageEditor implements OnDestroy {
   private readonly rulerLeftRef = viewChild<ElementRef<HTMLCanvasElement>>('rulerLeftEl');
   private readonly guidesOverlayRef = viewChild<ElementRef<HTMLCanvasElement>>('guidesOverlayEl');
 
+  // ---- optional heavy-feature loaders (consumer-provided via DI) -----------
+  // Null unless the app opts in with provideAspBackgroundRemoval / provideAspHeicDecoder.
+  // Keeping these out of the core import graph is what lets the editor load in any
+  // consumer's dev server without WASM/worker pre-bundling failures.
+  private readonly bgRemovalLoader = inject(ASP_BACKGROUND_REMOVAL_LOADER, { optional: true });
+  private readonly heicLoader = inject(ASP_HEIC_DECODER_LOADER, { optional: true });
+
   // ---- engine + readiness --------------------------------------------------
   private engine: EditorEngine | null = null;
   private resizeObserver: ResizeObserver | null = null;
@@ -175,9 +183,14 @@ export class AspImageEditor implements OnDestroy {
   protected readonly engineReady = signal(false);
 
   // ---- resolved configuration ----------------------------------------------
-  protected readonly resolvedToolKeys = computed<AspTool[]>(() =>
-    resolveTools(this.mode(), this.tools(), this.disabledTools()),
-  );
+  protected readonly resolvedToolKeys = computed<AspTool[]>(() => {
+    // The AI cut-out tools only work when a background-removal loader is wired,
+    // so hide them otherwise — the flood-fill Magic wand needs no dependency and stays.
+    const disabled = this.bgRemovalLoader
+      ? this.disabledTools()
+      : [...this.disabledTools(), 'removebg' as AspTool, 'selectsubject' as AspTool];
+    return resolveTools(this.mode(), this.tools(), disabled);
+  });
   protected readonly resolvedTools = computed<ToolMeta[]>(() =>
     this.resolvedToolKeys().map((t) => TOOL_REGISTRY[t]),
   );
@@ -782,7 +795,12 @@ export class AspImageEditor implements OnDestroy {
         this.resizeObserver?.disconnect();
         await this.engine?.destroy();
         const { width, height } = stageSize(stage);
-        this.engine = await EditorEngine.create(canvas, { width, height });
+        this.engine = await EditorEngine.create(canvas, {
+          width,
+          height,
+          backgroundRemovalLoader: this.bgRemovalLoader,
+          heicDecoderLoader: this.heicLoader,
+        });
         this.engine.setSelectionListener((info) => this.onSelectionChange(info));
         this.engine.setLayersListener(() => this.refreshLayers());
         this.engine.setViewportListener(() => this.rulerVersion.update((v) => v + 1));

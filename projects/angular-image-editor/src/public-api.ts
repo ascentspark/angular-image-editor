@@ -60,6 +60,23 @@ export {
 export { EditHistory, type HistoryEntry } from './lib/engine/history';
 export { DeltaHistory, type HistoryStep } from './lib/engine/delta-history';
 
+// Optional heavy features — opt in by PROVIDING a loader so the WASM/ML packages
+// live in the consumer's bundle, never the core library's import graph.
+export {
+  ASP_BACKGROUND_REMOVAL_LOADER,
+  ASP_HEIC_DECODER_LOADER,
+  provideAspBackgroundRemoval,
+  provideAspHeicDecoder,
+} from './lib/providers';
+export type {
+  AspBackgroundRemovalLoader,
+  AspBackgroundRemovalModule,
+  AspHeicDecoderLoader,
+  AspHeicDecoderModule,
+  RemoveBackgroundFn,
+  Heic2AnyFn,
+} from './lib/engine/loaders';
+
 // Theming — derive and apply the editor's --asp-* palette from 3 inputs.
 export { deriveTheme, type AspThemeMode } from './lib/theme/derive-theme';
 export { applyTheme } from './lib/theme/apply-theme';
