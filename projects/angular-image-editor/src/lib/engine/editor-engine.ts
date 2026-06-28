@@ -1164,15 +1164,16 @@ export class EditorEngine {
     const h = br.y - tl.y;
     ctx.save();
     // Dim the four bands around the region (not a composite punch-through, so it
-    // is independent of any prior overlay content).
-    ctx.fillStyle = 'rgba(17, 21, 30, 0.46)';
+    // is independent of any prior overlay content). Stronger while actively
+    // cropping so the kept area clearly stands out, light/dark alike.
+    ctx.fillStyle = cropping ? 'rgba(12, 16, 24, 0.62)' : 'rgba(17, 21, 30, 0.46)';
     ctx.fillRect(0, 0, cw, y);
     ctx.fillRect(0, y + h, cw, ch - (y + h));
     ctx.fillRect(0, y, x, h);
     ctx.fillRect(x + w, y, cw - (x + w), h);
     if (cropping) {
-      // Rule-of-thirds grid; the frame's own stroke + Fabric handles are the outline.
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      // Rule-of-thirds grid inside the crop frame.
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
       ctx.lineWidth = 1;
       ctx.setLineDash([]);
       for (let i = 1; i <= 2; i += 1) {
@@ -1185,6 +1186,25 @@ export class EditorEngine {
         ctx.lineTo(x + w, gy);
         ctx.stroke();
       }
+      // Crisp two-tone border so the crop enclosure is unmistakable on any image,
+      // independent of the Fabric frame's own (thin) stroke.
+      ctx.setLineDash([]);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.strokeRect(x, y, w, h);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#ffffff';
+      ctx.strokeRect(x, y, w, h);
+      // Corner brackets — a familiar "crop here" affordance.
+      const c = Math.max(14, Math.min(w, h) * 0.12);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(x, y + c); ctx.lineTo(x, y); ctx.lineTo(x + c, y);
+      ctx.moveTo(x + w - c, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + c);
+      ctx.moveTo(x + w, y + h - c); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w - c, y + h);
+      ctx.moveTo(x + c, y + h); ctx.lineTo(x, y + h); ctx.lineTo(x, y + h - c);
+      ctx.stroke();
     } else {
       // Two-tone outline reads on any background.
       ctx.lineWidth = 1;
