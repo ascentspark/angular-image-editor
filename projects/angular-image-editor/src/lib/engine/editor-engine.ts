@@ -18,6 +18,7 @@ import { centeredCropRect, aspectRatioValue } from './crop';
 import { clampCornerRadius, maxCornerRadius } from './shapes';
 import { embedFontsInSvg } from './svg-fonts';
 import { decodeImageBlob } from './image-decode';
+import type { AspBackgroundRemovalLoader, AspHeicDecoderLoader } from './loaders';
 import { type FrameRect, defaultCropFrame, clampFrame, applyRatio } from './crop-session';
 import { buildFabricFilters, LOOK_FILTERS } from './fabric-filters';
 import { loadFabric, type FabricModule } from './fabric-loader';
@@ -29,6 +30,17 @@ import { ALL_FILTERS, type AspAspectPreset, type AspExportFormat, type AspFilter
 export interface EngineOptions {
   readonly width: number;
   readonly height: number;
+  /**
+   * Loader for AI background removal (`@imgly/background-removal`). When absent,
+   * the Remove-background / Cut-out tools are unavailable. Kept out of the core
+   * import graph on purpose — see `engine/loaders.ts`.
+   */
+  readonly backgroundRemovalLoader?: AspBackgroundRemovalLoader | null;
+  /**
+   * Loader for the HEIC/HEIF decoder (`heic2any`). When absent, importing a
+   * HEIC/HEIF file throws a descriptive error.
+   */
+  readonly heicDecoderLoader?: AspHeicDecoderLoader | null;
 }
 
 export type ShapeKind =
@@ -263,15 +275,20 @@ export class EditorEngine {
   private aiProgressListener: ((info: AiProgress) => void) | null = null;
   private onFontsLoaded: (() => void) | null = null;
   private lastViewportKey = '';
+  /** Consumer-injected loaders for the optional heavy features (may be null). */
+  private readonly bgRemovalLoader: AspBackgroundRemovalLoader | null;
+  private readonly heicLoader: AspHeicDecoderLoader | null;
 
   /** Snap distance in *screen* pixels; divided by zoom to get a scene threshold. */
   private static readonly SNAP_PX = 7;
   /** Pointer proximity (screen px) for grabbing a manual guide on the canvas. */
   private static readonly GUIDE_GRAB_PX = 6;
 
-  private constructor(fabric: FabricModule, canvas: Fabric.Canvas) {
+  private constructor(fabric: FabricModule, canvas: Fabric.Canvas, options: EngineOptions) {
     this.fabric = fabric;
     this.canvas = canvas;
+    this.bgRemovalLoader = options.backgroundRemovalLoader ?? null;
+    this.heicLoader = options.heicDecoderLoader ?? null;
     this.history = new DeltaHistory('Opened editor', this.snapshot());
     const notify = (): void => {
       this.notifySelection();
@@ -1452,7 +1469,7 @@ export class EditorEngine {
       backgroundColor: undefined,
       selection: true,
     });
-    return new EditorEngine(fabric, canvas);
+    return new EditorEngine(fabric, canvas, options);
   }
 
   // ---- image loading -------------------------------------------------------
@@ -1475,10 +1492,10 @@ export class EditorEngine {
     }
     if (typeof src === 'string') {
       return src.startsWith('data:')
-        ? decodeImageBlob(dataUrlToBlob(src), MAX_IMPORT_DIM)
+        ? decodeImageBlob(dataUrlToBlob(src), MAX_IMPORT_DIM, '', this.heicLoader)
         : src;
     }
-    return decodeImageBlob(src, MAX_IMPORT_DIM, (src as File).name ?? '');
+    return decodeImageBlob(src, MAX_IMPORT_DIM, (src as File).name ?? '', this.heicLoader);
   }
 
   /**
@@ -2320,6 +2337,11 @@ export class EditorEngine {
     this.aiProgressListener = cb;
   }
 
+  /** Whether AI background removal has a loader wired (drives feature gating). */
+  get backgroundRemovalAvailable(): boolean {
+    return this.bgRemovalLoader !== null;
+  }
+
   /**
    * In-browser AI background removal. Segments the target image (the base image,
    * or a selected image layer) and either replaces it with the cut-out subject
@@ -2338,8 +2360,14 @@ export class EditorEngine {
     if (!source) {
       return false;
     }
+    if (!this.bgRemovalLoader) {
+      throw new Error(
+        'Background removal is unavailable. Install "@imgly/background-removal" and register it ' +
+          "with provideAspBackgroundRemoval(() => import('@imgly/background-removal')).",
+      );
+    }
     this.aiProgressListener?.({ stage: 'loading', progress: 0 });
-    const { removeBackground } = await import('@imgly/background-removal');
+    const { removeBackground } = await this.bgRemovalLoader();
     const cutoutBlob = await removeBackground(source, {
       progress: (key: string, current: number, total: number) => {
         const stage = key.startsWith('fetch') ? 'loading' : 'processing';

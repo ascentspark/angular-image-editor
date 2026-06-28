@@ -3,14 +3,17 @@
  *
  * Decodes a Blob into a downscaled data URL, honoring EXIF orientation (phone
  * photos are frequently rotated only via EXIF) and converting formats the
- * browser can't decode natively — HEIC/HEIF — through a lazily-loaded optional
- * dependency. Every failure throws a descriptive Error so the caller can surface
- * it, instead of the old `<img>` path that silently produced nothing for HEIC
- * and for images past the browser's decode limits.
+ * browser can't decode natively — HEIC/HEIF — through a consumer-INJECTED
+ * decoder loader (never a direct import; see `loaders.ts`). Every failure throws
+ * a descriptive Error so the caller can surface it, instead of the old `<img>`
+ * path that silently produced nothing for HEIC and for images past the browser's
+ * decode limits.
  *
  * Pure size/format helpers are separated from the browser decode so they can be
  * unit-tested.
  */
+
+import type { AspHeicDecoderLoader, Heic2AnyFn } from './loaders';
 
 const HEIC_RE = /\.(heic|heif)$/i;
 
@@ -49,16 +52,20 @@ export function outputType(sourceType: string): 'image/jpeg' | 'image/png' {
   return /jpe?g/i.test(sourceType ?? '') ? 'image/jpeg' : 'image/png';
 }
 
-/** Convert a HEIC/HEIF blob to a JPEG blob via the optional `heic2any` decoder. */
-async function decodeHeic(blob: Blob): Promise<Blob> {
-  let heic2any: (opts: { blob: Blob; toType?: string; quality?: number }) => Promise<Blob | Blob[]>;
-  try {
-    const mod = await import('heic2any');
-    heic2any = mod.default ?? (mod as unknown as typeof mod.default);
-  } catch {
+/** Convert a HEIC/HEIF blob to a JPEG blob via the consumer-provided `heic2any` loader. */
+async function decodeHeic(blob: Blob, loader: AspHeicDecoderLoader | null): Promise<Blob> {
+  if (!loader) {
     throw new Error(
-      'HEIC/HEIF images need the optional "heic2any" dependency. Install it to import this format.',
+      'HEIC/HEIF import needs a decoder. Install "heic2any" and register it with ' +
+        "provideAspHeicDecoder(() => import('heic2any')).",
     );
+  }
+  let heic2any: Heic2AnyFn;
+  try {
+    const mod = await loader();
+    heic2any = typeof mod === 'function' ? mod : (mod.default as Heic2AnyFn);
+  } catch {
+    throw new Error('The HEIC decoder ("heic2any") could not be loaded.');
   }
   const out = await heic2any({ blob, toType: 'image/jpeg', quality: 0.92 });
   return Array.isArray(out) ? out[0] : out;
@@ -70,9 +77,14 @@ async function decodeHeic(blob: Blob): Promise<Blob> {
  * descriptive Error when the image can't be decoded (unsupported, corrupt, or
  * past the browser's limits) or when no canvas context is available.
  */
-export async function decodeImageBlob(blob: Blob, maxDim: number, name = ''): Promise<string> {
+export async function decodeImageBlob(
+  blob: Blob,
+  maxDim: number,
+  name = '',
+  heicLoader: AspHeicDecoderLoader | null = null,
+): Promise<string> {
   const heic = isHeic(blob.type, name);
-  const source = heic ? await decodeHeic(blob) : blob;
+  const source = heic ? await decodeHeic(blob, heicLoader) : blob;
 
   let bitmap: ImageBitmap;
   try {
