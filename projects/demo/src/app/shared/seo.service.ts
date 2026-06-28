@@ -1,5 +1,5 @@
-import { DOCUMENT } from '@angular/common';
-import { inject, Injectable } from '@angular/core';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, NavigationEnd, NavigationStart, Router } from '@angular/router';
 import { filter } from 'rxjs';
@@ -11,6 +11,8 @@ import {
   softwareApplicationLd,
   webPageLd,
 } from './structured-data';
+
+declare function gtag(command: string, ...args: unknown[]): void;
 
 const DEFAULT_DESCRIPTION =
   'A standalone, themeable Angular 22 image editor built on Fabric.js v7: crop, filters, draw, ' +
@@ -28,6 +30,7 @@ export class SeoService {
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
   private readonly doc = inject(DOCUMENT);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   init(): void {
     // Sitewide SoftwareApplication structured data (set once).
@@ -59,6 +62,16 @@ export class SeoService {
         this.meta.updateTag({ name: 'twitter:description', content: description });
         this.setCanonical(url);
         this.setJsonLd('page', webPageLd(pageTitle, description, path));
+
+        // Explicit GA4 page_view for this SPA navigation (auto page_view is
+        // disabled in index.html so the first load is not double-counted).
+        if (this.isBrowser && typeof gtag === 'function') {
+          gtag('event', 'page_view', {
+            page_title: pageTitle,
+            page_location: url,
+            page_path: e.urlAfterRedirects,
+          });
+        }
       });
   }
 

@@ -22,6 +22,18 @@
     <meta property="og:image" content="https://angular-image-editor.ascentspark.com/og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="https://angular-image-editor.ascentspark.com/og-image.png" />
+
+    <!-- Google Analytics (GA4). Auto page_view is disabled; SeoService sends an
+         explicit page_view per route so SPA navigations are tracked exactly once. -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-J7E5V6918J"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag('js', new Date());
+      gtag('config', 'G-J7E5V6918J', { send_page_view: false });
+    </script>
   </head>
   <body>
     <demo-root></demo-root>
