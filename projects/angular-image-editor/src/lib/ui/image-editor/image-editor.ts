@@ -38,6 +38,7 @@ import type {
   AspAspectPreset,
   AspEditorError,
   AspExportFormat,
+  AspExportTarget,
   AspFilter,
   AspMode,
   AspSize,
@@ -153,6 +154,14 @@ export class AspImageEditor implements OnDestroy {
   readonly aspectRatios = input<AspAspectOption[]>([]);
   readonly exportFormats = input<AspExportFormat[]>(['png', 'jpeg', 'webp']);
   readonly exportQuality = input<number>(90);
+  /**
+   * Pixel size a cropped export should be rendered at, e.g. `{width: 1000,
+   * height: 1000}` for a profile photo. Without it a crop exports at the source
+   * image's own resolution; with it the export is that size, capped at the
+   * source's real pixels (the editor never upscales). An {@link aspectRatios}
+   * option carrying `width`/`height` overrides this while it is selected.
+   */
+  readonly exportTarget = input<AspExportTarget | null>(null);
 
   readonly baseColor = input<string>(FALLBACK_BASE);
   readonly accentColor = input<string>(FALLBACK_ACCENT);
@@ -242,6 +251,12 @@ export class AspImageEditor implements OnDestroy {
   protected readonly activeLook = signal<AspFilter | null>(null);
   protected readonly activeCrop = signal<AspAspectPreset>('free');
   protected readonly activeAspectLabel = signal('');
+  /** Pixel target of the selected custom aspect option, when it declares one. */
+  private readonly activeAspectTarget = signal<AspExportTarget | null>(null);
+  /** The selected aspect option's own size wins over the host-wide default. */
+  private readonly effectiveExportTarget = computed<AspExportTarget | null>(
+    () => this.activeAspectTarget() ?? this.exportTarget(),
+  );
   protected readonly straighten = signal(0);
   /** Available text fonts (host-overridable). */
   readonly fonts = input<FontOption[]>([...DEFAULT_FONTS]);
@@ -432,6 +447,15 @@ export class AspImageEditor implements OnDestroy {
       } else if (current === null || !keys.includes(current)) {
         this.activeTool.set(keys.includes('adjust') ? 'adjust' : keys[0]);
       }
+    });
+
+    // A cropped export renders at this pixel size (capped at the source's real
+    // resolution). Follows the selected aspect option, else the host input.
+    effect(() => {
+      // Read before the optional call: `engine?.m(sig())` would short-circuit
+      // while the engine is still initializing and register no dependency.
+      const target = this.effectiveExportTarget();
+      this.engine?.setExportTarget(target);
     });
 
     // Sync export defaults from inputs.
@@ -856,6 +880,7 @@ export class AspImageEditor implements OnDestroy {
         });
         this.engine.setSnapping(this.snapEnabled());
         this.engine.setArtboard(this.artboard());
+        this.engine.setExportTarget(this.effectiveExportTarget());
         this.engine.setRulersEnabled(this.rulersEnabled());
         this.boundCanvas = canvas;
         this.lastSource = undefined;
@@ -1292,6 +1317,8 @@ export class AspImageEditor implements OnDestroy {
   protected selectCrop(preset: AspAspectPreset): void {
     this.activeCrop.set(preset);
     this.activeAspectLabel.set('');
+    // A preset carries no pixel size, so exports fall back to the host default.
+    this.activeAspectTarget.set(null);
     this.ensureCropSession(this.ratioFromPreset(preset));
     this.sync();
   }
@@ -1299,6 +1326,9 @@ export class AspImageEditor implements OnDestroy {
   /** Choose a custom crop aspect (e.g. a CMS target) — reshapes (or starts) the live frame. */
   protected selectCustomCrop(option: AspAspectOption): void {
     this.activeAspectLabel.set(option.label);
+    this.activeAspectTarget.set(
+      option.width && option.height ? { width: option.width, height: option.height } : null,
+    );
     this.ensureCropSession(option.ratio);
     this.sync();
   }
