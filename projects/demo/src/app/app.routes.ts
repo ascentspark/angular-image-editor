@@ -64,6 +64,13 @@ export const routes: Routes = [
     },
   },
   {
+    // Hidden, unlinked surface the Playwright suite drives. Not in the nav and
+    // not in the sitemap; it exists so the tests get a deterministic editor.
+    path: 'e2e',
+    loadComponent: () => import('./pages/e2e/e2e-harness').then((m) => m.E2eHarness),
+    title: 'E2E harness',
+  },
+  {
     path: 'reference',
     loadComponent: () => import('./pages/reference/reference').then((m) => m.Reference),
     title: 'Integration & API reference — Angular Image Editor',
