@@ -41,13 +41,13 @@
     "@angular/compiler-cli": "^22.1.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
-    "angular-eslint": "22.0.0",
-    "eslint": "^10.3.0",
-    "jsdom": "^28.0.0",
-    "ng-packagr": "^22.0.0",
-    "prettier": "^3.8.1",
-    "typescript": "~6.0.2",
-    "typescript-eslint": "8.60.1",
-    "vitest": "^4.0.8"
+    "angular-eslint": "22.1.0",
+    "eslint": "^10.8.0",
+    "jsdom": "^30.0.1",
+    "ng-packagr": "^22.1.0",
+    "prettier": "^3.9.6",
+    "typescript": "~7.0.2",
+    "typescript-eslint": "8.65.0",
+    "vitest": "^4.1.10"
   }
 }
