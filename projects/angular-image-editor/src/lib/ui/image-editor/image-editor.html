@@ -268,10 +268,20 @@
               <button
                 type="button"
                 class="asp-chip"
-                [class.asp-chip--active]="activeCrop() === preset"
+                [class.asp-chip--active]="activeCrop() === preset && !activeAspectLabel()"
                 (click)="selectCrop(preset)"
               >
                 {{ preset === 'free' ? 'Free' : preset === 'original' ? 'Original' : preset }}
+              </button>
+            }
+            @for (option of aspectRatios(); track option.label) {
+              <button
+                type="button"
+                class="asp-chip"
+                [class.asp-chip--active]="activeAspectLabel() === option.label"
+                (click)="selectCustomCrop(option)"
+              >
+                {{ option.label }}
               </button>
             }
           </div>
