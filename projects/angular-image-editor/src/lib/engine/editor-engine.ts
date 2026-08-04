@@ -23,9 +23,16 @@ import { type FrameRect, defaultCropFrame, clampFrame, applyRatio } from './crop
 import { buildFabricFilters, LOOK_FILTERS } from './fabric-filters';
 import { loadFabric, type FabricModule } from './fabric-loader';
 import { resolveExport } from './export-config';
+import { exportMultiplier, exportPixelSize } from './export-scale';
 import { DeltaHistory, type HistoryStep } from './delta-history';
 import { FILTER_REGISTRY } from '../registry/tool-registry';
-import { ALL_FILTERS, type AspAspectPreset, type AspExportFormat, type AspFilter } from '../types/editor.types';
+import {
+  ALL_FILTERS,
+  type AspAspectPreset,
+  type AspExportFormat,
+  type AspExportTarget,
+  type AspFilter,
+} from '../types/editor.types';
 
 export interface EngineOptions {
   readonly width: number;
@@ -239,6 +246,8 @@ export class EditorEngine {
   private artboard: ArtboardSize | null = null;
   /** Committed crop region (scene coords) — drives the dim mask and raster/PDF export. */
   private cropRegion: FrameRect | null = null;
+  /** Host-requested pixel size for a cropped export; null = full source fidelity. */
+  private exportTarget: AspExportTarget | null = null;
   /** The interactive crop frame while the Crop tool is active, else null. */
   private cropFrame: Fabric.Rect | null = null;
   /** Aspect ratio (w/h) constraining the crop frame, or null for free crop. */
@@ -1093,6 +1102,23 @@ export class EditorEngine {
     this.canvas.renderAll();
   }
 
+  /**
+   * Declare the pixel size a cropped export should be rendered at. The export is
+   * capped at the source image's real resolution — the editor never upscales —
+   * and clearing the target (null) exports the crop at full source fidelity.
+   */
+  setExportTarget(target: AspExportTarget | null): void {
+    this.exportTarget =
+      target && target.width > 0 && target.height > 0
+        ? { width: target.width, height: target.height }
+        : null;
+  }
+
+  /** The pixel size a cropped export is currently targeting, if any. */
+  getExportTarget(): AspExportTarget | null {
+    return this.exportTarget;
+  }
+
   /** Clear any committed crop region (back to the full canvas). */
   clearCropRegion(): void {
     this.cropRegion = null;
@@ -1328,27 +1354,64 @@ export class EditorEngine {
     if (!rect) {
       return this.canvas.toDataURL({ format, quality, multiplier: 1 });
     }
-    // A centered artboard targets its preset pixel width; a crop region exports at
-    // scene resolution (multiplier 1).
-    const multiplier = !this.cropRegion && this.artboard ? this.artboard.width / rect.width : 1;
-    return this.canvas.toDataURL({
-      format,
-      quality,
-      left: rect.left,
-      top: rect.top,
-      width: rect.width,
-      height: rect.height,
-      multiplier,
+    // The region is in scene units, which are display-sized: exporting at 1x
+    // would pin the result to the host's canvas width and throw the photo's real
+    // pixels away. A centered artboard targets its preset width; a crop region
+    // recovers the source pixels beneath it, optionally capped by exportTarget.
+    const multiplier = this.exportMultiplierFor(rect);
+    return this.atIdentityViewport(() =>
+      this.canvas.toDataURL({
+        format,
+        quality,
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+        multiplier,
+      }),
+    );
+  }
+
+  /** The render multiplier for the current output region. */
+  private exportMultiplierFor(rect: FrameRect): number {
+    if (!this.cropRegion) {
+      return this.artboard ? this.artboard.width / rect.width : 1;
+    }
+    return exportMultiplier({
+      regionWidth: rect.width,
+      regionHeight: rect.height,
+      sourcePerScene: this.sourcePerScene(),
+      target: this.exportTarget,
     });
   }
 
-  /** Output pixel size of the current region (crop region in scene px, else artboard preset). */
+  /** Source image pixels packed into each scene unit (1 when there is no image). */
+  private sourcePerScene(): number {
+    const scale = this.baseImage?.scaleX ?? 0;
+    return scale > 0 ? 1 / scale : 1;
+  }
+
+  /**
+   * Run `fn` with the viewport transform reset to identity, so scene-space
+   * rectangles handed to Fabric's cropping options map 1:1 onto the sampled
+   * pixels. Fabric treats those options as viewport-space, so without this a
+   * zoomed or panned canvas samples the wrong area at the wrong size.
+   */
+  private atIdentityViewport<T>(fn: () => T): T {
+    const vpt = [...this.canvas.viewportTransform] as Fabric.TMat2D;
+    this.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    try {
+      return fn();
+    } finally {
+      this.canvas.setViewportTransform(vpt);
+      this.canvas.requestRenderAll();
+    }
+  }
+
+  /** Pixel size of the delivered export (crop region at its export scale, else artboard preset). */
   private outputSize(): { width: number; height: number } | null {
     if (this.cropRegion) {
-      return {
-        width: Math.round(this.cropRegion.width),
-        height: Math.round(this.cropRegion.height),
-      };
+      return exportPixelSize(this.cropRegion, this.exportMultiplierFor(this.cropRegion));
     }
     return this.artboard;
   }
@@ -1957,18 +2020,16 @@ export class EditorEngine {
     }
 
     // Sample the composited region at identity viewport (so region == pixels).
-    const vpt = [...this.canvas.viewportTransform] as Fabric.TMat2D;
-    this.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-    const dataUrl = this.canvas.toDataURL({
-      format: 'png',
-      left: region.left,
-      top: region.top,
-      width: region.width,
-      height: region.height,
-      multiplier: 1,
-    });
-    this.canvas.setViewportTransform(vpt);
-    this.canvas.requestRenderAll();
+    const dataUrl = this.atIdentityViewport(() =>
+      this.canvas.toDataURL({
+        format: 'png',
+        left: region.left,
+        top: region.top,
+        width: region.width,
+        height: region.height,
+        multiplier: 1,
+      }),
+    );
 
     const patch = await this.fabric.FabricImage.fromURL(dataUrl, {}, {});
     patch.set({ left: region.left, top: region.top, originX: 'left', originY: 'top' });
