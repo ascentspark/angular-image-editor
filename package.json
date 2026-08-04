@@ -12,7 +12,8 @@
     "test:lib": "ng test angular-image-editor --watch=false",
     "test:demo": "ng test demo --watch=false",
     "lint": "ng lint",
-    "pack:lib": "npm run build:lib && cd dist/angular-image-editor && npm pack"
+    "pack:lib": "npm run build:lib && cd dist/angular-image-editor && npm pack",
+    "e2e": "playwright test"
   },
   "private": true,
   "packageManager": "npm@11.12.1",
@@ -35,6 +36,7 @@
     "tslib": "^2.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@angular/build": "^20.0.0",
     "@angular/cli": "^20.0.0",
     "@angular/compiler-cli": "^20.0.0",
