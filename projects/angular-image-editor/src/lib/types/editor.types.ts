@@ -98,9 +98,27 @@ export type AspAspectPreset = 'free' | '1:1' | '4:3' | '16:9' | '3:2' | 'origina
 export interface AspAspectOption {
   readonly label: string;
   readonly ratio: number;
+  /**
+   * Target export width in real pixels. When set, cropping to this option
+   * exports at these dimensions (capped by the source image's real resolution)
+   * instead of at the on-screen size of the crop.
+   */
+  readonly width?: number;
+  /** Target export height in real pixels. See {@link AspAspectOption.width}. */
+  readonly height?: number;
 }
 
 /** Build an {@link AspAspectOption} from explicit pixel dimensions. */
 export function aspectOption(width: number, height: number, label?: string): AspAspectOption {
-  return { label: label ?? `${width}×${height}`, ratio: width / height };
+  return { label: label ?? `${width}×${height}`, ratio: width / height, width, height };
+}
+
+/**
+ * A concrete pixel target for the exported crop. The export is rendered at this
+ * size unless the source image does not hold that many real pixels, in which
+ * case it is capped at the source's resolution — the editor never upscales.
+ */
+export interface AspExportTarget {
+  readonly width: number;
+  readonly height: number;
 }
