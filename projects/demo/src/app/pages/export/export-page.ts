@@ -37,6 +37,18 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
       </demo-example>
 
       <demo-example
+        anchor="resolution"
+        title="Export resolution"
+        description="A cropped export carries the source image's real pixels, never the on-screen size of the crop frame. Set exportTarget for an exact size, or give an aspect option real dimensions so the selected chip decides. Either way the export is capped at the source's own resolution — the editor never upscales."
+        [sources]="resolutionSources"
+      >
+        <p class="prose">
+          Without a target, a crop exports at full source fidelity. With one, it is exactly that
+          size unless the photo does not hold that many pixels.
+        </p>
+      </demo-example>
+
+      <demo-example
         anchor="svg"
         title="SVG with embedded fonts"
         description="SVG export inlines the web fonts used by text as base64 @font-face rules, so the file renders the true typeface in any viewer — self-contained, with text kept as real, selectable text."
@@ -69,6 +81,7 @@ export class ExportPage {
 
   protected readonly sections: PageSection[] = [
     { id: 'formats', label: 'Formats & quality' },
+    { id: 'resolution', label: 'Export resolution' },
     { id: 'svg', label: 'SVG fonts' },
     { id: 'pdf', label: 'PDF' },
     { id: 'json', label: 'JSON & exact-pixel' },
@@ -77,6 +90,26 @@ export class ExportPage {
   protected onExported(blob: Blob): void {
     this.result.set(`exported ${blob.type} — ${blob.size} bytes`);
   }
+
+  protected readonly resolutionSources: ExampleSource[] = [
+    {
+      label: 'HTML',
+      lang: 'html',
+      code: `<!-- An exact pixel size for every crop -->
+<asp-image-editor [exportTarget]="{ width: 1000, height: 1000 }" />
+
+<!-- …or let the selected aspect chip decide -->
+<asp-image-editor [aspectRatios]="cmsTargets" />`,
+    },
+    {
+      label: 'TS',
+      lang: 'ts',
+      code: `import { aspectOption } from '@ascentsparksoftware/angular-image-editor';
+
+// Each option carries real dimensions, so picking one sets the export size.
+cmsTargets = [aspectOption(1200, 630, 'Social'), aspectOption(1000, 1000, 'Avatar')];`,
+    },
+  ];
 
   protected readonly formatSources: ExampleSource[] = [
     {
