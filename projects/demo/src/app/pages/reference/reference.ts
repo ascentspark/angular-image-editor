@@ -147,6 +147,11 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
               <td><code>90</code></td>
             </tr>
             <tr>
+              <td><code>exportTarget</code></td>
+              <td><code>AspExportTarget | null</code></td>
+              <td><code>null</code></td>
+            </tr>
+            <tr>
               <td><code>heading</code></td>
               <td><code>string</code></td>
               <td><code>'Edit image'</code></td>

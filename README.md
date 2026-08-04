@@ -332,6 +332,29 @@ it and supply a single non-`free` preset (e.g. `aspectPresets: ['1:1']`), that r
 otherwise the crop opens unconstrained (`free`). In `basic` mode the crop frame is live immediately;
 in `advanced`/`full` it becomes the crop tool's starting aspect.
 
+### Export resolution
+
+A cropped export carries the **source image's real pixels**, not the size the crop
+happened to be on screen. Pick the size you want in one of three ways:
+
+```ts
+// 1. An exact target for every crop in this editor.
+<asp-image-editor [exportTarget]="{ width: 1000, height: 1000 }" />
+
+// 2. Per aspect option — the selected chip's own dimensions win.
+aspectRatios = [aspectOption(1200, 630, 'Social'), aspectOption(1000, 1000, 'Avatar')];
+
+// 3. Nothing at all — the crop exports at full source fidelity.
+```
+
+The export is always capped at the source's real resolution (a 300px photo never
+becomes a 1000px blur) and at a 4096×4096 bitmap so low-end devices can allocate it.
+
+> **Upgrading from ≤ 22.0.5:** cropped exports used to come out at the on-screen
+> size of the crop frame — a 2400×2400 photo cropped in a 640px dialog produced a
+> ~230px image. They are now full resolution, so saved blobs get larger. Set
+> `exportTarget` if you want a specific (smaller) size.
+
 ## API
 
 ```ts
@@ -349,6 +372,7 @@ class AspImageEditor {
   aspectRatios  = input<AspAspectOption[]>([]);       // custom CMS targets, e.g. aspectOption(1200,630)
   exportFormats = input<AspExportFormat[]>(['png', 'jpeg', 'webp']); // + 'svg' | 'pdf' | 'json'
   exportQuality = input<number>(90);                  // 10–100
+  exportTarget  = input<AspExportTarget | null>(null); // exact px size for a cropped export
   heading     = input<string>('Edit image');          // basic-mode title
   showHistory = input<boolean>(true);                 // show the history panel
   keyboardEnabled = input<boolean>(true);             // editor keyboard shortcuts
