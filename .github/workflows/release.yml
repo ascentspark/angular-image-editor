@@ -85,6 +85,6 @@ jobs:
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
               --title "v$version" \
-              --notes "npm dist-tag \`$disttag\` — \`$install\`. Published with provenance. See the [README](https://github.com/$GITHUB_REPOSITORY#readme)." \
+              --notes "npm dist-tag \`$disttag\` — \`$install\`. Published with provenance. What changed: [CHANGELOG](https://github.com/$GITHUB_REPOSITORY/blob/v$version/CHANGELOG.md). Usage: [README](https://github.com/$GITHUB_REPOSITORY#readme)." \
               $latest_flag
           fi
