@@ -35,7 +35,7 @@ jobs:
       # Export resolution can only be verified against a real canvas, so these
       # run the demo's hidden /e2e harness in Chromium.
       - run: npm run e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
