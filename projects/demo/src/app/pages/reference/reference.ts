@@ -142,6 +142,16 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
               <td><code>[]</code></td>
             </tr>
             <tr>
+              <td><code>initialAspect</code></td>
+              <td><code>AspAspectPreset | AspAspectOption | null</code></td>
+              <td><code>null</code> (sole constrained chip, else free)</td>
+            </tr>
+            <tr>
+              <td><code>cropFrame</code></td>
+              <td><code>'fixed' | 'movable' | null</code></td>
+              <td><code>null</code> (dialog → fixed, else movable)</td>
+            </tr>
+            <tr>
               <td><code>fitMode</code></td>
               <td><code>'cover' | 'contain'</code></td>
               <td><code>'cover'</code></td>
@@ -313,6 +323,17 @@ const logo = await this.editor.open({
   fitMode: 'contain',
   exportBackground: '#ffffff',
   commitLabel: 'Use this logo',
+});
+
+// The same slot crop with the advanced tool set, opening at a custom ratio
+const banner = await this.editor.open({
+  src,
+  mode: 'advanced',
+  cropFrame: 'fixed',                 // slot crop in any chrome
+  fitMode: 'contain',
+  aspectRatios: [aspectOption(1200, 630, 'Social')],
+  initialAspect: aspectOption(1200, 630, 'Social'),
+  commitLabel: 'Use this banner',
 });`,
     },
   ];
