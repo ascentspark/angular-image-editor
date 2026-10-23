@@ -37,6 +37,35 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
       </demo-example>
 
       <demo-example
+        anchor="chrome"
+        title="Chrome vs. tools"
+        description="mode picks a default tool set AND a default chrome; chrome overrides the second half on its own. Below: the basic tool set inside the full workspace. The commit button (commitLabel) hands the result back through (saved) and never writes a file; showDownload removes the Export menu's download for hosts that only want the Blob."
+        [sources]="chromeSources"
+      >
+        @defer (on viewport) {
+          <asp-image-editor
+            mode="basic"
+            chrome="workspace"
+            commitLabel="Use this image"
+            [showDownload]="false"
+            height="480px"
+            (saved)="onCommitted($event)"
+          />
+        } @placeholder {
+          <div class="ed-skel">Loading editor…</div>
+        }
+        @if (committed()) {
+          <p class="note">{{ committed() }}</p>
+        }
+        <p class="prose">
+          The three chromes: <code>dialog</code> (compact card, fixed crop frame — the image pans and
+          zooms under it), <code>workspace</code> (rail, options and layers, movable crop frame) and
+          <code>viewer</code> (zoom + export only). Defaults: <code>basic → dialog</code>,
+          <code>viewer → viewer</code>, <code>advanced</code> / <code>full → workspace</code>.
+        </p>
+      </demo-example>
+
+      <demo-example
         anchor="theming"
         title="Theming"
         description="Three inputs derive the entire UI palette at runtime, with guaranteed WCAG AA text contrast. Set them to match your brand in light or dark — no extra config."
@@ -126,8 +155,11 @@ export class Configuration {
   protected readonly accent = signal('#1f6feb');
   protected readonly mode = signal<AspThemeMode>('light');
 
+  protected readonly committed = signal('');
+
   protected readonly sections: PageSection[] = [
     { id: 'tools', label: 'Tools & filters' },
+    { id: 'chrome', label: 'Chrome vs. tools' },
     { id: 'theming', label: 'Theming' },
     { id: 'sizing', label: 'Canvas size' },
   ];
@@ -155,6 +187,39 @@ export class Configuration {
 <!-- filters: explicit list, 'all', or null for the mode default -->
 <asp-image-editor mode="advanced" [filters]="['brightness', 'contrast', 'grayscale']" />
 <asp-image-editor mode="advanced" [filters]="'all'" />`,
+    },
+  ];
+
+  protected onCommitted(blob: Blob): void {
+    this.committed.set(`committed ${blob.type} — ${blob.size} bytes, nothing downloaded`);
+  }
+
+  protected readonly chromeSources: ExampleSource[] = [
+    {
+      label: 'HTML',
+      lang: 'html',
+      code: `<!-- the basic tool set, but in the full workspace -->
+<asp-image-editor mode="basic" chrome="workspace" />
+
+<!-- the advanced tool set, inside the compact dialog card -->
+<asp-image-editor mode="advanced" chrome="dialog" initialAspect="1:1" />
+
+<!-- commit-only hosting: the host wants the Blob, never a file in Downloads -->
+<asp-image-editor
+  mode="advanced"
+  commitLabel="Use this image"
+  [showDownload]="false"
+  (saved)="onCommitted($event)"
+/>`,
+    },
+    {
+      label: 'TS',
+      lang: 'ts',
+      code: `// (saved) fires from the commit button in EVERY chrome and never from a download.
+// (exported) fires from Export → Download only. Listen to both if you want both.
+onCommitted(blob: Blob): void {
+  upload(blob);
+}`,
     },
   ];
 

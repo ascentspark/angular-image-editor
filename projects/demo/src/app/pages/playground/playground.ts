@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnDestroy,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   AspImageEditor,
@@ -33,7 +40,7 @@ interface ThemePreset {
   templateUrl: './playground.html',
   styleUrl: './playground.scss',
 })
-export class Playground {
+export class Playground implements OnDestroy {
   protected readonly presets: readonly ThemePreset[] = [
     { label: 'Default blue', base: '#f4f6f9', accent: '#1f6feb' },
     { label: 'Wazure navy', base: '#f4f6f9', accent: '#02375e' },
@@ -65,6 +72,10 @@ export class Playground {
   protected readonly themeMode = signal<AspThemeMode>('light');
   protected readonly editorMode = signal<AspMode>('advanced');
   protected readonly lastResult = signal('');
+  /** Object URL of the last committed Blob, previewed as a thumbnail (proof the host got pixels back). */
+  protected readonly lastPreview = signal<string | null>(null);
+  /** Commit-only hosting: the Export menu loses its Download action and the commit button carries the host's label. */
+  protected readonly commitOnly = signal(false);
   protected readonly customTools = signal<AspTool[] | null>(null);
   protected readonly disabled = signal<AspTool[]>([]);
   protected readonly editorHeight = signal('600px');
@@ -78,6 +89,10 @@ export class Playground {
 
   protected toggleDisabled(): void {
     this.disabled.update((d) => (d.length ? [] : [...DISABLED_SET]));
+  }
+
+  protected toggleCommitOnly(): void {
+    this.commitOnly.update((v) => !v);
   }
 
   protected setHeight(value: string): void {
@@ -109,6 +124,9 @@ export class Playground {
     if (disabled.length) {
       attrs.push(`  [disabledTools]="${arr(disabled)}"`);
     }
+    if (this.commitOnly()) {
+      attrs.push(`  commitLabel="Use this image"`, `  [showDownload]="false"`);
+    }
     attrs.push(`  (saved)="onSaved($event)"`);
 
     return [
@@ -126,7 +144,7 @@ export class Playground {
       `})`,
       `export class EditorComponent {`,
       `  onSaved(blob: Blob) {`,
-      `    // the edited image — upload it, preview it, etc.`,
+      `    // the committed image — upload it, preview it, etc. Nothing was downloaded.`,
       `    console.log('saved', blob.type, blob.size);`,
       `  }`,
       `}`,
@@ -151,7 +169,45 @@ export class Playground {
       aspectPresets: ['1:1', '4:3', 'free'],
       initialAspect: '1:1',
     });
+    this.showResult(blob);
+  }
+
+  /**
+   * The logo flow from the Phlebio handoff: a wide wordmark placed into a square
+   * slot. `fitMode: 'contain'` lets it zoom OUT to fit, the letterbox is filled
+   * white at export, and the commit button says what it does.
+   */
+  protected async openLogoDialog(): Promise<void> {
+    const blob = await this.dialog.open({
+      src: 'asc-logo-full.svg',
+      heading: 'Place the logo',
+      baseColor: this.base(),
+      accentColor: this.accent(),
+      themeMode: this.themeMode(),
+      aspectPresets: ['1:1', '16:9'],
+      initialAspect: '1:1',
+      fitMode: 'contain',
+      exportBackground: '#ffffff',
+      exportFormats: ['png'],
+      commitLabel: 'Use this logo',
+    });
+    this.showResult(blob);
+  }
+
+  private showResult(blob: Blob | null): void {
+    const previous = this.lastPreview();
+    if (previous) {
+      URL.revokeObjectURL(previous);
+    }
+    this.lastPreview.set(blob ? URL.createObjectURL(blob) : null);
     this.lastResult.set(blob ? `saved ${blob.type} (${blob.size} bytes)` : 'canceled');
+  }
+
+  ngOnDestroy(): void {
+    const previous = this.lastPreview();
+    if (previous) {
+      URL.revokeObjectURL(previous);
+    }
   }
 
   protected applyPreset(preset: ThemePreset): void {
@@ -176,6 +232,6 @@ export class Playground {
   }
 
   protected onSaved(blob: Blob): void {
-    this.lastResult.set(`saved ${blob.type} (${blob.size} bytes)`);
+    this.showResult(blob);
   }
 }
