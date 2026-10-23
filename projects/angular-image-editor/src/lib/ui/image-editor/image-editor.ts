@@ -33,16 +33,19 @@ import { resolveFilters, resolveTools } from '../../registry/resolve-tools';
 import { groupForTool, resolveGroups, type ResolvedGroup } from '../../registry/toolbar-groups';
 import { applyTheme } from '../../theme/apply-theme';
 import { deriveTheme, type AspThemeMode } from '../../theme/derive-theme';
-import type {
-  AspAspectOption,
-  AspAspectPreset,
-  AspEditorError,
-  AspExportFormat,
-  AspExportTarget,
-  AspFilter,
-  AspMode,
-  AspSize,
-  AspTool,
+import {
+  defaultChromeFor,
+  type AspAspectOption,
+  type AspAspectPreset,
+  type AspChrome,
+  type AspEditorError,
+  type AspExportFormat,
+  type AspExportTarget,
+  type AspFilter,
+  type AspFitMode,
+  type AspMode,
+  type AspSize,
+  type AspTool,
 } from '../../types/editor.types';
 import { AspHistoryList } from '../history/history-list';
 import {
@@ -78,19 +81,18 @@ const ZOOM_STEP = 25;
  * `advanced`/`full` carry the rail + canvas + options column; the simpler
  * modes need much less.
  */
-const MODE_MIN: Record<AspMode, { width: string; height: string }> = {
+const CHROME_MIN: Record<AspChrome, { width: string; height: string }> = {
   viewer: { width: '240px', height: '200px' },
-  basic: { width: '300px', height: '360px' },
-  advanced: { width: '640px', height: '460px' },
-  full: { width: '640px', height: '460px' },
+  dialog: { width: '300px', height: '360px' },
+  workspace: { width: '640px', height: '460px' },
 };
 
 /**
- * Width the `basic` (dialog card) layout hugs by default. MUST stay in sync with
- * `.asp-basic { max-width }` in image-editor.css. `basic` is a self-contained card,
- * so the host sizes to this rather than stretching to fill (and paint) its
- * container — otherwise, mounted in a modal scrim, the host becomes a
- * full-viewport baseColor panel sitting behind the card.
+ * Width the `dialog` chrome (the card `basic` mode renders in) hugs by default.
+ * MUST stay in sync with `.asp-basic { max-width }` in image-editor.css. The
+ * dialog is a self-contained card, so the host sizes to this rather than
+ * stretching to fill (and paint) its container — otherwise, mounted in a modal
+ * scrim, the host becomes a full-viewport baseColor panel sitting behind the card.
  */
 const BASIC_DIALOG_WIDTH = '520px';
 
@@ -130,7 +132,15 @@ function toCssSize(value: AspSize | null | undefined, fallback: string): string 
 export class AspImageEditor implements OnDestroy {
   // ---- public API ----------------------------------------------------------
   readonly src = input<string | Blob | null>(null);
+  /** Baseline preset: picks the default tool set AND the default {@link chrome}. */
   readonly mode = input<AspMode>('advanced');
+  /**
+   * Which chrome renders around the canvas, independently of the tool set the
+   * mode (or `tools`) selects. `null` uses the mode's default: `basic` → `dialog`,
+   * `viewer` → `viewer`, `advanced`/`full` → `workspace`. Set it to put a small
+   * tool set in the full workspace, or the fixed-frame dialog crop around any mode.
+   */
+  readonly chrome = input<AspChrome | null>(null);
   /**
    * Editor width — a number (px) or any CSS length (`'70%'`, `'80vh'`,
    * `'calc(100vw - 320px)'`). Defaults to filling the host's container. A
@@ -152,8 +162,23 @@ export class AspImageEditor implements OnDestroy {
   readonly initialAspect = input<AspAspectPreset | null>(null);
   /** Host-defined crop aspect targets (e.g. CMS sizes); shown after the presets. */
   readonly aspectRatios = input<AspAspectOption[]>([]);
+  /**
+   * How the image fits the `dialog` chrome's fixed crop frame. `cover` (default)
+   * is the avatar crop — the frame is always filled, so the result has no gaps.
+   * `contain` is the logo crop — the zoom floor drops to the whole-image fit, so
+   * an image of any aspect can be placed inside the frame; the area it leaves
+   * uncovered is filled with {@link exportBackground} at export.
+   */
+  readonly fitMode = input<AspFitMode>('cover');
   readonly exportFormats = input<AspExportFormat[]>(['png', 'jpeg', 'webp']);
   readonly exportQuality = input<number>(90);
+  /**
+   * Colour composited under every pixel the scene leaves unpainted in a raster
+   * export (a `contain` crop's letterbox, a rotated image's corners, a
+   * transparent source) when the Background tool set nothing. `null` keeps PNG
+   * and WebP transparent and fills JPEG white — never black.
+   */
+  readonly exportBackground = input<string | null>(null);
   /**
    * Pixel size a cropped export should be rendered at, e.g. `{width: 1000,
    * height: 1000}` for a profile photo. Without it a crop exports at the source
@@ -167,8 +192,25 @@ export class AspImageEditor implements OnDestroy {
   readonly accentColor = input<string>(FALLBACK_ACCENT);
   readonly themeMode = input<AspThemeMode>('light');
 
-  /** Heading shown by the `basic` modal layout. */
+  /** Heading shown by the `dialog` chrome. */
   readonly heading = input<string>('Edit image');
+  /**
+   * Label of the commit action — the button that hands the result to the host
+   * through `saved` without writing a file. `null` reads "Save" in the dialog
+   * chrome and "Apply" elsewhere; the right word is host-specific ("Use this logo").
+   */
+  readonly commitLabel = input<string | null>(null);
+  /**
+   * Render the commit action in the workspace and viewer chromes. The dialog
+   * chrome always has one — committing is what a dialog is for.
+   */
+  readonly showCommit = input<boolean>(true);
+  /**
+   * Render the "Download image" action in the Export menu. Hosts that only want
+   * the Blob back (through the commit action) set `false` so nothing can land in
+   * the user's Downloads folder.
+   */
+  readonly showDownload = input<boolean>(true);
 
   /** Show the edit-history panel in the workspace (hosts that don't want it set false). */
   readonly showHistory = input<boolean>(true);
@@ -176,11 +218,16 @@ export class AspImageEditor implements OnDestroy {
   /** Enable keyboard shortcuts while the pointer is over the editor. */
   readonly keyboardEnabled = input<boolean>(true);
 
+  /**
+   * The user committed: here is the result. Fired by the commit action in every
+   * chrome, never by a download — a host listening here is never also left with
+   * a file in the user's Downloads folder.
+   */
   readonly saved = output<Blob>();
   readonly canceled = output<void>();
   /** Fired after an image successfully loads (initial, picker, or upload). */
   readonly imageLoaded = output<void>();
-  /** Fired with the exported Blob when the user downloads from the Export menu. */
+  /** A file was written: fired with the Blob when the user downloads from the Export menu. */
   readonly exported = output<Blob>();
   /** Fired on a recoverable error (load/export/engine init) instead of throwing. */
   readonly errorOccurred = output<AspEditorError>();
@@ -242,6 +289,11 @@ export class AspImageEditor implements OnDestroy {
   // ---- workspace state -----------------------------------------------------
   protected readonly activeTool = signal<AspTool | null>(null);
   protected readonly zoomPct = signal(100);
+  /** The zoom slider's bounds for the current interaction (see `EditorEngine.zoomRange`). */
+  protected readonly zoomRange = signal<{ readonly min: number; readonly max: number }>({
+    min: 25,
+    max: 400,
+  });
   protected readonly canUndo = signal(false);
   protected readonly canRedo = signal(false);
   protected readonly historyEntries = signal<readonly HistoryStep[]>([]);
@@ -375,16 +427,14 @@ export class AspImageEditor implements OnDestroy {
     return this.activeToolMeta()?.label ?? '';
   });
   protected readonly zoomLabel = computed(() => `${this.zoomPct()}%`);
-  protected readonly layout = computed<'workspace' | 'basic' | 'viewer'>(() => {
-    const mode = this.mode();
-    if (mode === 'basic') {
-      return 'basic';
-    }
-    if (mode === 'viewer') {
-      return 'viewer';
-    }
-    return 'workspace';
-  });
+  /** The chrome in use: the host's explicit {@link chrome}, else the mode's default. */
+  protected readonly layout = computed<AspChrome>(
+    () => this.chrome() ?? defaultChromeFor(this.mode()),
+  );
+  /** Text of the commit action: the host's label, else "Save" in the dialog and "Apply" elsewhere. */
+  protected readonly commitText = computed<string>(
+    () => this.commitLabel() ?? (this.layout() === 'dialog' ? 'Save' : 'Apply'),
+  );
 
   /**
    * The resolved theme. Invalid hex inputs are a developer error; rather than
@@ -408,26 +458,26 @@ export class AspImageEditor implements OnDestroy {
     // Apply the derived theme to the host element whenever inputs change.
     effect(() => applyTheme(this.host.nativeElement, this.theme()));
 
-    // Apply the host-requested size, with a per-mode minimum so the chrome
+    // Apply the host-requested size, with a per-chrome minimum so the chrome
     // always renders. Default fills the container; an explicit width/height
     // (px / % / vh / calc) overrides it. The stage's ResizeObserver picks up
     // the change and resizes the canvas.
     effect(() => {
       const el = this.host.nativeElement;
-      const mode = this.mode();
-      const min = MODE_MIN[mode];
-      // `basic` is a self-contained dialog CARD: it hugs its content (a fixed
+      const layout = this.layout();
+      const min = CHROME_MIN[layout];
+      // The dialog chrome is a self-contained CARD: it hugs its content (a fixed
       // width, content height) instead of stretching to fill its container. The
-      // other modes fill the host so the workspace can use the available space.
-      const isBasic = mode === 'basic';
-      el.style.width = toCssSize(this.width(), isBasic ? `min(${BASIC_DIALOG_WIDTH}, 100%)` : '100%');
-      el.style.height = toCssSize(this.height(), isBasic ? 'auto' : '100%');
+      // other chromes fill the host so the workspace can use the available space.
+      const isDialog = layout === 'dialog';
+      el.style.width = toCssSize(this.width(), isDialog ? `min(${BASIC_DIALOG_WIDTH}, 100%)` : '100%');
+      el.style.height = toCssSize(this.height(), isDialog ? 'auto' : '100%');
       // Cap the min-width to the available space so the editor never forces
       // horizontal overflow on a narrow screen; the layout reflows instead.
       el.style.minWidth = `min(${min.width}, 100%)`;
-      // No min-height in `basic`, or a dialog scrim would show a baseColor strip
+      // No min-height in the dialog, or a modal scrim would show a baseColor strip
       // below the card (the host's background extending past the card's content).
-      el.style.minHeight = isBasic ? '0px' : min.height;
+      el.style.minHeight = isDialog ? '0px' : min.height;
     });
 
     // Show a progress cursor over the editor while a web font is fetching.
@@ -458,11 +508,25 @@ export class AspImageEditor implements OnDestroy {
       this.engine?.setExportTarget(target);
     });
 
-    // Sync export defaults from inputs.
+    // Fixed-frame fit mode and export fill follow their inputs; the engine also
+    // receives both when it is (re)created, since it is not a signal.
     effect(() => {
-      this.exportQ.set(this.exportQuality());
+      const fit = this.fitMode();
+      this.engine?.setImageCropFitMode(fit);
+      this.syncZoom();
+    });
+    effect(() => {
+      const fill = this.exportBackground();
+      this.engine?.setExportBackground(fill);
+    });
+
+    // Sync export defaults from inputs. The first allowed format is the default
+    // (and, in chromes without a format picker, the commit format), so a new
+    // list resets the selection rather than keeping a stale pick.
+    effect(() => this.exportQ.set(this.exportQuality()));
+    effect(() => {
       const formats = this.exportFormats();
-      if (formats.length > 0 && !formats.includes(untracked(this.exportFormat))) {
+      if (formats.length > 0) {
         this.exportFormat.set(formats[0]);
       }
     });
@@ -590,7 +654,7 @@ export class AspImageEditor implements OnDestroy {
       return;
     }
     if (key === 'escape') {
-      if (this.layout() === 'basic') {
+      if (this.layout() === 'dialog') {
         this.cancel();
       } else {
         this.engine?.discardSelection();
@@ -881,6 +945,8 @@ export class AspImageEditor implements OnDestroy {
         this.engine.setSnapping(this.snapEnabled());
         this.engine.setArtboard(this.artboard());
         this.engine.setExportTarget(this.effectiveExportTarget());
+        this.engine.setImageCropFitMode(this.fitMode());
+        this.engine.setExportBackground(this.exportBackground());
         this.engine.setRulersEnabled(this.rulersEnabled());
         this.boundCanvas = canvas;
         this.lastSource = undefined;
@@ -936,17 +1002,41 @@ export class AspImageEditor implements OnDestroy {
   }
 
   /**
-   * After a load, constrain the crop to the resolved initial aspect. In basic
-   * (dialog) mode the crop IS the mode, so start it live; advanced/full only set
-   * the active aspect (the crop tool reads it when the user enters cropping).
+   * After a load, constrain the crop to the resolved initial aspect — with a
+   * live frame in EVERY chrome that can crop. The dialog's fixed frame starts
+   * at once; the workspace enters the Crop tool, whose session effect opens the
+   * movable frame at this aspect. Where nothing can enforce the aspect (the
+   * viewer, or a tool set without `crop`) the chip is left inactive: the UI must
+   * never assert a constraint it is not applying.
    */
   private applyInitialAspect(): void {
     const aspect = this.resolveInitialAspect();
-    this.activeCrop.set(aspect);
-    if (aspect !== 'free' && this.layout() === 'basic') {
-      this.activeAspectLabel.set('');
-      this.ensureCropSession(this.ratioFromPreset(aspect));
+    if (aspect === 'free') {
+      this.activeCrop.set('free');
+      return;
     }
+    const layout = this.layout();
+    if (layout === 'dialog') {
+      this.activeCrop.set(aspect);
+      this.activeAspectLabel.set('');
+      this.activeAspectTarget.set(null);
+      this.ensureCropSession(this.ratioFromPreset(aspect));
+      return;
+    }
+    if (layout === 'workspace' && this.resolvedToolKeys().includes('crop')) {
+      this.activeCrop.set(aspect);
+      this.activeAspectLabel.set('');
+      this.activeAspectTarget.set(null);
+      if (this.activeTool() === 'crop') {
+        // Already in the tool (e.g. the source changed): reshape or restart the frame.
+        this.cropActive = this.engine?.isCropping() ?? false;
+        this.ensureCropSession(this.ratioFromPreset(aspect));
+      } else {
+        this.selectTool('crop');
+      }
+      return;
+    }
+    this.activeCrop.set('free');
   }
 
   private emitError(code: string, error: unknown): void {
@@ -1002,8 +1092,22 @@ export class AspImageEditor implements OnDestroy {
     this.canRedo.set(engine.canRedo);
     this.historyEntries.set(engine.historyEntries);
     this.historyIndex.set(engine.historyIndex);
-    this.zoomPct.set(engine.isImageCropping() ? engine.imageCropZoomPct : engine.zoom);
+    this.syncZoom();
     this.refreshLayers();
+  }
+
+  /** Mirror the engine's zoom value and its honest slider bounds for the current interaction. */
+  private syncZoom(): void {
+    const engine = this.engine;
+    if (!engine) {
+      return;
+    }
+    this.zoomPct.set(engine.isImageCropping() ? engine.imageCropZoomPct : engine.zoom);
+    const range = engine.zoomRange;
+    const current = this.zoomRange();
+    if (current.min !== range.min || current.max !== range.max) {
+      this.zoomRange.set(range);
+    }
   }
 
   private refreshLayers(): void {
@@ -1082,12 +1186,24 @@ export class AspImageEditor implements OnDestroy {
   }
 
   protected zoomIn(): void {
-    this.engine?.zoomBy(ZOOM_STEP);
-    this.sync();
+    this.zoomStep(ZOOM_STEP);
   }
 
   protected zoomOut(): void {
-    this.engine?.zoomBy(-ZOOM_STEP);
+    this.zoomStep(-ZOOM_STEP);
+  }
+
+  /** Step whichever zoom the current interaction owns: the image in a fixed-frame crop, else the viewport. */
+  private zoomStep(deltaPct: number): void {
+    const engine = this.engine;
+    if (!engine) {
+      return;
+    }
+    if (engine.isImageCropping()) {
+      engine.zoomImageCrop(engine.imageCropZoomPct + deltaPct);
+    } else {
+      engine.zoomBy(deltaPct);
+    }
     this.sync();
   }
 
@@ -1185,6 +1301,11 @@ export class AspImageEditor implements OnDestroy {
     this.exportQ.set(Number((event.target as HTMLInputElement).value));
   }
 
+  /**
+   * Export → Download: write the image to a file and report it through
+   * `exported`. Deliberately NOT `saved` — a download is not a commit, and a
+   * host listening for the result must never also find a file in Downloads.
+   */
   protected async download(): Promise<void> {
     const engine = this.engine;
     if (!engine) {
@@ -1194,23 +1315,25 @@ export class AspImageEditor implements OnDestroy {
     try {
       const blob = await engine.exportImage(this.exportFormat(), this.exportQ(), this.exportFormats());
       this.exported.emit(blob);
-      this.saved.emit(blob);
       triggerDownload(blob, `image.${extensionFor(this.exportFormat())}`);
     } catch (error) {
       this.emitError('export-failed', error);
     }
   }
 
-  // ---- basic / viewer layouts ----------------------------------------------
-  /** Save (basic modal): export to a Blob and emit `saved` without downloading. */
+  // ---- commit / cancel (every chrome) -------------------------------------
+  /**
+   * The commit action: export to a Blob in the selected format and hand it to
+   * the host through `saved`. Writes no file and creates no object URL. An
+   * in-progress crop is applied first — the user framed it and pressed commit.
+   */
   protected async save(): Promise<void> {
     const engine = this.engine;
     if (!engine) {
       return;
     }
-    const format = this.exportFormats()[0] ?? 'png';
+    const format = this.exportFormat();
     try {
-      // Commit an in-progress crop (basic mode crops on Save) before export.
       if (engine.isImageCropping()) {
         engine.applyImageCrop();
         this.cropActive = false;
@@ -1240,11 +1363,11 @@ export class AspImageEditor implements OnDestroy {
 
   protected onZoomSlider(event: Event): void {
     const value = Number((event.target as HTMLInputElement).value);
-    // In avatar crop the slider zooms ONLY the image inside the fixed frame
-    // (100% = cover floor), never the canvas viewport.
+    // In a fixed-frame crop the slider zooms ONLY the image inside the frame
+    // (100% = the image exactly fills it), never the canvas viewport.
     if (this.engine?.isImageCropping()) {
       this.engine.zoomImageCrop(value);
-      this.zoomPct.set(value);
+      this.syncZoom();
       return;
     }
     this.engine?.setZoom(value);
@@ -1296,21 +1419,21 @@ export class AspImageEditor implements OnDestroy {
     return aspectRatioValue(preset);
   }
 
-  /** Start the crop frame if one isn't already active (e.g. from the basic-mode chips). */
+  /** Start the crop frame if one isn't already active (e.g. from the dialog's chips). */
   private ensureCropSession(ratio: number | null): void {
-    // Basic (dialog/avatar) mode: the crop frame is FIXED; the image pans and
-    // zooms underneath it. Advanced mode keeps the movable-frame crop.
-    if (this.layout() === 'basic') {
+    // Dialog chrome: the crop frame is FIXED; the image pans and zooms
+    // underneath it. The workspace keeps the movable-frame crop.
+    if (this.layout() === 'dialog') {
       this.engine?.setImageCropRatio(ratio);
       this.cropActive = this.engine?.isImageCropping() ?? false;
-      return;
-    }
-    if (this.engine && !this.engine.isCropping()) {
+    } else if (this.engine && !this.engine.isCropping()) {
       this.engine.beginCrop(ratio);
       this.cropActive = true;
     } else {
       this.engine?.setCropRatio(ratio);
     }
+    // Entering or leaving a fixed-frame crop changes which zoom the slider owns.
+    this.syncZoom();
   }
 
   /** Choose a crop aspect preset — reshapes (or starts) the live crop frame. */
