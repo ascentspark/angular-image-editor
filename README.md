@@ -302,7 +302,7 @@ full token map, and `applyTheme(element, tokens)` sets them.
 
 ## Modal dialog
 
-For avatar / quick-edit flows, open the `basic` editor as a modal and await the result:
+For avatar / quick-edit flows, open the editor as a modal and await the result:
 
 ```ts
 import { Component, inject } from '@angular/core';
@@ -326,11 +326,99 @@ export class AvatarComponent {
 }
 ```
 
+**Every input is accepted on the config.** `mode` defaults to `'basic'`; pass `mode: 'advanced'`
+(or any `chrome`) plus `width` / `height` to host the full workspace in the modal. The overlay traps
+Tab focus and returns focus to the element that opened it.
+
+```ts
+const blob = await this.editor.open({
+  src,
+  mode: 'advanced',
+  tools: ['crop', 'rotate', 'adjust'],
+  commitLabel: 'Use this image',
+  showDownload: false,
+  width: 1100,
+  height: '80vh',
+});
+```
+
 **Starting crop.** Pass `initialAspect` (e.g. `'1:1'`) — on `AspImageEditorDialog.open()` or as the
 `initialAspect` input on `<asp-image-editor>` — to open already constrained to that ratio. If you omit
 it and supply a single non-`free` preset (e.g. `aspectPresets: ['1:1']`), that ratio is auto-selected;
-otherwise the crop opens unconstrained (`free`). In `basic` mode the crop frame is live immediately;
-in `advanced`/`full` it becomes the crop tool's starting aspect.
+otherwise the crop opens unconstrained (`free`). The frame is live in every chrome that can crop: the
+dialog's fixed frame starts at once, the workspace opens in the Crop tool with its movable frame at
+that aspect. Where nothing can enforce it (a tool set without `crop`) the chip stays inactive.
+
+### Commit vs. download
+
+Two events for two intents, and they never overlap:
+
+| Action | Where | Event | Writes a file? |
+|---|---|---|---|
+| **Commit** — Save / Apply / your `commitLabel` | every chrome | `(saved)` with the Blob | **No** |
+| **Export → Download image** | workspace / viewer Export menu | `(exported)` with the Blob | Yes |
+
+A download never fires `(saved)`, so a host collecting the result is never also left with a copy in
+the user's Downloads folder. Hosts that only want the Blob set `[showDownload]="false"` (the Export
+menu then only offers Format / Quality); hosts that only want downloads can set `[showCommit]="false"`
+in the workspace and viewer. The dialog chrome always has a commit button.
+
+```html
+<asp-image-editor
+  mode="advanced"
+  commitLabel="Use this image"
+  [showDownload]="false"
+  (saved)="upload($event)"
+/>
+```
+
+### Chrome vs. tools
+
+`mode` picks a default tool set **and** a default chrome; `chrome` overrides the second half on its own.
+
+| `chrome` | What renders | Crop model |
+|---|---|---|
+| `dialog` (default for `basic`) | compact card: heading, aspect chips, rotate/flip, zoom, Cancel / commit | **fixed frame** — the image pans and zooms underneath |
+| `workspace` (default for `advanced` / `full`) | rail, options panel, layers, history | **movable frame** over the image |
+| `viewer` (default for `viewer`) | zoom + Export + commit bar | — |
+
+```html
+<!-- the basic tool set, but in the full workspace -->
+<asp-image-editor mode="basic" chrome="workspace" />
+<!-- the advanced tool set inside the compact dialog card -->
+<asp-image-editor mode="advanced" chrome="dialog" initialAspect="1:1" />
+```
+
+### Logo crop — `fitMode="contain"`
+
+The fixed-frame (dialog) crop is an **avatar crop** by default: `fitMode="cover"` keeps the frame
+fully covered, so the zoom floor is the cover scale and the result never has gaps. That is wrong for
+a logo: a 2282×832 wordmark in a square slot can only ever be centre-cropped.
+
+`fitMode="contain"` lowers the zoom floor to the **whole-image fit**, so an image of any aspect can be
+zoomed out and placed inside the frame. The slider's `min` is that floor — exactly reachable. The area
+the image leaves uncovered is filled at export with the **export background**:
+
+- a background set with the Background tool, if any;
+- else `exportBackground` (e.g. `'#ffffff'`);
+- else PNG / WebP stay **transparent** and JPEG is filled **white** — never black.
+
+```ts
+const logo = await this.editor.open({
+  src,
+  heading: 'Place the logo',
+  aspectPresets: ['1:1', '16:9'],
+  initialAspect: '1:1',
+  fitMode: 'contain',          // default 'cover' is unchanged for existing callers
+  exportBackground: '#ffffff', // omit for a transparent PNG
+  exportFormats: ['png'],
+  commitLabel: 'Use this logo',
+});
+```
+
+One zoom floor per interaction: while the fixed frame is active the slider zooms the **image** (100 %
+= the image exactly fills the frame); otherwise it zooms the viewport (floor 25 %). The slider's
+`min` / `max` always reflect which one it is driving.
 
 ### Export resolution
 
@@ -362,6 +450,7 @@ becomes a 1000px blur) and at a 4096×4096 bitmap so low-end devices can allocat
 class AspImageEditor {
   src         = input<string | Blob | null>(null);
   mode        = input<AspMode>('advanced');           // 'viewer'|'basic'|'advanced'|'full'
+  chrome      = input<AspChrome | null>(null);        // 'dialog'|'workspace'|'viewer' — null = mode default
   width       = input<AspSize | null>(null);          // px | % | vh | any CSS length / calc()
   height      = input<AspSize | null>(null);
   tools       = input<AspTool[] | null>(null);        // explicit allowlist
@@ -370,10 +459,15 @@ class AspImageEditor {
   aspectPresets = input<AspAspectPreset[]>(['free', '1:1', '4:3', '16:9']);
   initialAspect = input<AspAspectPreset | null>(null); // open already cropped to this ratio
   aspectRatios  = input<AspAspectOption[]>([]);       // custom CMS targets, e.g. aspectOption(1200,630)
+  fitMode       = input<AspFitMode>('cover');         // 'contain' = zoom out to whole-image fit (logo crop)
   exportFormats = input<AspExportFormat[]>(['png', 'jpeg', 'webp']); // + 'svg' | 'pdf' | 'json'
   exportQuality = input<number>(90);                  // 10–100
   exportTarget  = input<AspExportTarget | null>(null); // exact px size for a cropped export
-  heading     = input<string>('Edit image');          // basic-mode title
+  exportBackground = input<string | null>(null);      // fill under unpainted export pixels
+  heading     = input<string>('Edit image');          // dialog-chrome title
+  commitLabel = input<string | null>(null);           // commit button text ('Save' / 'Apply' default)
+  showCommit  = input<boolean>(true);                 // commit button in workspace / viewer
+  showDownload = input<boolean>(true);                // "Download image" in the Export menu
   showHistory = input<boolean>(true);                 // show the history panel
   keyboardEnabled = input<boolean>(true);             // editor keyboard shortcuts
   fonts       = input<FontOption[]>(DEFAULT_FONTS);   // text font choices
@@ -382,10 +476,10 @@ class AspImageEditor {
   accentColor = input<string>('#1f6feb');
   themeMode   = input<'light' | 'dark'>('light');
 
-  saved        = output<Blob>();            // export / Save
-  canceled     = output<void>();            // basic Cancel
+  saved        = output<Blob>();            // the commit action (never a download)
+  canceled     = output<void>();            // dialog Cancel / close
   imageLoaded  = output<void>();            // an image finished loading
-  exported     = output<Blob>();            // Export download produced a Blob
+  exported     = output<Blob>();            // Export → Download wrote a file (does not fire saved)
   errorOccurred = output<AspEditorError>(); // recoverable load/export/init error
 }
 ```
