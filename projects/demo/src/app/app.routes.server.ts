@@ -7,4 +7,10 @@ import { RenderMode, ServerRoute } from '@angular/ssr';
  * the client (inside `@defer` blocks), so the prerendered HTML is the page's
  * prose, code panels, navigation and structured data.
  */
-export const serverRoutes: ServerRoute[] = [{ path: '**', renderMode: RenderMode.Prerender }];
+export const serverRoutes: ServerRoute[] = [
+  // The Playwright harness is a client-only surface: it paints its fixture on a
+  // canvas and has nothing a crawler wants, so prerendering it only exercises
+  // DOM APIs the prerenderer does not implement.
+  { path: 'e2e', renderMode: RenderMode.Client },
+  { path: '**', renderMode: RenderMode.Prerender },
+];
