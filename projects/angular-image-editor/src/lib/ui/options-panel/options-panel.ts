@@ -4,7 +4,13 @@ import { AspIcon } from '../../icons/asp-icon';
 import { AspColorField } from '../controls/color-field';
 import type { ArtboardSize, RedactMode, ShapeKind } from '../../engine/editor-engine';
 import type { FilterMeta } from '../../registry/tool-registry';
-import type { AspAspectOption, AspAspectPreset, AspFilter, AspTool } from '../../types/editor.types';
+import type {
+  AspAspectOption,
+  AspAspectPreset,
+  AspCropFrame,
+  AspFilter,
+  AspTool,
+} from '../../types/editor.types';
 import type { FontOption } from '../image-editor/fonts';
 
 export type { RedactMode } from '../../engine/editor-engine';
@@ -163,6 +169,12 @@ export class AspOptionsPanel {
   readonly selectCustomCrop = output<AspAspectOption>();
   /** True once a crop region is applied — enables the Reset control. */
   readonly hasCropRegion = input<boolean>(false);
+  /**
+   * Which frame the Crop tool drives. A `fixed` frame is a slot the image pans
+   * under: no Apply/Cancel, the chips are the whole control. A `movable` frame
+   * is a session with Apply / Cancel / Reset.
+   */
+  readonly cropFrame = input<AspCropFrame>('movable');
   readonly applyCrop = output<void>();
   readonly cancelCrop = output<void>();
   readonly resetCrop = output<void>();
