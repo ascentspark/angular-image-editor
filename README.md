@@ -342,12 +342,15 @@ const blob = await this.editor.open({
 });
 ```
 
-**Starting crop.** Pass `initialAspect` (e.g. `'1:1'`) — on `AspImageEditorDialog.open()` or as the
-`initialAspect` input on `<asp-image-editor>` — to open already constrained to that ratio. If you omit
-it and supply a single non-`free` preset (e.g. `aspectPresets: ['1:1']`), that ratio is auto-selected;
-otherwise the crop opens unconstrained (`free`). The frame is live in every chrome that can crop: the
-dialog's fixed frame starts at once, the workspace opens in the Crop tool with its movable frame at
-that aspect. Where nothing can enforce it (a tool set without `crop`) the chip stays inactive.
+**Starting crop.** Pass `initialAspect` — on `AspImageEditorDialog.open()` or as the `initialAspect`
+input on `<asp-image-editor>` — to open already constrained to it. It takes a preset (`'1:1'`) **or a
+custom option** (`aspectOption(1200, 630, 'Social')`), so a custom ratio can be the opening frame, not
+only a chip; list the same option in `aspectRatios` to show it as a chip. If you omit it and offer a
+single constrained chip without `free` (e.g. `aspectPresets: ['1:1']`, or no presets and one
+`aspectRatios` entry), that one is auto-selected; otherwise the crop opens unconstrained (`free`). The
+frame is live in every chrome that can crop: a fixed frame starts at once, a movable one opens in the
+Crop tool at that aspect. Where nothing can enforce it (a tool set without `crop`) the chip stays
+inactive.
 
 ### Commit vs. download
 
@@ -376,10 +379,10 @@ in the workspace and viewer. The dialog chrome always has a commit button.
 
 `mode` picks a default tool set **and** a default chrome; `chrome` overrides the second half on its own.
 
-| `chrome` | What renders | Crop model |
+| `chrome` | What renders | Default crop frame |
 |---|---|---|
-| `dialog` (default for `basic`) | compact card: heading, aspect chips, rotate/flip, zoom, Cancel / commit | **fixed frame** — the image pans and zooms underneath |
-| `workspace` (default for `advanced` / `full`) | rail, options panel, layers, history | **movable frame** over the image |
+| `dialog` (default for `basic`) | compact card: heading, aspect chips, rotate/flip, zoom, Cancel / commit | **fixed** — the image pans and zooms underneath |
+| `workspace` (default for `advanced` / `full`) | rail, options panel, layers, history | **movable** frame over the image |
 | `viewer` (default for `viewer`) | zoom + Export + commit bar | — |
 
 ```html
@@ -389,9 +392,36 @@ in the workspace and viewer. The dialog chrome always has a commit button.
 <asp-image-editor mode="advanced" chrome="dialog" initialAspect="1:1" />
 ```
 
+### Crop frame vs. chrome — `cropFrame`
+
+The crop model is a third, independent switch. `cropFrame: 'fixed' | 'movable' | null` picks it on its
+own; `null` (the default) keeps each chrome's default from the table above.
+
+| `cropFrame` | Behaviour |
+|---|---|
+| `fixed` | **Slot crop.** The frame stays put; the image pans and zooms underneath it (`fitMode` applies). It is a slot, not a session: it persists while other tools are used, the options panel shows the aspect chips only (no Apply / Cancel — *Free* removes the frame), and the commit button exports the slot. |
+| `movable` | **Editing crop.** A draggable, resizable frame over a still image, opened by the Crop tool and committed with Apply. |
+
+So the advanced tool set with a fixed-slot `contain` crop is one input away:
+
+```html
+<asp-image-editor
+  mode="advanced"
+  cropFrame="fixed"
+  fitMode="contain"
+  [aspectRatios]="[social]"
+  [initialAspect]="social"
+  commitLabel="Use this banner"
+/>
+```
+
+and a movable editing crop inside the compact dialog card is `<asp-image-editor mode="basic"
+cropFrame="movable" />`.
+
 ### Logo crop — `fitMode="contain"`
 
-The fixed-frame (dialog) crop is an **avatar crop** by default: `fitMode="cover"` keeps the frame
+The fixed crop frame (the dialog's default, or `cropFrame="fixed"` anywhere) is an **avatar crop** by
+default: `fitMode="cover"` keeps the frame
 fully covered, so the zoom floor is the cover scale and the result never has gaps. That is wrong for
 a logo: a 2282×832 wordmark in a square slot can only ever be centre-cropped.
 
@@ -457,8 +487,9 @@ class AspImageEditor {
   disabledTools = input<AspTool[]>([]);               // subtracted from the resolved set
   filters     = input<AspFilter[] | 'all' | null>(null);
   aspectPresets = input<AspAspectPreset[]>(['free', '1:1', '4:3', '16:9']);
-  initialAspect = input<AspAspectPreset | null>(null); // open already cropped to this ratio
+  initialAspect = input<AspInitialAspect | null>(null); // preset or aspectOption(...) to open cropped to
   aspectRatios  = input<AspAspectOption[]>([]);       // custom CMS targets, e.g. aspectOption(1200,630)
+  cropFrame     = input<AspCropFrame | null>(null);   // 'fixed' (slot) | 'movable' (editing) — null = chrome default
   fitMode       = input<AspFitMode>('cover');         // 'contain' = zoom out to whole-image fit (logo crop)
   exportFormats = input<AspExportFormat[]>(['png', 'jpeg', 'webp']); // + 'svg' | 'pdf' | 'json'
   exportQuality = input<number>(90);                  // 10–100

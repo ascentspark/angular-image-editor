@@ -3,8 +3,55 @@
 All notable changes to `@ascentsparksoftware/angular-image-editor`.
 
 > **20.x line.** This branch tracks `main` two Angular majors behind; each entry below
-> ships here with the same minor number (`22.2.0` → **`20.2.0`**, `22.1.0` → **`20.1.0`**)
+> ships here with the same minor number (`22.3.0` → **`20.3.0`**, `22.2.0` → **`20.2.0`**, `22.1.0` → **`20.1.0`**)
 > and is published under the `ng20` dist-tag. Behaviour and API are identical.
+
+## 22.3.0 — 2026-10-23
+
+Closes the two gaps found when reviewing the 22.2.0 handoff work: the fixed-slot
+crop was still welded to the dialog chrome, and a custom ratio could be a chip but
+not the opening frame. Both are additive; defaults are unchanged.
+
+### Added — `cropFrame`: the crop model is independent of the chrome
+
+`chrome` (22.2.0) decoupled the layout from the tool set, but the crop model still
+followed the chrome: the dialog got the fixed slot, everything else the movable
+editing frame. So "advanced tool set **and** a fixed-slot `contain` crop" was not a
+reachable combination.
+
+`cropFrame: 'fixed' | 'movable' | null` picks it on its own. `null` (default) keeps
+each chrome's default — `fixed` in the dialog, `movable` elsewhere — so nothing
+changes for existing callers.
+
+- A **fixed** frame is a slot, not a session: in the workspace it persists while
+  other tools are used, the options panel shows the aspect chips only (no
+  Apply / Cancel — *Free* removes the frame, the −/+ controls zoom the image inside
+  it with the `fitMode` floor) and the commit button exports the slot.
+- A **movable** frame in the dialog chrome is the editing crop: drag the frame,
+  the slider zooms the viewport, Save commits the region.
+- Flipping `cropFrame` at runtime swaps a live frame in place; no stale frame of
+  the other kind is left on the canvas.
+- `AspCropFrame`, `defaultCropFrameFor(chrome)` are exported; the dialog config
+  forwards `cropFrame` like every other input.
+
+### Added — `initialAspect` accepts a custom ratio
+
+`initialAspect` now takes `AspAspectPreset | AspAspectOption` (`AspInitialAspect`),
+so `aspectOption(1200, 630, 'Social')` can be the opening frame — its chip is active
+from the start and its pixel size is the export target from the start, not only
+once the chip is clicked. The auto-pin rule widens to match: a **sole** constrained
+chip offered without `free`, preset *or* custom, is the opening frame. `isAspectOption()`
+is exported for hosts that branch on the union.
+
+### Fixed
+
+- Re-entering the Crop tool (or resetting the crop) after a custom chip was chosen
+  reopened the frame at the last *preset* ratio instead of the custom one.
+
+### Compatibility
+
+Additive. `cropFrame` defaults to the previous behaviour; `initialAspect` widens
+its accepted type. Peer ranges unchanged.
 
 ## 22.2.0 — 2026-10-23
 
