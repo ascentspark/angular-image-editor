@@ -84,6 +84,7 @@
           <span class="asp-spacer"></span>
           <ng-container [ngTemplateOutlet]="imageTpl" />
           <ng-container [ngTemplateOutlet]="exportTpl" />
+          <ng-container [ngTemplateOutlet]="commitTpl" />
         </div>
 
         <div class="asp-stagewrap" [class.asp-stagewrap--rulers]="rulersEnabled()">
@@ -236,6 +237,7 @@
         <ng-container [ngTemplateOutlet]="zoomTpl" />
         <span class="asp-spacer"></span>
         <ng-container [ngTemplateOutlet]="exportTpl" />
+        <ng-container [ngTemplateOutlet]="commitTpl" />
       </div>
       <div #stageEl class="asp-stage">
         <canvas #canvasEl></canvas>
@@ -243,7 +245,7 @@
     </div>
   }
 
-  @case ('basic') {
+  @case ('dialog') {
     <div class="asp-basic asp-card">
       <div class="asp-basic__head">
         <div class="asp-basic__title">{{ heading() }}</div>
@@ -302,8 +304,8 @@
             <input
               type="range"
               class="asp-range"
-              min="100"
-              max="300"
+              [min]="zoomRange().min"
+              [max]="zoomRange().max"
               [value]="zoomPct()"
               (input)="onZoomSlider($event)"
               aria-label="Zoom"
@@ -318,7 +320,7 @@
 
       <div class="asp-basic__foot">
         <button type="button" class="asp-btn-line" (click)="cancel()">Cancel</button>
-        <button type="button" class="asp-btn-accent" (click)="save()">Save</button>
+        <button type="button" class="asp-btn-accent asp-commit" (click)="save()">{{ commitText() }}</button>
       </div>
     </div>
   }
@@ -387,8 +389,9 @@
 
 <ng-template #exportTpl>
   <div class="asp-pop">
-    <button type="button" class="asp-btn-accent asp-topbtn" (click)="toggleExport()">
-      <asp-icon name="download" [size]="16" /> Export
+    <button type="button" class="asp-btn-line asp-topbtn" (click)="toggleExport()">
+      <asp-icon [name]="showDownload() ? 'download' : 'sliders-horizontal'" [size]="16" />
+      {{ showDownload() ? 'Export' : 'Format' }}
     </button>
     @if (exportOpen()) {
       <button
@@ -424,10 +427,21 @@
           (input)="onExportQuality($event)"
           aria-label="Export quality"
         />
-        <button type="button" class="asp-btn-accent asp-download" (click)="download()">
-          Download image
-        </button>
+        @if (showDownload()) {
+          <button type="button" class="asp-btn-accent asp-download" (click)="download()">
+            Download image
+          </button>
+        }
       </div>
     }
   </div>
+</ng-template>
+
+<!-- The commit action: hands the result to the host through `saved`, writes no file. -->
+<ng-template #commitTpl>
+  @if (showCommit()) {
+    <button type="button" class="asp-btn-accent asp-topbtn asp-commit" (click)="save()">
+      <asp-icon name="check" [size]="16" /> {{ commitText() }}
+    </button>
+  }
 </ng-template>
