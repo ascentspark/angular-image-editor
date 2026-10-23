@@ -2,6 +2,10 @@
 
 All notable changes to `@ascentsparksoftware/angular-image-editor`.
 
+> **20.x line.** This branch tracks `main` two Angular majors behind; each entry below
+> ships here with the same minor number (`22.2.0` → **`20.2.0`**, `22.1.0` → **`20.1.0`**)
+> and is published under the `ng20` dist-tag. Behaviour and API are identical.
+
 ## 22.2.0 — 2026-10-23
 
 Driven by the Phlebio operator-panel handoff: a logo of any size and aspect has to
