@@ -17,9 +17,11 @@ import {
   type AspAspectOption,
   type AspAspectPreset,
   type AspChrome,
+  type AspCropFrame,
   type AspExportFormat,
   type AspExportTarget,
   type AspFitMode,
+  type AspInitialAspect,
   type AspMode,
   type AspThemeMode,
   type AspTool,
@@ -29,6 +31,8 @@ import {
 const MODES: readonly AspMode[] = ['viewer', 'basic', 'advanced', 'full'];
 const CHROMES: readonly AspChrome[] = ['dialog', 'workspace', 'viewer'];
 const ALL_FORMATS: readonly AspExportFormat[] = ['png', 'jpeg', 'webp', 'svg', 'json', 'pdf'];
+const PRESETS: readonly AspAspectPreset[] = ['free', '1:1', '4:3', '16:9', '3:2', 'original'];
+const CROP_FRAMES: readonly AspCropFrame[] = ['fixed', 'movable'];
 
 /**
  * Build a deterministic test image: white with a black grid and a diagonal.
@@ -125,8 +129,10 @@ interface BlobFacts {
             [chrome]="chrome()"
             [tools]="tools()"
             [themeMode]="themeMode()"
+            [aspectPresets]="aspectPresets()"
             [initialAspect]="initialAspect()"
             [aspectRatios]="aspectRatios()"
+            [cropFrame]="cropFrame()"
             [fitMode]="fitMode()"
             [exportBackground]="exportBackground()"
             [exportTarget]="exportTarget()"
@@ -214,9 +220,30 @@ export class E2eHarness implements OnDestroy {
   protected readonly themeMode = computed<AspThemeMode>(() =>
     this.params().get('theme') === 'dark' ? 'dark' : 'light',
   );
-  protected readonly initialAspect = computed<AspAspectPreset | null>(() =>
-    this.params().get('aspect') === '1:1' ? '1:1' : null,
-  );
+  /** `aspect=1:1` opens at a preset; `aspect=1200x630` at a custom option (same label as `chip=`). */
+  protected readonly initialAspect = computed<AspInitialAspect | null>(() => {
+    const raw = this.params().get('aspect');
+    if (PRESETS.includes(raw as AspAspectPreset)) {
+      return raw as AspAspectPreset;
+    }
+    const size = parseSize(raw);
+    return size ? aspectOption(size.width, size.height) : null;
+  });
+  /** `presets=1:1,16:9` replaces the preset chips; `presets=` (empty) removes them all. */
+  protected readonly aspectPresets = computed<AspAspectPreset[]>(() => {
+    const raw = this.params().get('presets');
+    if (raw === null) {
+      return ['free', '1:1', '4:3', '16:9'];
+    }
+    return raw
+      .split(',')
+      .filter((p): p is AspAspectPreset => PRESETS.includes(p as AspAspectPreset));
+  });
+  /** `frame=fixed` / `frame=movable` overrides the chrome's default crop frame. */
+  protected readonly cropFrame = computed<AspCropFrame | null>(() => {
+    const raw = this.params().get('frame');
+    return CROP_FRAMES.includes(raw as AspCropFrame) ? (raw as AspCropFrame) : null;
+  });
   /** `fit=contain` opens the fixed-frame crop at the whole-image fit (logo crop). */
   protected readonly fitMode = computed<AspFitMode>(() =>
     this.params().get('fit') === 'contain' ? 'contain' : 'cover',
@@ -316,8 +343,10 @@ export class E2eHarness implements OnDestroy {
       chrome: this.chrome(),
       tools: this.tools(),
       themeMode: this.themeMode(),
+      aspectPresets: this.aspectPresets(),
       initialAspect: this.initialAspect() ?? undefined,
       aspectRatios: this.aspectRatios(),
+      cropFrame: this.cropFrame(),
       fitMode: this.fitMode(),
       exportBackground: this.exportBackground(),
       exportTarget: this.exportTarget(),
