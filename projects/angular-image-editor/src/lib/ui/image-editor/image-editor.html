@@ -114,7 +114,7 @@
             @if (rulersEnabled()) {
               <canvas #guidesOverlayEl class="asp-guides-overlay" aria-hidden="true"></canvas>
             }
-            @if (activeTool() === 'crop') {
+            @if (activeTool() === 'crop' && resolvedCropFrame() === 'movable') {
               <div class="asp-crop-overlay" aria-hidden="true">
                 <span class="asp-crop-overlay__v" style="left: 33.33%"></span>
                 <span class="asp-crop-overlay__v" style="left: 66.66%"></span>
@@ -176,6 +176,7 @@
           (requestTool)="selectTool($event)"
           (fillChange)="setFill($event)"
           [hasCropRegion]="hasCropRegion()"
+          [cropFrame]="resolvedCropFrame()"
           (selectCrop)="selectCrop($event)"
           (selectCustomCrop)="selectCustomCrop($event)"
           (applyCrop)="applyCrop()"
@@ -260,7 +261,13 @@
         </div>
 
         @if (cropActive) {
-          <p class="asp-basic__hint">Drag the photo to reposition · use the slider to zoom</p>
+          <p class="asp-basic__hint">
+            @if (resolvedCropFrame() === 'fixed') {
+              Drag the photo to reposition · use the slider to zoom
+            } @else {
+              Drag the frame and its handles to choose the area to keep
+            }
+          </p>
         }
 
         <div>
