@@ -17,7 +17,7 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
       <demo-example
         anchor="dialog"
         title="Modal dialog"
-        description="For avatar / quick-edit flows, inject AspImageEditorDialog and await a Blob (or null on cancel). Opens the basic editor as a modal."
+        description="Inject AspImageEditorDialog and await a Blob (or null on cancel). Every editor input is accepted on the config — mode defaults to basic, and chrome/width/height let the modal host the full workspace. The overlay traps Tab focus and returns focus to the opener on close."
         [sources]="dialogSources"
       >
         <button type="button" class="brandbtn" (click)="edit()">Edit a photo…</button>
@@ -56,12 +56,12 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
             <tr>
               <td><code>saved</code></td>
               <td><code>Blob</code></td>
-              <td>Export / Save</td>
+              <td>The commit button (Save / Apply / commitLabel) in any chrome — never a download</td>
             </tr>
             <tr>
               <td><code>canceled</code></td>
               <td><code>void</code></td>
-              <td>Basic-mode Cancel</td>
+              <td>Dialog-chrome Cancel / close</td>
             </tr>
             <tr>
               <td><code>imageLoaded</code></td>
@@ -71,7 +71,7 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
             <tr>
               <td><code>exported</code></td>
               <td><code>Blob</code></td>
-              <td>Export download produced a Blob</td>
+              <td>Export → Download wrote a file (does not fire <code>saved</code>)</td>
             </tr>
             <tr>
               <td><code>errorOccurred</code></td>
@@ -107,6 +107,11 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
               <td><code>'advanced'</code></td>
             </tr>
             <tr>
+              <td><code>chrome</code></td>
+              <td><code>'dialog' | 'workspace' | 'viewer' | null</code></td>
+              <td><code>null</code> (mode default)</td>
+            </tr>
+            <tr>
               <td><code>width</code> / <code>height</code></td>
               <td><code>AspSize | null</code></td>
               <td><code>null</code></td>
@@ -137,6 +142,11 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
               <td><code>[]</code></td>
             </tr>
             <tr>
+              <td><code>fitMode</code></td>
+              <td><code>'cover' | 'contain'</code></td>
+              <td><code>'cover'</code></td>
+            </tr>
+            <tr>
               <td><code>exportFormats</code></td>
               <td><code>AspExportFormat[]</code></td>
               <td><code>['png','jpeg','webp']</code></td>
@@ -152,9 +162,29 @@ import { DocPage, type PageSection } from '../../shared/doc-page';
               <td><code>null</code></td>
             </tr>
             <tr>
+              <td><code>exportBackground</code></td>
+              <td><code>string | null</code></td>
+              <td><code>null</code></td>
+            </tr>
+            <tr>
               <td><code>heading</code></td>
               <td><code>string</code></td>
               <td><code>'Edit image'</code></td>
+            </tr>
+            <tr>
+              <td><code>commitLabel</code></td>
+              <td><code>string | null</code></td>
+              <td><code>null</code> ("Save" in the dialog, "Apply" elsewhere)</td>
+            </tr>
+            <tr>
+              <td><code>showCommit</code></td>
+              <td><code>boolean</code></td>
+              <td><code>true</code></td>
+            </tr>
+            <tr>
+              <td><code>showDownload</code></td>
+              <td><code>boolean</code></td>
+              <td><code>true</code></td>
             </tr>
             <tr>
               <td><code>showHistory</code></td>
@@ -263,7 +293,27 @@ async edit(src: string): Promise<void> {
     aspectPresets: ['1:1', '4:3', 'free'],
   });
   if (blob) { /* user saved — upload blob */ }
-}`,
+}
+
+// The full workspace in a modal — every editor input is accepted
+const edited = await this.editor.open({
+  src,
+  mode: 'advanced',
+  tools: ['crop', 'rotate', 'adjust'],
+  commitLabel: 'Use this image',
+  showDownload: false,
+  width: 1100,
+  height: '80vh',
+});
+
+// A logo of any aspect into a square slot (letterbox filled white)
+const logo = await this.editor.open({
+  src,
+  initialAspect: '1:1',
+  fitMode: 'contain',
+  exportBackground: '#ffffff',
+  commitLabel: 'Use this logo',
+});`,
     },
   ];
 
