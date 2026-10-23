@@ -106,10 +106,24 @@
         >
           Disable filters / frame / redact
         </button>
+        <button
+          type="button"
+          class="toggle"
+          [class.toggle--on]="commitOnly()"
+          (click)="toggleCommitOnly()"
+        >
+          Commit only (no download)
+        </button>
         <button type="button" class="toggle" (click)="toggleCode()">&lt;/&gt; Show code</button>
-        <button type="button" class="btn-brand" (click)="openDialog()">Open dialog</button>
+        <button type="button" class="btn-brand" (click)="openDialog()">Profile photo dialog</button>
+        <button type="button" class="btn-brand" (click)="openLogoDialog()">Logo crop dialog</button>
         @if (lastResult()) {
-          <span class="result">{{ lastResult() }}</span>
+          <span class="result">
+            @if (lastPreview(); as preview) {
+              <img class="result__thumb" [src]="preview" alt="Committed image preview" />
+            }
+            {{ lastResult() }}
+          </span>
         }
       </div>
     </div>
@@ -148,6 +162,8 @@
         [baseColor]="base()"
         [accentColor]="accent()"
         [themeMode]="themeMode()"
+        [commitLabel]="commitOnly() ? 'Use this image' : null"
+        [showDownload]="!commitOnly()"
         (saved)="onSaved($event)"
       ></asp-image-editor>
     } @placeholder {
